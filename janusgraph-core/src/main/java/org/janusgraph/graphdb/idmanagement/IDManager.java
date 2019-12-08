@@ -368,6 +368,7 @@ public class IDManager {
 
     /**
      * Number of bits that need to be reserved from the type ids for storing additional information during serialization
+     * 需要在类型ID中保留的位数，以在序列化期间存储其他信息
      */
     public static final int TYPE_LEN_RESERVE = 3;
 
@@ -380,6 +381,7 @@ public class IDManager {
 
     /**
      * Maximum number of bits that can be used for the partition prefix of an id
+     * 可用于ID的分区前缀的最大位数
      */
     private static final long MAX_PARTITION_BITS = 16;
     /**
