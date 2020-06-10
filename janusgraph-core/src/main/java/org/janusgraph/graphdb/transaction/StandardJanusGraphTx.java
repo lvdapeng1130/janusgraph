@@ -16,7 +16,6 @@ package org.janusgraph.graphdb.transaction;
 
 import com.carrotsearch.hppc.LongArrayList;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.Weigher;
@@ -30,9 +29,11 @@ import org.janusgraph.diskstorage.util.time.TimestampProvider;
 import org.janusgraph.diskstorage.BackendTransaction;
 import org.janusgraph.diskstorage.EntryList;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
+import org.janusgraph.graphdb.query.index.IndexSelectionStrategy;
 import org.janusgraph.graphdb.query.profile.QueryProfiler;
 import org.janusgraph.graphdb.relations.RelationComparator;
 import org.janusgraph.graphdb.relations.RelationIdentifier;
+import org.janusgraph.graphdb.relations.RelationIdentifierUtils;
 import org.janusgraph.graphdb.relations.StandardEdge;
 import org.janusgraph.graphdb.relations.StandardVertexProperty;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphBlueprintsTransaction;
@@ -53,8 +54,8 @@ import org.janusgraph.graphdb.query.vertex.MultiVertexCentricQueryBuilder;
 import org.janusgraph.graphdb.query.vertex.VertexCentricQuery;
 import org.janusgraph.graphdb.query.vertex.VertexCentricQueryBuilder;
 import org.janusgraph.graphdb.transaction.addedrelations.AddedRelationsContainer;
-import org.janusgraph.graphdb.transaction.addedrelations.ConcurrentBufferAddedRelations;
-import org.janusgraph.graphdb.transaction.addedrelations.SimpleBufferAddedRelations;
+import org.janusgraph.graphdb.transaction.addedrelations.ConcurrentAddedRelations;
+import org.janusgraph.graphdb.transaction.addedrelations.SimpleAddedRelations;
 import org.janusgraph.graphdb.transaction.indexcache.ConcurrentIndexCache;
 import org.janusgraph.graphdb.transaction.indexcache.IndexCache;
 import org.janusgraph.graphdb.transaction.indexcache.SimpleIndexCache;
@@ -119,6 +120,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
     private BackendTransaction txHandle;
     private final EdgeSerializer edgeSerializer;
     private final IndexSerializer indexSerializer;
+    private final IndexSelectionStrategy indexSelector;
 
     /* ###############################################
             Internal Data Structures
@@ -201,6 +203,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         this.attributeHandler = graph.getDataSerializer();
         this.edgeSerializer = graph.getEdgeSerializer();
         this.indexSerializer = graph.getIndexSerializer();
+        this.indexSelector = graph.getIndexSelector();
 
         temporaryIds = new IDPool() {
 
@@ -219,12 +222,12 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
 
         int concurrencyLevel;
         if (config.isSingleThreaded()) {
-            addedRelations = new SimpleBufferAddedRelations();
+            addedRelations = new SimpleAddedRelations();
             concurrencyLevel = 1;
             newTypeCache = new HashMap<>();
             newVertexIndexEntries = new SimpleIndexCache();
         } else {
-            addedRelations = new ConcurrentBufferAddedRelations();
+            addedRelations = new ConcurrentAddedRelations();
             concurrencyLevel = 1; //TODO: should we increase this?
             newTypeCache = new NonBlockingHashMap<>();
             newVertexIndexEntries = new ConcurrentIndexCache();
@@ -839,7 +842,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         List<JanusGraphEdge> result = new ArrayList<>(ids.length);
         for (RelationIdentifier id : ids) {
             if (id==null) continue;
-            JanusGraphEdge edge = id.findEdge(this);
+            JanusGraphEdge edge = RelationIdentifierUtils.findEdge(id,this);
             if (edge!=null && !edge.isRemoved()) result.add(edge);
         }
         return result;
@@ -1134,31 +1137,62 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
     public final QueryExecutor<VertexCentricQuery, JanusGraphRelation, SliceQuery> edgeProcessor;
 
     public final QueryExecutor<VertexCentricQuery, JanusGraphRelation, SliceQuery> edgeProcessorImpl = new QueryExecutor<VertexCentricQuery, JanusGraphRelation, SliceQuery>() {
+
         @Override
         public Iterator<JanusGraphRelation> getNew(final VertexCentricQuery query) {
             InternalVertex vertex = query.getVertex();
             if (vertex.isNew() || vertex.hasAddedRelations()) {
-                return (Iterator) vertex.getAddedRelations(new Predicate<InternalRelation>() {
-                    //Need to filter out self-loops if query only asks for one direction
-
-                    private JanusGraphRelation previous = null;
-
-                    @Override
-                    public boolean apply(final InternalRelation relation) {
-                        if ((relation instanceof JanusGraphEdge) && relation.isLoop()
-                                && query.getDirection() != Direction.BOTH) {
-                            if (relation.equals(previous))
-                                return false;
-
-                            previous = relation;
-                        }
-
-                        return query.matches(relation);
-                    }
-                }).iterator();
+                return getMatchedRelations(query, vertex);
             } else {
                 return Collections.emptyIterator();
             }
+        }
+
+        private Iterator<JanusGraphRelation> getMatchedRelations(final VertexCentricQuery query, final InternalVertex vertex) {
+            // Need to filter out self-loops if query only asks for one direction
+            return new Iterator<JanusGraphRelation>() {
+                Iterator<InternalRelation> iterator = vertex.getAddedRelations(t -> true).iterator();
+                InternalRelation loop = null;
+                InternalRelation current = null;
+
+                @Override
+                public boolean hasNext() {
+                    if (current == null) {
+                        current = nextRelation();
+                        return current != null;
+                    }
+                    return true;
+                }
+
+                @Override
+                public JanusGraphRelation next() {
+                    if (hasNext()) {
+                        InternalRelation current = this.current;
+                        this.current = null;
+                        return current;
+                    } else {
+                        throw new NoSuchElementException();
+                    }
+                }
+
+                private InternalRelation nextRelation() {
+                    if (loop != null) {
+                        InternalRelation loop = this.loop;
+                        this.loop = null;
+                        return loop;
+                    }
+                    while (iterator.hasNext()) {
+                        InternalRelation next = iterator.next();
+                        if (query.matches(next)) {
+                            if (query.getDirection() == Direction.BOTH && next instanceof JanusGraphEdge && next.isLoop()) {
+                                loop = next;
+                            }
+                            return next;
+                        }
+                    }
+                    return null;
+                }
+            };
         }
 
         @Override
@@ -1359,18 +1393,18 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
     private final Function<Object, JanusGraphEdge> edgeIDConversionFct = id -> {
         Preconditions.checkNotNull(id);
         Preconditions.checkArgument(id instanceof RelationIdentifier);
-        return ((RelationIdentifier)id).findEdge(StandardJanusGraphTx.this);
+        return RelationIdentifierUtils.findEdge((RelationIdentifier)id, StandardJanusGraphTx.this);
     };
 
     private final Function<Object, JanusGraphVertexProperty> propertyIDConversionFct = id -> {
         Preconditions.checkNotNull(id);
         Preconditions.checkArgument(id instanceof RelationIdentifier);
-        return ((RelationIdentifier)id).findProperty(StandardJanusGraphTx.this);
+        return RelationIdentifierUtils.findProperty((RelationIdentifier)id, StandardJanusGraphTx.this);
     };
 
     @Override
     public GraphCentricQueryBuilder query() {
-        return new GraphCentricQueryBuilder(this, graph.getIndexSerializer());
+        return new GraphCentricQueryBuilder(this, graph.getIndexSerializer(), indexSelector);
     }
 
     @Override

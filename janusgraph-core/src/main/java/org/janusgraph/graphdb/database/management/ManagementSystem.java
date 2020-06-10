@@ -51,12 +51,8 @@ import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Element;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
-import javax.annotation.Nullable;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,7 +145,7 @@ public class ManagementSystem implements JanusGraphManagement {
     };
 
     public Set<String> getOpenInstancesInternal() {
-        Set<String> openInstances = Sets.newHashSet(modifyConfig.getContainedNamespaces(REGISTRATION_NS));
+        Set<String> openInstances = new HashSet<>(modifyConfig.getContainedNamespaces(REGISTRATION_NS));
         LOGGER.debug("Open instances: {}", openInstances);
         return openInstances;
     }
@@ -297,7 +293,10 @@ public class ManagementSystem implements JanusGraphManagement {
             lm.dataType(((PropertyKey) type).dataType());
             maker = lm;
         }
-        maker.status(type.isNew() ? SchemaStatus.ENABLED : SchemaStatus.INSTALLED);
+
+        boolean canIndexBeEnabled = type.isNew() || Arrays.stream(sortKeys).anyMatch(key -> key.isNew());
+
+        maker.status(canIndexBeEnabled ? SchemaStatus.ENABLED : SchemaStatus.INSTALLED);
         maker.invisible();
         maker.multiplicity(Multiplicity.MULTI);
         maker.sortKey(sortKeys);
@@ -305,9 +304,13 @@ public class ManagementSystem implements JanusGraphManagement {
 
         //Compose signature
         long[] typeSig = ((InternalRelationType) type).getSignature();
-        Set<PropertyKey> signature = Sets.newHashSet();
-        for (long typeId : typeSig) signature.add(transaction.getExistingPropertyKey(typeId));
-        for (RelationType sortType : sortKeys) signature.remove(sortType);
+        Set<PropertyKey> signature = new HashSet<>(typeSig.length);
+        for (long typeId : typeSig) {
+            signature.add(transaction.getExistingPropertyKey(typeId));
+        }
+        for (RelationType sortType : sortKeys) {
+            signature.remove(sortType);
+        }
         if (!signature.isEmpty()) {
             PropertyKey[] sig = signature.toArray(new PropertyKey[signature.size()]);
             maker.signature(sig);
@@ -315,7 +318,9 @@ public class ManagementSystem implements JanusGraphManagement {
         RelationType typeIndex = maker.make();
         addSchemaEdge(type, typeIndex, TypeDefinitionCategory.RELATIONTYPE_INDEX, null);
         RelationTypeIndexWrapper index = new RelationTypeIndexWrapper((InternalRelationType) typeIndex);
-        if (!type.isNew()) updateIndex(index, SchemaAction.REGISTER_INDEX);
+        if (!canIndexBeEnabled) {
+            updateIndex(index, SchemaAction.REGISTER_INDEX);
+        }
         return index;
     }
 
@@ -344,13 +349,9 @@ public class ManagementSystem implements JanusGraphManagement {
     @Override
     public Iterable<RelationTypeIndex> getRelationIndexes(final RelationType type) {
         Preconditions.checkArgument(type != null && type instanceof InternalRelationType, "Invalid relation type provided: %s", type);
-        return Iterables.transform(Iterables.filter(((InternalRelationType) type).getRelationIndexes(), internalRelationType -> !type.equals(internalRelationType)), new Function<InternalRelationType, RelationTypeIndex>() {
-            @Nullable
-            @Override
-            public RelationTypeIndex apply(@Nullable InternalRelationType internalType) {
-                return new RelationTypeIndexWrapper(internalType);
-            }
-        });
+        return StreamSupport.stream(((InternalRelationType) type).getRelationIndexes().spliterator(), false)
+            .filter(internalRelationType -> !type.equals(internalRelationType))
+            .map(internalType -> (RelationTypeIndex) new RelationTypeIndexWrapper(internalType))::iterator;
     }
 
     /* --------------
@@ -697,7 +698,7 @@ public class ManagementSystem implements JanusGraphManagement {
         }
         updateSchemaVertex(indexVertex);
         JanusGraphIndexWrapper index = new JanusGraphIndexWrapper(indexVertex.asIndexType());
-        if (!oneNewKey) updateIndex(index, SchemaAction.REGISTER_INDEX);
+        if (!canIndexBeEnabled) updateIndex(index, SchemaAction.REGISTER_INDEX);
         return index;
     }
 
@@ -783,14 +784,14 @@ public class ManagementSystem implements JanusGraphManagement {
 
         JanusGraphSchemaVertex schemaVertex = getSchemaVertex(index);
         Set<JanusGraphSchemaVertex> dependentTypes;
-        Set<PropertyKeyVertex> keySubset = ImmutableSet.of();
+        Set<PropertyKeyVertex> keySubset = Collections.emptySet();
         if (index instanceof RelationTypeIndex) {
-            dependentTypes = ImmutableSet.of((JanusGraphSchemaVertex) ((InternalRelationType) schemaVertex).getBaseType());
+            dependentTypes = Collections.singleton((JanusGraphSchemaVertex) ((InternalRelationType) schemaVertex).getBaseType());
             if (!updateAction.isApplicableStatus(schemaVertex.getStatus()))
                 return null;
         } else if (index instanceof JanusGraphIndex) {
             IndexType indexType = schemaVertex.asIndexType();
-            dependentTypes = Sets.newHashSet();
+            dependentTypes = new HashSet<>();
             if (indexType.isCompositeIndex()) {
                 if (!updateAction.isApplicableStatus(schemaVertex.getStatus()))
                     return null;
@@ -798,7 +799,7 @@ public class ManagementSystem implements JanusGraphManagement {
                     dependentTypes.add((PropertyKeyVertex) key);
                 }
             } else {
-                keySubset = Sets.newHashSet();
+                keySubset = new HashSet<>();
                 MixedIndexType mixedIndexType = (MixedIndexType) indexType;
                 Set<SchemaStatus> applicableStatus = updateAction.getApplicableStatus();
                 for (ParameterIndexField field : mixedIndexType.getFieldKeys()) {
@@ -943,13 +944,9 @@ public class ManagementSystem implements JanusGraphManagement {
             this.graph = graph;
             this.schemaVertexId = vertex.longId();
             this.newStatus = newStatus;
-            this.propertyKeys = Sets.newHashSet(Iterables.transform(keys, new Function<PropertyKey, Long>() {
-                @Nullable
-                @Override
-                public Long apply(@Nullable PropertyKey propertyKey) {
-                    return propertyKey.longId();
-                }
-            }));
+            this.propertyKeys = StreamSupport.stream(keys.spliterator(), false)
+                .map(PropertyKey::longId)
+                .collect(Collectors.toSet());
         }
 
         @Override
@@ -959,14 +956,15 @@ public class ManagementSystem implements JanusGraphManagement {
                 JanusGraphVertex vertex = management.transaction.getVertex(schemaVertexId);
                 Preconditions.checkArgument(vertex != null && vertex instanceof JanusGraphSchemaVertex);
                 JanusGraphSchemaVertex schemaVertex = (JanusGraphSchemaVertex) vertex;
-
-                Set<PropertyKeyVertex> keys = Sets.newHashSet();
-                for (Long keyId : propertyKeys) keys.add((PropertyKeyVertex) management.transaction.getVertex(keyId));
+                Set<PropertyKeyVertex> keys = new HashSet<>(propertyKeys.size());
+                for (Long keyId : propertyKeys) {
+                    keys.add((PropertyKeyVertex) management.transaction.getVertex(keyId));
+                }
                 management.setStatus(schemaVertex, newStatus, keys);
                 management.updatedTypes.addAll(keys);
                 management.updatedTypes.add(schemaVertex);
                 if (log.isInfoEnabled()) {
-                    Set<String> propNames = Sets.newHashSet();
+                    Set<String> propNames = new HashSet<>(keys.size());
                     for (PropertyKeyVertex v : keys) {
                         try {
                             propNames.add(v.name());

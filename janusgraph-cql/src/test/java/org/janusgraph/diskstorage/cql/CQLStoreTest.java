@@ -24,9 +24,9 @@ import org.janusgraph.diskstorage.keycolumnvalue.StoreFeatures;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.testutil.FeatureFlag;
 import org.janusgraph.testutil.JanusGraphFeature;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -93,47 +93,6 @@ public class CQLStoreTest extends KeyColumnValueStoreTest {
         assertFalse(this.manager.getFeatures().hasLocking());
         assertTrue(openStorageManager(getBaseStorageConfiguration()
                 .set(USE_EXTERNAL_LOCKING, true)).getFeatures().hasLocking());
-    }
-
-    @Test
-    public void testDefaultCompactStorage() throws BackendException {
-        final String cf = TEST_CF_NAME + "_defaultcompact";
-
-        final CQLStoreManager cqlStoreManager = openStorageManager();
-        cqlStoreManager.openDatabase(cf);
-
-        // COMPACT STORAGE is allowed on Cassandra 2 or earlier
-        // when COMPACT STORAGE is allowed, the default is to enable it
-        assertTrue(cqlStoreManager.isCompactStorageAllowed() == cqlStoreManager.getTableMetadata(cf).getOptions().isCompactStorage());
-    }
-
-    @Test
-    @EnabledIf("org.janusgraph.JanusGraphCassandraContainer.isCompactStorageSupported()")
-    public void testUseCompactStorage() throws BackendException {
-        final String cf = TEST_CF_NAME + "_usecompact";
-        final ModifiableConfiguration config = getBaseStorageConfiguration();
-        config.set(CF_COMPACT_STORAGE, true);
-
-        final CQLStoreManager cqlStoreManager = openStorageManager(config);
-        cqlStoreManager.openDatabase(cf);
-
-        if (cqlStoreManager.isCompactStorageAllowed()) {
-            assertTrue(cqlStoreManager.getTableMetadata(cf).getOptions().isCompactStorage());
-        } else {
-            assertFalse(cqlStoreManager.getTableMetadata(cf).getOptions().isCompactStorage());
-        }
-    }
-
-    @Test
-    public void testNoCompactStorage() throws BackendException {
-        final String cf = TEST_CF_NAME + "_nocompact";
-        final ModifiableConfiguration config = getBaseStorageConfiguration();
-        config.set(CF_COMPACT_STORAGE, false);
-
-        final CQLStoreManager cqlStoreManager = openStorageManager(config);
-        cqlStoreManager.openDatabase(cf);
-
-        assertFalse(cqlStoreManager.getTableMetadata(cf).getOptions().isCompactStorage());
     }
 
     @Test

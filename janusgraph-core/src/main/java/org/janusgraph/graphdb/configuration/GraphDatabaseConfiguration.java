@@ -14,10 +14,9 @@
 
 package org.janusgraph.graphdb.configuration;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableMap;
 import org.janusgraph.core.*;
 import org.janusgraph.core.schema.DefaultSchemaMaker;
+import org.janusgraph.core.schema.LoggingSchemaMaker;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.StandardIndexProvider;
 import org.janusgraph.diskstorage.StandardStoreManager;
@@ -26,6 +25,7 @@ import org.janusgraph.graphdb.configuration.converter.RegisteredAttributeClasses
 import org.janusgraph.graphdb.tinkerpop.JanusGraphDefaultSchemaMaker;
 import org.janusgraph.graphdb.tinkerpop.Tp3DefaultSchemaMaker;
 import org.janusgraph.graphdb.types.typemaker.DisableDefaultSchemaMaker;
+import org.janusgraph.util.StringUtils;
 import org.janusgraph.util.stats.NumberUtil;
 import org.janusgraph.diskstorage.util.time.*;
 import org.janusgraph.diskstorage.configuration.*;
@@ -169,7 +169,7 @@ public class GraphDatabaseConfiguration {
 
     public static final ConfigOption<Boolean> ALLOW_STALE_CONFIG = new ConfigOption<>(GRAPH_NS,"allow-stale-config",
             "Whether to allow the local and storage-backend-hosted copies of the configuration to contain conflicting values for " +
-            "options with any of the following types: " + Joiner.on(", ").join(ConfigOption.getManagedTypes()) + ".  " +
+            "options with any of the following types: " + StringUtils.join(ConfigOption.getManagedTypes(), ", ") + ".  " +
             "These types are managed globally through the storage backend and cannot be overridden by changing the " +
             "local configuration.  This type of conflict usually indicates misconfiguration.  When this option is true, " +
             "JanusGraph will log these option conflicts, but continue normal operation using the storage-backend-hosted value " +
@@ -264,6 +264,13 @@ public class GraphDatabaseConfiguration {
                     "performance improvement if there is a non-trivial latency to the backend.",
             ConfigOption.Type.MASKABLE, false);
 
+    public static final ConfigOption<Integer> INDEX_SELECT_BRUTE_FORCE_THRESHOLD = new ConfigOption<>(QUERY_NS, "index-select-threshold",
+            "Threshold of deciding whether to use brute force enumeration algorithm or fast approximation algorithm " +
+                    "for selecting suitable indexes. Selecting optimal indexes for a query is a NP-complete set cover problem. " +
+                    "When number of suitable index candidates is no larger than threshold, JanusGraph uses brute force search " +
+                    "with exponential time complexity to ensure the best combination of indexes is selected.",
+            ConfigOption.Type.MASKABLE, 10);
+
     public static final ConfigOption<Boolean> BATCH_PROPERTY_PREFETCHING = new ConfigOption<>(QUERY_NS,"batch-property-prefetch",
             "Whether to do a batched pre-fetch of all properties on adjacent vertices against the storage backend prior to evaluating a has condition against those vertices. " +
                     "Because these vertex properties will be loaded into the transaction-level cache of recently-used vertices when the condition is evaluated this can " +
@@ -277,8 +284,13 @@ public class GraphDatabaseConfiguration {
             "Schema related configuration options");
 
     public static final ConfigOption<String> AUTO_TYPE = new ConfigOption<>(SCHEMA_NS,"default",
-            "Configures the DefaultSchemaMaker to be used by this graph. If set to 'none', automatic schema creation is disabled. " +
-                    "Defaults to a blueprints compatible schema maker with MULTI edge labels and SINGLE property keys",
+            "Configures the DefaultSchemaMaker to be used by this graph."
+            + " Either one of the following shorthands can be used: <br>"
+            + " - `default` (a blueprints compatible schema maker with MULTI edge labels and SINGLE property keys),<br>"
+            + " - `none` (automatic schema creation is disabled)<br>"
+            + " - `logging` (same as default, but with a log done when an automatic schema creation is done)<br>"
+            + " - or to the full package and classname of a custom/third-party implementing the"
+            + " interface `org.janusgraph.core.schema.DefaultSchemaMaker`",
             ConfigOption.Type.MASKABLE, "default", new Predicate<String>() {
         @Override
         public boolean apply(@Nullable String s) {
@@ -293,10 +305,14 @@ public class GraphDatabaseConfiguration {
         }
     });
 
-    private static final Map<String, DefaultSchemaMaker> PREREGISTERED_AUTO_TYPE =
-            ImmutableMap.of("none", DisableDefaultSchemaMaker.INSTANCE,
-                    "default", JanusGraphDefaultSchemaMaker.INSTANCE,
-                    "tp3", Tp3DefaultSchemaMaker.INSTANCE);
+    private static final Map<String, DefaultSchemaMaker> PREREGISTERED_AUTO_TYPE = Collections.unmodifiableMap(
+        new HashMap<String, DefaultSchemaMaker>(4){{
+            put("none", DisableDefaultSchemaMaker.INSTANCE);
+            put("default", JanusGraphDefaultSchemaMaker.INSTANCE);
+            put("tp3", Tp3DefaultSchemaMaker.INSTANCE);
+            put("logging", LoggingSchemaMaker.DEFAULT_INSTANCE);
+        }}
+    );
 
     public static final ConfigOption<Boolean> SCHEMA_CONSTRAINTS = new ConfigOption<>(SCHEMA_NS, "constraints",
             "Configures the schema constraints to be used by this graph. If config 'schema.constraints' " +
@@ -431,7 +447,7 @@ public class GraphDatabaseConfiguration {
     public static final ConfigOption<String> STORAGE_BACKEND = new ConfigOption<>(STORAGE_NS,"backend",
             "The primary persistence provider used by JanusGraph.  This is required.  It should be set one of " +
             "JanusGraph's built-in shorthand names for its standard storage backends " +
-            "(shorthands: " + Joiner.on(", ").join(StandardStoreManager.getAllShorthands()) + ") " +
+            "(shorthands: " + String.join(", ", StandardStoreManager.getAllShorthands()) + ") " +
             "or to the full package and classname of a custom/third-party StoreManager implementation.",
             ConfigOption.Type.LOCAL, String.class);
 
@@ -826,7 +842,7 @@ public class GraphDatabaseConfiguration {
             "\"" + INDEX_NS.getName() + "\" and \"backend\" is unique among appearances." +
             "Similar to the storage backend, this should be set to one of " +
             "JanusGraph's built-in shorthand names for its standard index backends " +
-            "(shorthands: " + Joiner.on(", ").join(StandardIndexProvider.getAllShorthands()) + ") " +
+            "(shorthands: " + String.join(", ", StandardIndexProvider.getAllShorthands()) + ") " +
             "or to the full package and classname of a custom/third-party IndexProvider implementation.",
             ConfigOption.Type.GLOBAL_OFFLINE, "elasticsearch");
 
@@ -857,7 +873,7 @@ public class GraphDatabaseConfiguration {
             ConfigOption.Type.MASKABLE, 50);
 
     public static final ConfigOption<Boolean> INDEX_NAME_MAPPING = new ConfigOption<>(INDEX_NS,"map-name",
-            "Whether to use the name of the property key as the field name in the index. It must be ensured, that the" +
+            "Whether to use the name of the property key as the field name in the index. It must be ensured, that the " +
                     "indexed property key names are valid field names. Renaming the property key will NOT rename the field " +
                     "and its the developers responsibility to avoid field collisions.",
             ConfigOption.Type.GLOBAL, true);
@@ -1220,6 +1236,7 @@ public class GraphDatabaseConfiguration {
     private Boolean propertyPrefetching;
     private boolean adjustQueryLimit;
     private Boolean useMultiQuery;
+    private int indexSelectThreshold;
     private Boolean batchPropertyPrefetching;
     private boolean allowVertexIdSetting;
     private boolean logTransactions;
@@ -1305,6 +1322,10 @@ public class GraphDatabaseConfiguration {
 
     public boolean useMultiQuery() {
         return useMultiQuery;
+    }
+
+    public int getIndexSelectThreshold() {
+        return indexSelectThreshold;
     }
 
     public boolean batchPropertyPrefetching() {
@@ -1421,6 +1442,7 @@ public class GraphDatabaseConfiguration {
 
         propertyPrefetching = configuration.get(PROPERTY_PREFETCHING);
         useMultiQuery = configuration.get(USE_MULTIQUERY);
+        indexSelectThreshold = configuration.get(INDEX_SELECT_BRUTE_FORCE_THRESHOLD);
         batchPropertyPrefetching = configuration.get(BATCH_PROPERTY_PREFETCHING);
         adjustQueryLimit = configuration.get(ADJUST_LIMIT);
         allowVertexIdSetting = configuration.get(ALLOW_SETTING_VERTEX_ID);

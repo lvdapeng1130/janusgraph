@@ -1,9 +1,5 @@
-
-JanusGraph Cache
-================
-
-Caching
--------
+# JanusGraph Cache
+## Caching
 
 JanusGraph employs multiple layers of data caching to facilitate fast
 graph traversals. The caching layers are listed here in the order they
@@ -11,8 +7,7 @@ are accessed from within a JanusGraph transaction. The closer the cache
 is to the transaction, the faster the cache access and the higher the
 memory footprint and maintenance overhead.
 
-Transaction-Level Caching
--------------------------
+## Transaction-Level Caching
 
 Within an open transaction, JanusGraph maintains two caches:
 
@@ -64,8 +59,7 @@ Each entry in the index cache is given a weight equal to
 `2 + result set size` and the total weight of the cache will not exceed
 half of the transaction cache size.
 
-Database Level Caching
-----------------------
+## Database Level Caching
 
 The database level cache retains adjacency lists (or subsets thereof)
 across multiple transactions and beyond the duration of a single
@@ -128,10 +122,9 @@ Note, that the cache size refers to the amount of heap space that is
 exclusively occupied by the cache. JanusGraph’s other data structures
 and each open transaction will occupy additional heap space. If
 additional software layers are running in the same JVM, those may occupy
-a significant amount of heap space as well (e.g. Gremlin Server,
-embedded Cassandra, etc). Be conservative in your heap memory
-estimation. Configuring a cache that is too large can lead to
-out-of-memory exceptions and excessive GC.
+a significant amount of heap space as well (e.g. Gremlin Server, etc). 
+Be conservative in your heap memory estimation. Configuring a cache 
+that is too large can lead to out-of-memory exceptions and excessive GC.
 
 ### Clean Up Wait Time
 
@@ -150,8 +143,7 @@ entry retrieved from the storage backend.
 If JanusGraph runs locally or against a storage backend that guarantees
 immediate visibility of modifications, this value can be set to 0.
 
-Storage Backend Caching
------------------------
+## Storage Backend Caching
 
 Each storage backend maintains its own data caching layer. These caches
 benefit from compression, data compactness, coordinated expiration and

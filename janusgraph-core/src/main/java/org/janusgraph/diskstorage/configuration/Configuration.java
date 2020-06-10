@@ -14,9 +14,8 @@
 
 package org.janusgraph.diskstorage.configuration;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,9 +24,17 @@ import java.util.Set;
  */
 public interface Configuration {
 
-    boolean has(ConfigOption option, String... umbrellaElements);
+    default boolean has(ConfigOption option, String... umbrellaElements) {
+        return has(option, false, umbrellaElements);
+    }
 
-    <O> O get(ConfigOption<O> option, String... umbrellaElements);
+    boolean has(ConfigOption option, boolean includeRoot, String... umbrellaElements);
+
+    default <O> O get(ConfigOption<O> option, String... umbrellaElements) {
+        return get(option, false, umbrellaElements);
+    }
+
+    <O> O get(ConfigOption<O> option, boolean includeRoot, String... umbrellaElements);
 
     Set<String> getContainedNamespaces(ConfigNamespace umbrella, String... umbrellaElements);
 
@@ -40,23 +47,23 @@ public interface Configuration {
 
     Configuration EMPTY = new Configuration() {
         @Override
-        public boolean has(ConfigOption option, String... umbrellaElements) {
+        public boolean has(ConfigOption option, boolean includeRoot, String... umbrellaElements) {
             return false;
         }
 
         @Override
-        public <O> O get(ConfigOption<O> option, String... umbrellaElements) {
+        public <O> O get(ConfigOption<O> option, boolean includeRoot, String... umbrellaElements) {
             return option.getDefaultValue();
         }
 
         @Override
         public Set<String> getContainedNamespaces(ConfigNamespace umbrella, String... umbrellaElements) {
-            return Sets.newHashSet();
+            return new HashSet<>();
         }
 
         @Override
         public Map<String, Object> getSubset(ConfigNamespace umbrella, String... umbrellaElements) {
-            return Maps.newHashMap();
+            return new HashMap<>();
         }
 
         @Override

@@ -133,14 +133,6 @@ public interface CQLConfigOptions {
             ConfigOption.Type.FIXED,
             String[].class);
 
-    ConfigOption<Boolean> CF_COMPACT_STORAGE = new ConfigOption<>(
-            CQL_NS,
-            "compact-storage",
-            "Whether the storage backend should use compact storage on tables. This option is only available for Cassandra 2 and earlier and defaults to true.",
-            ConfigOption.Type.FIXED,
-            Boolean.class,
-            true);
-
     // Compression
     ConfigOption<Boolean> CF_COMPRESSION = new ConfigOption<>(
             CQL_NS,
@@ -213,10 +205,22 @@ public interface CQLConfigOptions {
             "ssl",
             "Configuration options for SSL");
 
+    ConfigNamespace SSL_KEYSTORE_NS = new ConfigNamespace(
+            SSL_NS, 
+            "keystore", 
+            "Configuration options for SSL Keystore.");
+
     ConfigNamespace SSL_TRUSTSTORE_NS = new ConfigNamespace(
             SSL_NS,
             "truststore",
             "Configuration options for SSL Truststore.");
+
+    ConfigOption<Boolean> SSL_CLIENT_AUTHENTICATION_ENABLED = new ConfigOption<>(
+            SSL_NS,
+            "client-authentication-enabled",
+            "Enables use of a client key to authenticate with Cassandra",
+            ConfigOption.Type.LOCAL,
+            false);
 
     ConfigOption<Boolean> SSL_ENABLED = new ConfigOption<>(
             SSL_NS,
@@ -225,6 +229,27 @@ public interface CQLConfigOptions {
             ConfigOption.Type.LOCAL,
             false);
 
+    ConfigOption<String> SSL_KEYSTORE_LOCATION = new ConfigOption<>(
+            SSL_KEYSTORE_NS,
+            "location",
+            "Marks the location of the SSL Keystore.",
+            ConfigOption.Type.LOCAL,
+            "");
+    
+    ConfigOption<String> SSL_KEYSTORE_KEY_PASSWORD = new ConfigOption<>(
+            SSL_KEYSTORE_NS,
+            "keypassword",
+            "The password to access the key in SSL Keystore.",
+            ConfigOption.Type.LOCAL,
+            "");
+    
+    ConfigOption<String> SSL_KEYSTORE_STORE_PASSWORD = new ConfigOption<>(
+            SSL_KEYSTORE_NS,
+            "storepassword",
+            "The password to access the SSL Keystore.",
+            ConfigOption.Type.LOCAL,
+            "");
+    
     ConfigOption<String> SSL_TRUSTSTORE_LOCATION = new ConfigOption<>(
             SSL_TRUSTSTORE_NS,
             "location",

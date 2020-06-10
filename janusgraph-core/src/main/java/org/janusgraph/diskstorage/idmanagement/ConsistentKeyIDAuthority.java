@@ -25,13 +25,12 @@ import java.util.Random;
 
 import org.janusgraph.diskstorage.*;
 import org.janusgraph.diskstorage.util.*;
-import org.janusgraph.diskstorage.util.time.Timer;
+import org.janusgraph.util.StringUtils;
 import org.janusgraph.util.stats.NumberUtil;
 import org.janusgraph.diskstorage.util.time.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 
 import org.janusgraph.diskstorage.configuration.Configuration;
@@ -237,7 +236,8 @@ public class ConsistentKeyIDAuthority extends AbstractIDAuthority implements Bac
                         exhaustedUniquePIDs.add(uniquePID);
                         if (exhaustedUniquePIDs.size() == randomUniqueIDLimit)
                             throw new IDPoolExhaustedException(String.format("Exhausted %d uniqueid(s) on partition(%d)-namespace(%d): %s",
-                                    exhaustedUniquePIDs.size(), partition, idNamespace, Joiner.on(",").join(exhaustedUniquePIDs)));
+                                exhaustedUniquePIDs.size(), partition, idNamespace,
+                                StringUtils.join(exhaustedUniquePIDs, ",")));
                         else
                             throw new UniqueIDExhaustedException(
                                     String.format("Exhausted ID partition(%d)-namespace(%d) with uniqueid %d (uniqueid attempt %d/%d)",
@@ -263,8 +263,9 @@ public class ConsistentKeyIDAuthority extends AbstractIDAuthority implements Bac
                     },this,times);
                     writeTimer.stop();
 
+                    final boolean distributed = manager.getFeatures().isDistributed();
                     Duration writeElapsed = writeTimer.elapsed();
-                    if (idApplicationWaitMS.compareTo(writeElapsed) < 0) {
+                    if (idApplicationWaitMS.compareTo(writeElapsed) < 0 && distributed) {
                         throw new TemporaryBackendException("Wrote claim for id block [" + nextStart + ", " + nextEnd + ") in " + (writeElapsed) + " => too slow, threshold is: " + idApplicationWaitMS);
                     } else {
 
@@ -276,7 +277,9 @@ public class ConsistentKeyIDAuthority extends AbstractIDAuthority implements Bac
                          * the same id block from another machine
                          */
 
-                        sleepAndConvertInterrupts(idApplicationWaitMS.plus(waitGracePeriod));
+                        if (distributed) {
+                            sleepAndConvertInterrupts(idApplicationWaitMS.plus(waitGracePeriod));
+                        }
 
                         // Read all id allocation claims on this partition, for the counter value we're claiming
                         final List<Entry> blocks = BackendOperation.execute(

@@ -14,6 +14,7 @@
 
 package org.janusgraph.diskstorage.berkeleyje;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.sleepycat.je.*;
 import org.janusgraph.diskstorage.BackendException;
@@ -29,8 +30,12 @@ import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.NoSuchElementException;
 
 public class BerkeleyJEKeyValueStore implements OrderedKeyValueStore {
@@ -38,6 +43,9 @@ public class BerkeleyJEKeyValueStore implements OrderedKeyValueStore {
     private static final Logger log = LoggerFactory.getLogger(BerkeleyJEKeyValueStore.class);
 
     private static final StaticBuffer.Factory<DatabaseEntry> ENTRY_FACTORY = (array, offset, limit) -> new DatabaseEntry(array,offset,limit-offset);
+
+    @VisibleForTesting
+    public static Function<Integer, Integer> ttlConverter = ttl -> (int) Math.max(1, Duration.of(ttl, ChronoUnit.SECONDS).toHours());
 
 
     private final Database db;
@@ -100,9 +108,9 @@ public class BerkeleyJEKeyValueStore implements OrderedKeyValueStore {
 
             log.trace("db={}, op=get, tx={}", name, txh);
 
-            OperationStatus status = db.get(tx, databaseKey, data, getLockMode(txh));
+            OperationResult result = db.get(tx, databaseKey, data, Get.SEARCH, getReadOptions(txh));
 
-            if (status == OperationStatus.SUCCESS) {
+            if (result != null) {
                 return getBuffer(data);
             } else {
                 return null;
@@ -162,9 +170,9 @@ public class BerkeleyJEKeyValueStore implements OrderedKeyValueStore {
                 }
                 while (!selector.reachedLimit()) {
                     if (status == null) {
-                        status = cursor.getSearchKeyRange(foundKey, foundData, getLockMode(txh));
+                        status = cursor.get(foundKey, foundData, Get.SEARCH_GTE, getReadOptions(txh)) == null ? OperationStatus.NOTFOUND : OperationStatus.SUCCESS;
                     } else {
-                        status = cursor.getNext(foundKey, foundData, getLockMode(txh));
+                        status = cursor.get(foundKey, foundData, Get.NEXT, getReadOptions(txh)) == null ? OperationStatus.NOTFOUND : OperationStatus.SUCCESS;
                     }
                     if (status != OperationStatus.SUCCESS) {
                         break;
@@ -201,34 +209,35 @@ public class BerkeleyJEKeyValueStore implements OrderedKeyValueStore {
     }
 
     @Override
-    public void insert(StaticBuffer key, StaticBuffer value, StoreTransaction txh) throws BackendException {
-        insert(key, value, txh, true);
+    public void insert(StaticBuffer key, StaticBuffer value, StoreTransaction txh, Integer ttl) throws BackendException {
+        insert(key, value, txh, true, ttl);
     }
 
-    public void insert(StaticBuffer key, StaticBuffer value, StoreTransaction txh, boolean allowOverwrite) throws BackendException {
+    public void insert(StaticBuffer key, StaticBuffer value, StoreTransaction txh, boolean allowOverwrite, Integer ttl) throws BackendException {
         Transaction tx = getTransaction(txh);
-        try {
-            OperationStatus status;
+        OperationStatus status;
 
-            log.trace("db={}, op=insert, tx={}", name, txh);
+        log.trace("db={}, op=insert, tx={}", name, txh);
 
-            if (allowOverwrite)
-                status = db.put(tx, key.as(ENTRY_FACTORY), value.as(ENTRY_FACTORY));
-            else
-                status = db.putNoOverwrite(tx, key.as(ENTRY_FACTORY), value.as(ENTRY_FACTORY));
+        WriteOptions writeOptions = getWriteOptions(txh);
 
-            if (status != OperationStatus.SUCCESS) {
-                if (status == OperationStatus.KEYEXIST) {
-                    throw new PermanentBackendException("Key already exists on no-overwrite.");
-                } else {
-                    throw new PermanentBackendException("Could not write entity, return status: " + status);
-                }
-            }
-        } catch (DatabaseException e) {
-            throw new PermanentBackendException(e);
+        if (ttl != null && ttl > 0) {
+            int convertedTtl = ttlConverter.apply(ttl);
+            writeOptions.setTTL(convertedTtl, TimeUnit.HOURS);
+        }
+        if (allowOverwrite) {
+            OperationResult result = db.put(tx, key.as(ENTRY_FACTORY), value.as(ENTRY_FACTORY), Put.OVERWRITE, writeOptions);
+            EnvironmentFailureException.assertState(result != null);
+            status = OperationStatus.SUCCESS;
+        } else {
+            OperationResult result = db.put(tx, key.as(ENTRY_FACTORY), value.as(ENTRY_FACTORY), Put.NO_OVERWRITE, writeOptions);
+            status = result == null ? OperationStatus.KEYEXIST : OperationStatus.SUCCESS;
+        }
+
+        if (status != OperationStatus.SUCCESS) {
+            throw new PermanentBackendException("Key already exists on no-overwrite.");
         }
     }
-
 
     @Override
     public void delete(StaticBuffer key, StoreTransaction txh) throws BackendException {
@@ -249,7 +258,12 @@ public class BerkeleyJEKeyValueStore implements OrderedKeyValueStore {
         return new StaticArrayBuffer(entry.getData(),entry.getOffset(),entry.getOffset()+entry.getSize());
     }
 
-    private static LockMode getLockMode(StoreTransaction txh) {
-        return ((BerkeleyJETx)txh).getLockMode();
+    private WriteOptions getWriteOptions(final StoreTransaction txh) {
+        return new WriteOptions().setCacheMode(((BerkeleyJETx) txh).getCacheMode());
+    }
+
+    private ReadOptions getReadOptions(final StoreTransaction txh) {
+        return new ReadOptions().setCacheMode(((BerkeleyJETx) txh).getCacheMode())
+                                .setLockMode(((BerkeleyJETx) txh).getLockMode());
     }
 }

@@ -56,7 +56,7 @@ import org.janusgraph.diskstorage.util.DefaultTransaction;
 import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
 import static org.janusgraph.diskstorage.configuration.ConfigOption.disallowEmpty;
 
-import org.janusgraph.graphdb.database.serialize.AttributeUtil;
+import org.janusgraph.graphdb.database.serialize.AttributeUtils;
 import org.janusgraph.graphdb.query.JanusGraphPredicate;
 import org.janusgraph.graphdb.query.condition.And;
 import org.janusgraph.graphdb.query.condition.Condition;
@@ -72,6 +72,7 @@ import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -122,12 +123,24 @@ public class ElasticSearchIndex implements IndexProvider {
             "configured to use already exists, then this setting has no effect.", ConfigOption.Type.MASKABLE, 200L);
 
     public static final ConfigNamespace ES_CREATE_EXTRAS_NS =
-            new ConfigNamespace(ES_CREATE_NS, "ext", "Overrides for arbitrary settings applied at index creation", true);
+            new ConfigNamespace(ES_CREATE_NS, "ext", "Overrides for arbitrary settings applied at index creation.\n" +
+            		"See [Elasticsearch](../index-backend/elasticsearch.md#index-creation-options), The full list of possible setting is available at " + 
+            		"[Elasticsearch index settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules.html#index-modules-settings).");
 
     public static final ConfigOption<Boolean> USE_EXTERNAL_MAPPINGS =
             new ConfigOption<>(ES_CREATE_NS, "use-external-mappings",
             "Whether JanusGraph should make use of an external mapping when registering an index.", ConfigOption.Type.MASKABLE, false);
 
+    public static final ConfigOption<Integer> NUMBER_OF_REPLICAS =
+            new ConfigOption<>(ES_CREATE_EXTRAS_NS, "number_of_replicas",
+            "The number of replicas each primary shard has", ConfigOption.Type.MASKABLE, 1);
+
+    public static final ConfigOption<Integer> NUMBER_OF_SHARDS =
+            new ConfigOption<>(ES_CREATE_EXTRAS_NS, "number_of_shards",
+            "The number of primary shards that an index should have." +
+            "Default value is 5 on ES 6 and 1 on ES 7", ConfigOption.Type.MASKABLE, Integer.class);
+
+    
     public static final ConfigOption<Boolean> ALLOW_MAPPING_UPDATE =
             new ConfigOption<>(ES_CREATE_NS, "allow-mapping-update",
             "Whether JanusGraph should allow a mapping update when registering an index. " +
@@ -243,6 +256,12 @@ public class ElasticSearchIndex implements IndexProvider {
         new ConfigOption<>(ELASTICSEARCH_NS, "retry_on_conflict",
             "Specify how many times should the operation be retried when a conflict occurs.", ConfigOption.Type.MASKABLE, 0);
 
+    public static final ConfigOption<Boolean> ENABLE_INDEX_STORE_NAMES_CACHE =
+        new ConfigOption<>(ELASTICSEARCH_NS, "enable_index_names_cache",
+            "Enables cache for generated index store names. " +
+                "It is recommended to always enable index store names cache unless you have more then 50000 indexes " +
+                "per index store.", ConfigOption.Type.MASKABLE, true);
+
     public static final int HOST_PORT_DEFAULT = 9200;
 
     /**
@@ -277,7 +296,7 @@ public class ElasticSearchIndex implements IndexProvider {
             "    }",
             "}");
 
-    private static final String INDEX_NAME_SEPARATOR = "_";
+    static final String INDEX_NAME_SEPARATOR = "_";
     private static final String SCRIPT_ID_SEPARATOR = "-";
 
     private static final String MAX_OPEN_SCROLL_CONTEXT_PARAMETER = "search.max_open_scroll_context";
@@ -289,9 +308,9 @@ public class ElasticSearchIndex implements IndexProvider {
     private static final Parameter[] TRACK_TOTAL_HITS_DISABLED_PARAMETERS = new Parameter[]{new Parameter<>(TRACK_TOTAL_HITS_PARAMETER, false)};
     private static final Map<String, Object> TRACK_TOTAL_HITS_DISABLED_REQUEST_BODY = ImmutableMap.of(TRACK_TOTAL_HITS_PARAMETER, false);
 
-    private static final Map<String, String> INDEX_STORE_NAMES_CACHE = new ConcurrentHashMap<>();
-    private static final int CACHE_LIMIT_TO_DISABLE = 50000;
-    private static volatile boolean indexStoreNameCacheEnabled = true;
+    private final Function<String, String> generateIndexStoreNameFunction = this::generateIndexStoreName;
+    private final Map<String, String> indexStoreNamesCache = new ConcurrentHashMap<>();
+    private final boolean indexStoreNameCacheEnabled;
 
     private final AbstractESCompat compat;
     private final ElasticSearchClient client;
@@ -318,6 +337,7 @@ public class ElasticSearchIndex implements IndexProvider {
         createSleep = config.get(CREATE_SLEEP);
         ingestPipelines = config.getSubset(ES_INGEST_PIPELINES);
         useMappingForES7 = config.get(USE_MAPPING_FOR_ES7);
+        indexStoreNameCacheEnabled = config.get(ENABLE_INDEX_STORE_NAMES_CACHE);
         batchSize = config.get(INDEX_MAX_RESULT_SET_SIZE);
         log.debug("Configured ES query nb result by query to {}", batchSize);
 
@@ -463,23 +483,7 @@ public class ElasticSearchIndex implements IndexProvider {
     private String getIndexStoreName(String store) {
 
         if(indexStoreNameCacheEnabled){
-
-            String cachedName = INDEX_STORE_NAMES_CACHE.get(store);
-
-            if(cachedName != null){
-                return cachedName;
-            }
-
-            cachedName = generateIndexStoreName(store);
-
-            if(INDEX_STORE_NAMES_CACHE.size() < CACHE_LIMIT_TO_DISABLE){
-                INDEX_STORE_NAMES_CACHE.put(store, cachedName);
-            } else {
-                indexStoreNameCacheEnabled = false;
-                INDEX_STORE_NAMES_CACHE.clear();
-            }
-
-            return cachedName;
+            return indexStoreNamesCache.computeIfAbsent(store, generateIndexStoreNameFunction);
         }
 
         return generateIndexStoreName(store);
@@ -490,8 +494,8 @@ public class ElasticSearchIndex implements IndexProvider {
                          BaseTransaction tx) throws BackendException {
         final Class<?> dataType = information.getDataType();
         final Mapping map = Mapping.getMapping(information);
-        Preconditions.checkArgument(map==Mapping.DEFAULT || AttributeUtil.isString(dataType) ||
-                (map==Mapping.PREFIX_TREE && AttributeUtil.isGeo(dataType)),
+        Preconditions.checkArgument(map==Mapping.DEFAULT || AttributeUtils.isString(dataType) ||
+                (map==Mapping.PREFIX_TREE && AttributeUtils.isGeo(dataType)),
                 "Specified illegal mapping [%s] for data type [%s]",map,dataType);
         final String indexStoreName = getIndexStoreName(store);
         if (useExternalMappings) {
@@ -529,7 +533,7 @@ public class ElasticSearchIndex implements IndexProvider {
         final Class<?> dataType = information.getDataType();
         Mapping map = Mapping.getMapping(information);
         final Map<String,Object> properties = new HashMap<>();
-        if (AttributeUtil.isString(dataType)) {
+        if (AttributeUtils.isString(dataType)) {
             if (map==Mapping.DEFAULT) map=Mapping.TEXT;
             log.debug("Registering string type for {} with mapping {}", key, map);
             final String stringAnalyzer
@@ -629,14 +633,14 @@ public class ElasticSearchIndex implements IndexProvider {
     }
 
     private static Mapping getStringMapping(KeyInformation information) {
-        assert AttributeUtil.isString(information.getDataType());
+        assert AttributeUtils.isString(information.getDataType());
         Mapping map = Mapping.getMapping(information);
         if (map==Mapping.DEFAULT) map = Mapping.TEXT;
         return map;
     }
 
     private static boolean hasDualStringMapping(KeyInformation information) {
-        return AttributeUtil.isString(information.getDataType()) && getStringMapping(information)==Mapping.TEXTSTRING;
+        return AttributeUtils.isString(information.getDataType()) && getStringMapping(information)==Mapping.TEXTSTRING;
     }
 
     public Map<String, Object> getNewDocument(final List<IndexEntry> additions,
@@ -687,12 +691,12 @@ public class ElasticSearchIndex implements IndexProvider {
 
     private static Object convertToEsType(Object value, Mapping mapping) {
         if (value instanceof Number) {
-            if (AttributeUtil.isWholeNumber((Number) value)) {
+            if (AttributeUtils.isWholeNumber((Number) value)) {
                 return ((Number) value).longValue();
             } else { //double or float
                 return ((Number) value).doubleValue();
             }
-        } else if (AttributeUtil.isString(value)) {
+        } else if (AttributeUtils.isString(value)) {
             return value;
         } else if (value instanceof Geoshape) {
             return convertGeoshape((Geoshape) value, mapping);
@@ -1112,13 +1116,17 @@ public class ElasticSearchIndex implements IndexProvider {
                 compat.createRequestBody(sr, useScroll? NULL_PARAMETERS : TRACK_TOTAL_HITS_DISABLED_PARAMETERS),
                 useScroll);
             log.debug("First Executed query [{}] in {} ms", query.getCondition(), response.getTook());
-            final ElasticSearchScroll resultIterator = new ElasticSearchScroll(client, response, sr.getSize());
+            final Iterator<RawQuery.Result<String>> resultIterator = getResultsIterator(useScroll, response, sr.getSize());
             final Stream<RawQuery.Result<String>> toReturn
                     = StreamSupport.stream(Spliterators.spliteratorUnknownSize(resultIterator, Spliterator.ORDERED), false);
             return (query.hasLimit() ? toReturn.limit(query.getLimit()) : toReturn).map(RawQuery.Result::getResult);
         } catch (final IOException | UncheckedIOException e) {
             throw new PermanentBackendException(e);
         }
+    }
+
+    private Iterator<RawQuery.Result<String>> getResultsIterator(boolean useScroll, ElasticSearchResponse response, int windowSize){
+        return (useScroll)? new ElasticSearchScroll(client, response, windowSize) : response.getResults().iterator();
     }
 
     private String convertToEsDataType(Class<?> dataType, Mapping mapping) {
@@ -1206,9 +1214,10 @@ public class ElasticSearchIndex implements IndexProvider {
     public Stream<RawQuery.Result<String>> query(RawQuery query, KeyInformation.IndexRetriever information,
                                                  BaseTransaction tx) throws BackendException {
         final int size = query.hasLimit() ? Math.min(query.getLimit() + query.getOffset(), batchSize) : batchSize;
-        final ElasticSearchResponse response = runCommonQuery(query, information, tx, size, size >= batchSize );
+        final boolean useScroll = size >= batchSize;
+        final ElasticSearchResponse response = runCommonQuery(query, information, tx, size, useScroll);
         log.debug("First Executed query [{}] in {} ms", query.getQuery(), response.getTook());
-        final ElasticSearchScroll resultIterator = new ElasticSearchScroll(client, response, size);
+        final Iterator<RawQuery.Result<String>> resultIterator = getResultsIterator(useScroll, response, size);
         final Stream<RawQuery.Result<String>> toReturn
                 = StreamSupport.stream(Spliterators.spliteratorUnknownSize(resultIterator, Spliterator.ORDERED),
                 false).skip(query.getOffset());
@@ -1230,8 +1239,8 @@ public class ElasticSearchIndex implements IndexProvider {
     public boolean supports(KeyInformation information, JanusGraphPredicate janusgraphPredicate) {
         final Class<?> dataType = information.getDataType();
         final Mapping mapping = Mapping.getMapping(information);
-        if (mapping!=Mapping.DEFAULT && !AttributeUtil.isString(dataType) &&
-                !(mapping==Mapping.PREFIX_TREE && AttributeUtil.isGeo(dataType))) return false;
+        if (mapping!=Mapping.DEFAULT && !AttributeUtils.isString(dataType) &&
+                !(mapping==Mapping.PREFIX_TREE && AttributeUtils.isGeo(dataType))) return false;
 
         if (Number.class.isAssignableFrom(dataType)) {
             return janusgraphPredicate instanceof Cmp;
@@ -1242,7 +1251,7 @@ public class ElasticSearchIndex implements IndexProvider {
                 case PREFIX_TREE:
                     return janusgraphPredicate instanceof Geo;
             }
-        } else if (AttributeUtil.isString(dataType)) {
+        } else if (AttributeUtils.isString(dataType)) {
             switch(mapping) {
                 case DEFAULT:
                 case TEXT:
@@ -1272,10 +1281,10 @@ public class ElasticSearchIndex implements IndexProvider {
         if (Number.class.isAssignableFrom(dataType) || dataType == Date.class || dataType== Instant.class
                 || dataType == Boolean.class || dataType == UUID.class) {
             return mapping == Mapping.DEFAULT;
-        } else if (AttributeUtil.isString(dataType)) {
+        } else if (AttributeUtils.isString(dataType)) {
             return mapping == Mapping.DEFAULT || mapping == Mapping.STRING
                 || mapping == Mapping.TEXT || mapping == Mapping.TEXTSTRING;
-        } else if (AttributeUtil.isGeo(dataType)) {
+        } else if (AttributeUtils.isGeo(dataType)) {
             return mapping == Mapping.DEFAULT || mapping == Mapping.PREFIX_TREE;
         }
         return false;

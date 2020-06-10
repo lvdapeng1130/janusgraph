@@ -1,5 +1,4 @@
-Example Graph Configuration
-===========================
+# Example Graph Configuration
 
 This page illustrates a number of common graph configurations. Please
 refer to [Configuration Reference](configuration-reference.md) and the pages of the respective [storage backend](../storage-backend/index.md), [index backend](../index-backend/index.md) for more
@@ -8,9 +7,8 @@ information.
 Also, note that the JanusGraph distribution includes local configuration
 files in the `conf/` directory.
 
-BerkeleyDB
-----------
-```conf
+## BerkeleyDB
+```properties
 storage.backend=berkeleyje
 storage.directory=/tmp/graph
 
@@ -31,12 +29,10 @@ Elasticsearch internally and it will not be externally accessible since
 `local-mode` is enabled. Elasticsearch stores all data for the `search`
 index in `/tmp/searchindex`. Configuring an index backend is optional.
 
-Cassandra
----------
+## Cassandra
 
 ### Cassandra Remote
-
-```conf
+```properties
 storage.backend=cql
 storage.hostname=100.100.100.1, 100.100.100.2
 
@@ -57,31 +53,8 @@ cluster is running and accessible at the given IP addresses. Enabling
 Elasticsearch cluster as another node but only connects to it.
 Configuring an index backend is optional.
 
-### Embedded Cassandra
-
-```conf
-storage.backend=embeddedcassandra
-storage.conf-file=config/cassandra.yaml
-
-index.search.backend=elasticsearch
-index.search.directory=/tmp/searchindex
-index.search.elasticsearch.client-only=false
-index.search.elasticsearch.local-mode=true
-```
-
-This configuration file configures JanusGraph to start
-[Cassandra](../storage-backend/cassandra.md) internally embedded in JanusGraph and specifies
-the yaml configuration file for Cassandra. Cassandra is still accessible
-externally and can connect to other available Cassandra nodes to form a
-cluster as configured in the yaml file.
-
-The optional index backend configuration is identical to embedded index
-configuration described above.
-
-HBase
------
-
-```conf
+## HBase
+```properties
 storage.backend=hbase
 storage.hostname=127.0.0.1
 storage.port=2181

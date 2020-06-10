@@ -15,11 +15,10 @@
 package org.janusgraph.graphdb.transaction.addedrelations;
 
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import org.janusgraph.graphdb.internal.InternalRelation;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.Collections;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -31,7 +30,7 @@ public interface AddedRelationsContainer {
 
     boolean remove(InternalRelation relation);
 
-    List<InternalRelation> getView(Predicate<InternalRelation> filter);
+    Iterable<InternalRelation> getView(Predicate<InternalRelation> filter);
 
     boolean isEmpty();
 
@@ -55,8 +54,8 @@ public interface AddedRelationsContainer {
         }
 
         @Override
-        public List<InternalRelation> getView(Predicate<InternalRelation> filter) {
-            return ImmutableList.of();
+        public Iterable<InternalRelation> getView(Predicate<InternalRelation> filter) {
+            return Collections.emptyList();
         }
 
         @Override
@@ -66,7 +65,7 @@ public interface AddedRelationsContainer {
 
         @Override
         public Collection<InternalRelation> getAll() {
-            return ImmutableList.of();
+            return Collections.emptyList();
         }
     };
 

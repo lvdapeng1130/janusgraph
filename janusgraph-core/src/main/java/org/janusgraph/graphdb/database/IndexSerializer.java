@@ -22,13 +22,13 @@ import org.janusgraph.core.*;
 import org.janusgraph.core.schema.Parameter;
 import org.janusgraph.core.schema.SchemaStatus;
 import org.janusgraph.diskstorage.configuration.Configuration;
+import org.janusgraph.graphdb.database.serialize.InternalAttributeUtil;
 import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.internal.ElementCategory;
 import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.internal.OrderList;
-import org.janusgraph.graphdb.query.graph.GraphCentricQueryBuilder;
 import org.janusgraph.graphdb.query.graph.MultiKeySliceQuery;
 import org.janusgraph.diskstorage.*;
 import org.janusgraph.diskstorage.indexing.*;
@@ -38,13 +38,13 @@ import org.janusgraph.diskstorage.util.HashingUtil;
 import org.janusgraph.diskstorage.util.StaticArrayEntry;
 import org.janusgraph.graphdb.database.idhandling.VariableLong;
 import org.janusgraph.graphdb.database.management.ManagementSystem;
-import org.janusgraph.graphdb.database.serialize.AttributeUtil;
 import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.database.serialize.Serializer;
 import org.janusgraph.graphdb.query.graph.IndexQueryBuilder;
 import org.janusgraph.graphdb.query.JanusGraphPredicate;
 import org.janusgraph.graphdb.query.condition.*;
 import org.janusgraph.graphdb.query.graph.JointIndexQuery;
+import org.janusgraph.graphdb.query.index.IndexSelectionUtil;
 import org.janusgraph.graphdb.query.vertex.VertexCentricQueryBuilder;
 import org.janusgraph.graphdb.relations.RelationIdentifier;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
@@ -101,7 +101,7 @@ public class IndexSerializer {
         Preconditions.checkArgument(containsIndex(indexName), "Unknown backing index: %s", indexName);
         final String fieldname = configuration.get(INDEX_NAME_MAPPING,indexName)?key.name():keyID2Name(key);
         return mixedIndexes.get(indexName).mapKey2Field(fieldname,
-                new StandardKeyInformation(key,parameters));
+            new StandardKeyInformation(key,parameters));
     }
 
     public static void register(final MixedIndexType index, final PropertyKey key, final BackendTransaction tx) throws BackendException {
@@ -260,9 +260,9 @@ public class IndexSerializer {
 
     private static boolean indexAppliesTo(IndexType index, JanusGraphElement element) {
         return index.getElement().isInstance(element) &&
-                (!(index instanceof CompositeIndexType) || ((CompositeIndexType)index).getStatus()!=SchemaStatus.DISABLED) &&
-                (!index.hasSchemaTypeConstraint() ||
-                        index.getElement().matchesConstraint(index.getSchemaTypeConstraint(),element));
+            (!(index instanceof CompositeIndexType) || ((CompositeIndexType)index).getStatus()!=SchemaStatus.DISABLED) &&
+            (!index.hasSchemaTypeConstraint() ||
+                index.getElement().matchesConstraint(index.getSchemaTypeConstraint(),element));
     }
 
     public Collection<IndexUpdate> getIndexUpdates(InternalRelation relation) {
@@ -345,8 +345,9 @@ public class IndexSerializer {
         return new IndexUpdate<>(index, updateType, element2String(element), new IndexEntry(key2Field(index.getField(key)), value), element);
     }
 
-    public void reindexElement(JanusGraphElement element, MixedIndexType index, Map<String,Map<String,List<IndexEntry>>> documentsPerStore) {
-        if (!indexAppliesTo(index,element)) return;
+    public boolean reindexElement(JanusGraphElement element, MixedIndexType index, Map<String,Map<String,List<IndexEntry>>> documentsPerStore) {
+        if (!indexAppliesTo(index, element))
+            return false;
         final List<IndexEntry> entries = Lists.newArrayList();
         for (final ParameterIndexField field: index.getFieldKeys()) {
             final PropertyKey key = field.getFieldKey();
@@ -355,8 +356,10 @@ public class IndexSerializer {
                 element.values(key.name()).forEachRemaining(value->entries.add(new IndexEntry(key2Field(field), value)));
             }
         }
-        final Map<String, List<IndexEntry>> documents = documentsPerStore.computeIfAbsent(index.getStoreName(), k -> Maps.newHashMap());
-        getDocuments(documentsPerStore,index).put(element2String(element),entries);
+        if (entries.isEmpty())
+            return false;
+        getDocuments(documentsPerStore, index).put(element2String(element), entries);
+        return true;
     }
 
     private Map<String,List<IndexEntry>> getDocuments(Map<String,Map<String,List<IndexEntry>>> documentsPerStore, MixedIndexType index) {
@@ -365,7 +368,7 @@ public class IndexSerializer {
 
     public void removeElement(Object elementId, MixedIndexType index, Map<String,Map<String,List<IndexEntry>>> documentsPerStore) {
         Preconditions.checkArgument((index.getElement()==ElementCategory.VERTEX && elementId instanceof Long) ||
-                (index.getElement().isRelation() && elementId instanceof RelationIdentifier),"Invalid element id [%s] provided for index: %s",elementId,index);
+            (index.getElement().isRelation() && elementId instanceof RelationIdentifier),"Invalid element id [%s] provided for index: %s",elementId,index);
         getDocuments(documentsPerStore,index).put(element2String(elementId),Lists.newArrayList());
     }
 
@@ -452,13 +455,13 @@ public class IndexSerializer {
         final IndexField[] fields = index.getFieldKeys();
         if (indexAppliesTo(index,vertex)) {
             indexMatches(vertex,new RecordEntry[fields.length],matches,fields,0,false,
-                                            replaceKey,new RecordEntry(0,replaceValue,replaceKey));
+                replaceKey,new RecordEntry(0,replaceValue,replaceKey));
         }
         return matches;
     }
 
     private static IndexRecords indexMatches(JanusGraphVertex vertex, CompositeIndexType index,
-                                              boolean onlyLoaded, PropertyKey replaceKey, RecordEntry replaceValue) {
+                                             boolean onlyLoaded, PropertyKey replaceKey, RecordEntry replaceValue) {
         final IndexRecords matches = new IndexRecords();
         final IndexField[] fields = index.getFieldKeys();
         indexMatches(vertex,new RecordEntry[fields.length],matches,fields,0,onlyLoaded,replaceKey,replaceValue);
@@ -482,7 +485,7 @@ public class IndexSerializer {
             values = new ArrayList<>();
             Iterable<JanusGraphVertexProperty> props;
             if (onlyLoaded ||
-                    (!vertex.isNew() && IDManager.VertexIDType.PartitionedVertex.is(vertex.longId()))) {
+                (!vertex.isNew() && IDManager.VertexIDType.PartitionedVertex.is(vertex.longId()))) {
                 //going through transaction so we can query deleted vertices
                 final VertexCentricQueryBuilder qb = ((InternalVertex)vertex).tx().query(vertex);
                 qb.noPartitionRestriction().type(key);
@@ -544,18 +547,18 @@ public class IndexSerializer {
 
     public IndexQuery getQuery(final MixedIndexType index, final Condition condition, final OrderList orders) {
         final Condition newCondition = ConditionUtil.literalTransformation(condition,
-                new Function<Condition<JanusGraphElement>, Condition<JanusGraphElement>>() {
-                    @Nullable
-                    @Override
-                    public Condition<JanusGraphElement> apply(final Condition<JanusGraphElement> condition) {
-                        Preconditions.checkArgument(condition instanceof PredicateCondition);
-                        final PredicateCondition pc = (PredicateCondition) condition;
-                        final PropertyKey key = (PropertyKey) pc.getKey();
-                        return new PredicateCondition<>(key2Field(index, key), pc.getPredicate(), pc.getValue());
-                    }
-                });
+            new Function<Condition<JanusGraphElement>, Condition<JanusGraphElement>>() {
+                @Nullable
+                @Override
+                public Condition<JanusGraphElement> apply(final Condition<JanusGraphElement> condition) {
+                    Preconditions.checkArgument(condition instanceof PredicateCondition);
+                    final PredicateCondition pc = (PredicateCondition) condition;
+                    final PropertyKey key = (PropertyKey) pc.getKey();
+                    return new PredicateCondition<>(key2Field(index, key), pc.getPredicate(), pc.getValue());
+                }
+            });
         ImmutableList<IndexQuery.OrderEntry> newOrders = IndexQuery.NO_ORDER;
-        if (!orders.isEmpty() && GraphCentricQueryBuilder.indexCoversOrder(index,orders)) {
+        if (!orders.isEmpty() && IndexSelectionUtil.indexCoversOrder(index,orders)) {
             final ImmutableList.Builder<IndexQuery.OrderEntry> lb = ImmutableList.builder();
             for (int i = 0; i < orders.size(); i++) {
                 lb.add(new IndexQuery.OrderEntry(key2Field(index,orders.getKey(i)), orders.getOrder(i), orders.getKey(i).dataType()));
@@ -570,7 +573,7 @@ public class IndexSerializer {
     	Common code used by executeQuery and executeTotals
 	################################################### */
     private String createQueryString(IndexQueryBuilder query, final ElementCategory resultType,
-            final StandardJanusGraphTx transaction, MixedIndexType index) {
+                                     final StandardJanusGraphTx transaction, MixedIndexType index) {
         Preconditions.checkArgument(index.getElement()==resultType,"Index is not configured for the desired result type: %s",resultType);
         final String backingIndexName = index.getBackingIndexName();
         final IndexProvider indexInformation = (IndexProvider) mixedIndexes.get(backingIndexName);
@@ -591,8 +594,8 @@ public class IndexSerializer {
             final boolean quoteTerminated = qB.charAt(pos)=='"';
             if (quoteTerminated) pos++;
             while (pos<qB.length() &&
-                    (Character.isLetterOrDigit(qB.charAt(pos))
-                            || (quoteTerminated && qB.charAt(pos)!='"') || qB.charAt(pos) == '*' ) ) {
+                (Character.isLetterOrDigit(qB.charAt(pos))
+                    || (quoteTerminated && qB.charAt(pos)!='"') || qB.charAt(pos) == '*' ) ) {
                 keyBuilder.append(qB.charAt(pos));
                 pos++;
             }
@@ -600,7 +603,7 @@ public class IndexSerializer {
             final int endPos = pos;
             final String keyName = keyBuilder.toString();
             Preconditions.checkArgument(StringUtils.isNotBlank(keyName),
-                    "Found reference to empty key at position [%s]",startPos);
+                "Found reference to empty key at position [%s]",startPos);
             String replacement;
             if(keyName.equals("*")) {
                 replacement = indexInformation.getFeatures().getWildcardField();
@@ -609,11 +612,11 @@ public class IndexSerializer {
                 final PropertyKey key = transaction.getPropertyKey(keyName);
                 Preconditions.checkNotNull(key);
                 Preconditions.checkArgument(index.indexesKey(key),
-                        "The used key [%s] is not indexed in the targeted index [%s]",key.name(),query.getIndex());
+                    "The used key [%s] is not indexed in the targeted index [%s]",key.name(),query.getIndex());
                 replacement = key2Field(index,key);
             } else {
                 Preconditions.checkArgument(query.getUnknownKeyName()!=null,
-                        "Found reference to nonexistent property key in query at position [%s]: %s",startPos,keyName);
+                    "Found reference to nonexistent property key in query at position [%s]: %s",startPos,keyName);
                 replacement = query.getUnknownKeyName();
             }
             Preconditions.checkArgument(StringUtils.isNotBlank(replacement));
@@ -651,7 +654,7 @@ public class IndexSerializer {
     }
 
     public Stream<RawQuery.Result> executeQuery(IndexQueryBuilder query, final ElementCategory resultType,
-                                                  final BackendTransaction backendTx, final StandardJanusGraphTx transaction) {
+                                                final BackendTransaction backendTx, final StandardJanusGraphTx transaction) {
         final MixedIndexType index = getMixedIndex(query.getIndex(), transaction);
         final String queryStr = createQueryString(query, resultType, transaction, index);
         ImmutableList<IndexQuery.OrderEntry> orders = getOrders(query, resultType, transaction, index);
@@ -662,7 +665,7 @@ public class IndexSerializer {
     }
 
     public Long executeTotals(IndexQueryBuilder query, final ElementCategory resultType,
-            final BackendTransaction backendTx, final StandardJanusGraphTx transaction) {
+                              final BackendTransaction backendTx, final StandardJanusGraphTx transaction) {
         final MixedIndexType index = getMixedIndex(query.getIndex(), transaction);
         final String queryStr = createQueryString(query, resultType, transaction, index);
         final RawQuery rawQuery = new RawQuery(index.getStoreName(),queryStr,query.getParameters());
@@ -733,7 +736,7 @@ public class IndexSerializer {
             final IndexField f = fields[i];
             final Object value = values[i];
             Preconditions.checkNotNull(value);
-            if (AttributeUtil.hasGenericDataType(f.getFieldKey())) {
+            if (InternalAttributeUtil.hasGenericDataType(f.getFieldKey())) {
                 out.writeClassAndObject(value);
             } else {
                 assert value.getClass().equals(f.getFieldKey().dataType()) : value.getClass() + " - " + f.getFieldKey().dataType();

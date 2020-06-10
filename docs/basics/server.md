@@ -15,6 +15,9 @@ Server from different languages refer to [Connecting to JanusGraph](../connectin
 
 ### Using the Pre-Packaged Distribution
 
+!!! note
+    Starting with 0.5.1, this is just included in the full package version.
+
 The JanusGraph
 [release](https://github.com/JanusGraph/janusgraph/releases) comes
 pre-configured to run JanusGraph Server out of the box leveraging a
@@ -40,7 +43,6 @@ together. To use this default configuration:
     reasons Elasticsearch and therefore `janusgraph.sh` must be run
     under a non-root account.
 
-<!-- -->
 ```bash
 $ bin/janusgraph.sh start
 Forking Cassandra...
@@ -82,18 +84,18 @@ The `:remote` command tells the console to configure a remote connection
 to Gremlin Server using the `conf/remote.yaml` file to connect. That
 file points to a Gremlin Server instance running on `localhost`. The
 `:>` is the "submit" command which sends the Gremlin on that line to the
-currently active remote. By default remote connections are sessionless,
+currently active remote.
+Instead of prefixing every single script with `:>`, the command `:remote console` can
+be executed once to implicitly send all subsequent scripts to the current remote connection.
+By default remote connections are sessionless,
 meaning that each line sent in the console is interpreted as a single
 request. Multiple statements can be sent on a single line using a
-semicolon as the delimiter. Alternately, you can establish a console
-with a session by specifying
-[session](https://tinkerpop.apache.org/docs/current/reference/#sessions)
-when creating the connection. A [console
-session](https://tinkerpop.apache.org/docs/current/reference/#console-sessions)
-allows you to reuse variables across several lines of input.
+semicolon as the delimiter.
 ```groovy
 gremlin> :remote connect tinkerpop.server conf/remote.yaml
 ==>Configured localhost/127.0.0.1:8182
+gremlin> :remote console
+==>All scripts will now be sent to Gremlin Server - [localhost/127.0.0.1:8182] - type ':remote console' to return to local mode
 gremlin> graph
 ==>standardjanusgraph[cql:[127.0.0.1]]
 gremlin> g
@@ -105,8 +107,18 @@ gremlin> graph.addVertex("name", user)
 No such property: user for class: Script21
 Type ':help' or ':h' for help.
 Display stack trace? [yN]
+```
+
+Alternatively, you can establish a console with a session by specifying
+[session](https://tinkerpop.apache.org/docs/{{ tinkerpop_version }}/reference/#sessions)
+when creating the connection. A [console
+session](https://tinkerpop.apache.org/docs/{{ tinkerpop_version }}/reference/#console-sessions)
+allows you to reuse variables across several lines of input.
+```groovy
 gremlin> :remote connect tinkerpop.server conf/remote.yaml session
 ==>Configured localhost/127.0.0.1:8182-[9acf239e-a3ed-4301-b33f-55c911e04052]
+gremlin> :remote console
+==>All scripts will now be sent to Gremlin Server - [localhost/127.0.0.1:8182]-[9acf239e-a3ed-4301-b33f-55c911e04052] - type ':remote console' to return to local mode
 gremlin> g.V()
 gremlin> user = "Chris"
 ==>Chris
@@ -155,7 +167,7 @@ environment, follow these steps:
     JanusGraph for various storage backends, see
     [Storage Backends](../storage-backend/index.md). Make sure the properties file contains the
     following line:
-```conf
+```properties
 gremlin.graph=org.janusgraph.core.JanusGraphFactory
 ```
 
@@ -199,7 +211,7 @@ bin/gremlin-server.sh ./conf/gremlin-server/socket-gremlin-server.yaml
 ```
  
 6.  The JanusGraph Server should now be running in WebSocket mode and
-    can be tested by following the instructions in [Connecting to Gremlin Server](#first-example-connecting-gremlin-server)
+    can be tested by following the instructions in [Connecting to Gremlin Server](../getting-started/installation.md)
 
 !!! Important
     Do not use `bin/janusgraph.sh`. That starts the default
@@ -223,7 +235,7 @@ steps:
     JanusGraph for various storage backends, see
     [Storage Backends](../storage-backend/index.md). Make sure the properties file contains the
     following line:
-```conf
+```properties
 gremlin.graph=org.janusgraph.core.JanusGraphFactory
 ```
 
@@ -433,7 +445,7 @@ instantiate `JanusGraph` objects.
 
 Create a file called `GREMLIN_SERVER_HOME/conf/janusgraph.properties`
 with the following contents:
-```conf
+```properties
 gremlin.graph=org.janusgraph.core.JanusGraphFactory
 storage.backend=berkeleyje
 storage.directory=db/berkeley

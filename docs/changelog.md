@@ -17,17 +17,214 @@ understand their supported versions. Users are strongly encouraged to
 use the latest versions of the software.
 
 ### Version Compatibility Matrix
+
+#### Currently supported
+All currently supported verions of JanusGraph are listed below. 
+
+!!! info
+    You are currently viewing the documentation page of JanusGraph version {{ latest_version }}. To ensure that the information below is up to date, please double check that this is not an archived version of the documentation.
+
+| JanusGraph | Storage Version | Cassandra | HBase | Bigtable | Elasticsearch | Solr | TinkerPop | Spark | Scala |
+| ----- | ---- | ---- | ---- | ---- | ---- | ---- | --- | ---- | ---- |
+| 0.5.z | 2 | 2.1.z, 2.2.z, 3.0.z, 3.11.z | 1.2.z, 1.3.z, 1.4.z, 2.1.z | 1.3.0, 1.4.0, 1.5.z, 1.6.z, 1.7.z, 1.8.z, 1.9.z, 1.10.z, 1.11.z, 1.14.z | 6.y, 7.y | 7.y | 3.4.z | 2.2.z | 2.11.z | 
+| 0.6.z | 2 | 3.0.z, 3.11.z | 1.2.z, 1.3.z, 1.4.z, 2.1.z | 1.3.0, 1.4.0, 1.5.z, 1.6.z, 1.7.z, 1.8.z, 1.9.z, 1.10.z, 1.11.z, 1.14.z | 6.y, 7.y | 7.y | 3.4.z | 2.2.z | 2.11.z | 
+
+#### End-of-Life
+The versions of JanusGraph listed below are outdated and will no longer receive bugfixes.
+
 | JanusGraph | Storage Version | Cassandra | HBase | Bigtable | Elasticsearch | Solr | TinkerPop | Spark | Scala |
 | ----- | ---- | ---- | ---- | ---- | ---- | ---- | --- | ---- | ---- |
 | 0.1.z| 1| 1.2.z, 2.0.z, 2.1.z| 0.98.z, 1.0.z, 1.1.z, 1.2.z| 0.9.z, 1.0.0-preZ, 1.0.0| 1.5.z| 5.2.z| 3.2.z| 1.6.z| 2.10.z| 
 | 0.2.z | 1 | 1.2.z, 2.0.z, 2.1.z, 2.2.z, 3.0.z, 3.11.z | 0.98.z, 1.0.z, 1.1.z, 1.2.z, 1.3.z | 0.9.z, 1.0.0-preZ, 1.0.0 | 1.5-1.7.z, 2.3-2.4.z, 5.y, 6.y | 5.2-5.5.z, 6.2-6.6.z, 7.y | 3.2.z | 1.6.z | 2.10.z | 
 | 0.3.z | 2 | 1.2.z, 2.0.z, 2.1.z, 2.2.z, 3.0.z, 3.11.z | 1.0.z, 1.1.z, 1.2.z, 1.3.z, 1.4.z | 1.0.0, 1.1.0, 1.1.2, 1.2.0, 1.3.0, 1.4.0 | 1.5-1.7.z, 2.3-2.4.z, 5.y, 6.y |  5.2-5.5.z, 6.2-6.6.z, 7.y | 3.3.z | 2.2.z | 2.11.z |
-| 0.4.z | 2 | 2.1.z, 2.2.z, 3.0.z, 3.11.z | 1.2.z, 1.3.z, 1.4.z, 2.1.z | 1.3.0, 1.4.0, 1.5.z, 1.6.z, 1.7.z, 1.8.z, 1.9.z, 1.10.z, 1.11.z | 5.y, 6.y | 7.y | 3.4.z | 2.2.z | 2.11.z |
-| 0.5.z | 2 | 2.1.z, 2.2.z, 3.0.z, 3.11.z | 1.2.z, 1.3.z, 1.4.z, 2.1.z | 1.3.0, 1.4.0, 1.5.z, 1.6.z, 1.7.z, 1.8.z, 1.9.z, 1.10.z, 1.11.z | 6.y, 7.y | 7.y | 3.4.z | 2.2.z | 2.11.z | 
+| 0.4.z | 2 | 2.1.z, 2.2.z, 3.0.z, 3.11.z | 1.2.z, 1.3.z, 1.4.z, 2.1.z | N/A | 5.y, 6.y | 7.y | 3.4.z | 2.2.z | 2.11.z |
 
 ## Release Notes
 
-### Version 0.5.0 (Release Date: July ?, 2019)
+### Version 0.6.0 (Release Date: X, 2020)
+
+```xml tab='Maven'
+<dependency>
+    <groupId>org.janusgraph</groupId>
+    <artifactId>janusgraph-core</artifactId>
+    <version>0.6.0</version>
+</dependency>
+```
+
+```groovy tab='Gradle'
+compile "org.janusgraph:janusgraph-core:0.6.0"
+```
+
+**Tested Compatibility:**
+
+* Apache Cassandra 2.2.10, 3.0.14, 3.11.0
+* Apache HBase 1.2.6, 1.3.1, 1.4.10, 2.1.5
+* Google Bigtable 1.3.0, 1.4.0, 1.5.0, 1.6.0, 1.7.0, 1.8.0, 1.9.0, 1.10.0, 1.11.0, 1.14.0
+* Oracle BerkeleyJE 7.5.11
+* Elasticsearch 6.0.1, 6.6.0, 7.6.2
+* Apache Lucene 7.0.0
+* Apache Solr 7.0.0
+* Apache TinkerPop 3.4.6
+* Java 1.8
+
+For more information on features and bug fixes in 0.6.0, see the GitHub milestone:
+
+-   <https://github.com/JanusGraph/janusgraph/milestone/17?closed=1>
+
+#### Upgrade Instructions
+
+##### Serialization of JanusGraph predicates has changed
+
+The serialization of JanusGraph predicates has changed in this version for both 
+GraphSON and Gryo. It is therefore necessary to update both the client and 
+the server to this version in parallel as the server will not be able to 
+deserialize a JanusGraph predicate that was serialized by a client prior 
+to version 0.6.0 once it was updated to version 0.6.0.
+
+##### GraphBinary is now supported
+
+[GraphBinary](http://tinkerpop.apache.org/docs/current/dev/io/#graphbinary) is a 
+new binary serialization format from TinkerPop that supersedes Gryo and it will 
+eventually also replace GraphSON. GraphBinary is language independent and has a 
+low serialization overhead which results in an improved performance.
+
+If you want to use GraphBinary, you have to add following to the `gremlin-server.yaml` 
+after the keyword `serializers`. This will add the support on the server site. 
+
+```yaml
+    - { className: org.apache.tinkerpop.gremlin.driver.ser.GraphBinaryMessageSerializerV1, 
+        config: { ioRegistries: [org.janusgraph.graphdb.tinkerpop.JanusGraphIoRegistry] }}
+    - { className: org.apache.tinkerpop.gremlin.driver.ser.GraphBinaryMessageSerializerV1, 
+        config: { serializeResultToString: true }}
+```
+!!! note 
+    The java driver is the only driver that currently supports GraphBinary, 
+    see [Connecting to JanusGraph using Java](connecting/java.md).
+
+##### New index selection algorithm
+In version 0.6.0, the index selection algorithm has changed. If the number of possible
+indexes for a query is small enough, the new algorithm will perform an exhaustive search
+to minimize the number of indexes which need to be queried. The default limit is set to 10.
+In order to maintain the old selection algorithm regardless of the available indexes, set
+the key `query.index-select-threshold` to `0`.
+For more information, see [Configuration Reference](basics/configuration-reference.md#query)
+    
+##### Removal of Cassandra Thrift support
+
+Thrift will be completely removed in Cassandra 4.
+All deprecated Cassandra Thrift backends were removed in JanusGraph 0.6.0.
+We already added support for CQL in JanusGraph 0.2.0 and we have been 
+encouraging users to switch from Thrift to CQL since version 0.2.1.
+
+This means that the following backends were removed: 
+`cassandrathrift`, `cassandra`, `astyanax`, and `embeddedcassandra`.
+Users who still use one of these Thrift backends should migrate to CQL.
+[Our migration guide](advanced-topics/migrating-thrift.md) explains the 
+necessary steps for this. The option to run Cassandra embedded 
+in the same JVM as JanusGraph is however no longer supported with CQL.
+
+!!! note 
+    The source code for the Thrift backends will be moved into a 
+    [dedicated repository](https://github.com/JanusGraph/janusgraph-cassandra).
+    While we do not support them any more, users can still use them 
+    if they for some reason cannot migrate to CQL.
+
+#### Drop support for Cassandra 2
+
+With the release of Cassandra 4, the support of Cassandra 2 will be dropped. 
+Therefore, you should upgrade to Cassandra 3 or higher.
+
+!!! note
+    Cassandra 3 and higher doesn't support compact storage. If you have activated 
+    or never changed the value of `storage.cql.storage-compact=true`, during the 
+    upgrade process you have to ensure your data is correctly migrated.
+
+### Version 0.5.2 (Release Date: May 3, 2020)
+
+```xml tab='Maven'
+<dependency>
+    <groupId>org.janusgraph</groupId>
+    <artifactId>janusgraph-core</artifactId>
+    <version>0.5.2</version>
+</dependency>
+```
+
+```groovy tab='Gradle'
+compile "org.janusgraph:janusgraph-core:0.5.2"
+```
+
+**Tested Compatibility:**
+
+* Apache Cassandra 2.2.10, 3.0.14, 3.11.0
+* Apache HBase 1.2.6, 1.3.1, 1.4.10, 2.1.5
+* Google Bigtable 1.3.0, 1.4.0, 1.5.0, 1.6.0, 1.7.0, 1.8.0, 1.9.0, 1.10.0, 1.11.0, 1.14.0
+* Oracle BerkeleyJE 7.5.11
+* Elasticsearch 6.0.1, 6.6.0, 7.6.2
+* Apache Lucene 7.0.0
+* Apache Solr 7.0.0
+* Apache TinkerPop 3.4.6
+* Java 1.8
+
+For more information on features and bug fixes in 0.5.2, see the GitHub milestone:
+
+-   <https://github.com/JanusGraph/janusgraph/milestone/19?closed=1>
+
+#### Upgrade Instructions
+
+##### ElasticSearch index store names cache now enabled for any amount of indexes per store
+
+In JanusGraph version `0.5.0` and `0.5.1` all ElasticSearch index store names are cached for efficient index store name 
+retrieval and the cache is disabled if there are more than `50000` indexes available per index store. 
+From JanusGraph version `0.5.2` index store names cache isn't limited to `50000` but instead can be disabled by using 
+a new added parameter `enable_index_names_cache`. It is still recommended to disable index store names cache if more 
+than `50000` indexes are used per index store.
+
+### Version 0.5.1 (Release Date: March 25, 2020)
+
+```xml tab='Maven'
+<dependency>
+    <groupId>org.janusgraph</groupId>
+    <artifactId>janusgraph-core</artifactId>
+    <version>0.5.1</version>
+</dependency>
+```
+
+```groovy tab='Gradle'
+compile "org.janusgraph:janusgraph-core:0.5.1"
+```
+
+**Tested Compatibility:**
+
+* Apache Cassandra 2.2.10, 3.0.14, 3.11.0
+* Apache HBase 1.2.6, 1.3.1, 1.4.10, 2.1.5
+* Google Bigtable 1.3.0, 1.4.0, 1.5.0, 1.6.0, 1.7.0, 1.8.0, 1.9.0, 1.10.0, 1.11.0, 1.14.0
+* Oracle BerkeleyJE 7.5.11
+* Elasticsearch 6.0.1, 6.6.0, 7.6.1
+* Apache Lucene 7.0.0
+* Apache Solr 7.0.0
+* Apache TinkerPop 3.4.6
+* Java 1.8
+
+For more information on features and bug fixes in 0.5.1, see the GitHub milestone:
+
+-   <https://github.com/JanusGraph/janusgraph/milestone/18?closed=1>
+
+#### Upgrade Instructions
+
+##### Two Distributed package is splitted into two version
+
+The default version of the distribution package does no longer contain the `janusgraph.sh`. 
+This includes a packaged version of cassandra and elasticsearch. If you want to have `janusgraph.sh`, 
+you have to download distribution with the suffix `-full`.
+
+##### Gremlin Server distributed with the release uses inmemory storage backend and no search backend by default
+
+Gremlin Server is by default configured for the inmemory storage backend and no search backend when started with 
+`bin/gremlin-server.sh`.  
+You can provide configuration for another storage backend and/or search backend by providing a path to the appropriate 
+configuration as a second parameter (`./bin/gremlin-server.sh ./conf/gremlin-server/[...].yaml`).
+
+### Version 0.5.0 (Release Date: March 10, 2020)
 
 ```xml tab='Maven'
 <dependency>
@@ -47,10 +244,10 @@ compile "org.janusgraph:janusgraph-core:0.5.0"
 * Apache HBase 1.2.6, 1.3.1, 1.4.10, 2.1.5
 * Google Bigtable 1.3.0, 1.4.0, 1.5.0, 1.6.0, 1.7.0, 1.8.0, 1.9.0, 1.10.0, 1.11.0
 * Oracle BerkeleyJE 7.5.11
-* Elasticsearch 6.0.1, 6.6.0, 7.3.1
+* Elasticsearch 6.0.1, 6.6.0, 7.6.1
 * Apache Lucene 7.0.0
 * Apache Solr 7.0.0
-* Apache TinkerPop 3.4.1
+* Apache TinkerPop 3.4.6
 * Java 1.8
 
 For more information on features and bug fixes in 0.5.0, see the GitHub milestone:
@@ -63,8 +260,27 @@ For more information on features and bug fixes in 0.5.0, see the GitHub mileston
 
 The distribution has no longer the suffix `-hadoop2`.
 
-##### ElasticSearch: Upgrade from 6.6.0 to 7.3.1 and drop support for 5.x version
-The ElasticSearch version has been changed to 7.3.1 which removes support for `max-retry-timeout` option. 
+##### Reorder dependency of Hadoop
+
+Hadoop is now a dependency of supported backends. Therefore, `MapReduceIndexJobs` is now split up into different classes:
+
+| Old Function | New Function |
+| ------------ | ------------ |
+|`MapReduceIndexJobs.cassandraRepair`|`CassandraMapReduceIndexJobsUtils.repair`| 
+|`MapReduceIndexJobs.cassandraRemove`|`CassandraMapReduceIndexJobsUtils.remove`|
+|`MapReduceIndexJobs.cqlRepair`|`CqlMapReduceIndexJobsUtils.repair`| 
+|`MapReduceIndexJobs.cqlRemove`|`CqlMapReduceIndexJobsUtils.remove`| 
+|`MapReduceIndexJobs.hbaseRepair`|`HBaseMapReduceIndexJobsUtils.repair`| 
+|`MapReduceIndexJobs.hbaseRemove`|`HBaseMapReduceIndexJobsUtils.remove`| 
+
+!!! note
+    Now, you can easily support for any backend.
+
+!!! warning
+    `Cassandra3InputFormat` is replaced by `CqlInputFormat`
+
+##### ElasticSearch: Upgrade from 6.6.0 to 7.6.1 and drop support for 5.x version
+The ElasticSearch version has been changed to 7.6.1 which removes support for `max-retry-timeout` option. 
 That is why this option no longer available in JanusGraph.
 Users should be aware that by default JanusGraph setups maximum open scroll contexts to maximum value of `2147483647` with the parameter `setup-max-open-scroll-contexts` for ElasticSearch 7.y. 
 This option can be disabled and updated manually in ElasticSearch
@@ -81,6 +297,49 @@ Parameter `use-deprecated-multitype-index` is no more supported by JanusGraph.
 ##### BerkeleyDB
 
 BerkeleyDB storage configured with [SHARED_CACHE](https://docs.oracle.com/cd/E17277_02/html/java/com/sleepycat/je/EnvironmentConfig.html#SHARED_CACHE) for better memory usage.
+
+##### Default logging location has changed
+
+If you are using `janusgraph.sh` to start your instance, the default logging has been changed from `log` to `logs`
+
+### Version 0.4.1 (Release Date: January 14, 2020)
+
+```xml tab='Maven'
+<dependency>
+    <groupId>org.janusgraph</groupId>
+    <artifactId>janusgraph-core</artifactId>
+    <version>0.4.1</version>
+</dependency>
+```
+
+```groovy tab='Gradle'
+compile "org.janusgraph:janusgraph-core:0.4.1"
+```
+
+**Tested Compatibility:**
+
+-   Apache Cassandra 2.2.10, 3.0.14, 3.11.0
+-   Apache HBase 1.2.6, 1.3.1, 1.4.10, 2.1.5
+-   Google Bigtable 1.3.0, 1.4.0, 1.5.0, 1.6.0, 1.7.0, 1.8.0, 1.9.0, 1.10.0, 1.11.0
+-   Oracle BerkeleyJE 7.5.11
+-   Elasticsearch 5.6.14, 6.0.1, 6.6.0
+-   Apache Lucene 7.0.0
+-   Apache Solr 7.0.0
+-   Apache TinkerPop 3.4.4
+-   Java 1.8
+
+For more information on features and bug fixes in 0.4.1, see the GitHub milestone:
+
+-   <https://github.com/JanusGraph/janusgraph/milestone/15?closed=1>
+
+#### Upgrade Instructions
+
+##### TinkerPop: Upgrade from 3.4.1 to 3.4.4
+
+Adding multiple values in the same query to a new vertex property without explicitly defined type 
+(i.e. using `Automatic Schema Maker` to create a property type) requires explicit usage of `VertexProperty.Cardinality` 
+for each call (only for the first query which defines a property) if the `VertexProperty.Cardinality` is different than 
+`VertexProperty.Cardinality.single`.
 
 ### Version 0.4.0 (Release Date: July 1, 2019)
 Legacy documentation: <https://old-docs.janusgraph.org/0.4.0/index.html>
@@ -139,6 +398,36 @@ The JanusGraph distribution contains a `solrconfig.xml` file that can be used to
 The value `luceneMatchVersion` in this config that tells Solr to behave according to that Lucene version was changed from 5.0.0 to 7.0.0 as that is the default version currently used by JanusGraph.
 Users should generally set this value to the version of their Solr installation.
 If the config distributed by JanusGraph is used for an existing Solr installation that used a lower version before (like 5.0.0 from a previous versions of this file), it is highly recommended that a re-indexing is performed.
+
+### Version 0.3.3 (Release Date: January 11, 2020)
+
+```xml tab='Maven'
+<dependency>
+    <groupId>org.janusgraph</groupId>
+    <artifactId>janusgraph-core</artifactId>
+    <version>0.3.3</version>
+</dependency>
+```
+
+```groovy tab='Gradle'
+compile "org.janusgraph:janusgraph-core:0.3.3"
+```
+
+**Tested Compatibility:**
+
+-   Apache Cassandra 2.1.20, 2.2.10, 3.0.14, 3.11.0
+-   Apache HBase 1.2.6, 1.3.1, 1.4.4
+-   Google Bigtable 1.0.0, 1.1.2, 1.2.0, 1.3.0, 1.4.0
+-   Oracle BerkeleyJE 7.4.5
+-   Elasticsearch 1.7.6, 2.4.6, 5.6.5, 6.0.1
+-   Apache Lucene 7.0.0
+-   Apache Solr 5.5.4, 6.6.1, 7.0.0
+-   Apache TinkerPop 3.3.3
+-   Java 1.8
+
+For more information on features and bug fixes in 0.3.3, see the GitHub milestone:
+
+-   <https://github.com/JanusGraph/janusgraph/milestone/14?closed=1>
 
 ### Version 0.3.2 (Release Date: June 16, 2019)
 Legacy documentation: <https://old-docs.janusgraph.org/0.3.2/index.html>
@@ -242,7 +531,7 @@ For more information on features and bug fixes in 0.3.0, see the GitHub mileston
 JanusGraph 0.3.0 implements [Schema Constraints](./basics/schema.md#schema-constraints) which made it necessary to also introduce the concept of a schema version. There is a check to prevent client connections that either expect a different schema version or have no concept of a schema version. To perform an upgrade, the configuration option `graph.allow-upgrade=true` must be set on each graph you wish to upgrade. The graph must be opened with a 0.3.0 or greater version of JanusGraph since older versions have no concept of `graph.storage-version` and will not allow for it to be set.
 
 Example excerpt from `janusgraph.properties` file
-```conf
+```properties
 # JanusGraph configuration sample: Cassandra over a socket
 #
 # This file connects to a Cassandra daemon running on localhost via
@@ -436,7 +725,7 @@ offers only a single configuration option using the REST client.
 The `TRANSPORT_CLIENT` interface has been replaced with `REST_CLIENT`.
 When migrating an existing graph to JanusGraph 0.2.0, the `interface`
 property must be set when connecting to the graph:
-```conf
+```properties
 index.search.backend=elasticsearch
 index.search.elasticsearch.interface=REST_CLIENT
 index.search.hostname=127.0.0.1
@@ -594,4 +883,4 @@ adjust your code and configuration accordingly:
     `JanusGraph` rather than `JanusGraphGraph`
 
 For more information on how to configure JanusGraph to read data which
-had previously been written by Titan refer to [Migration from titan](advanced-topics/migrating.md).
+had previously been written by Titan refer to [Migration from titan](advanced-topics/migrating-titan.md).

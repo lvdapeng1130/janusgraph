@@ -15,11 +15,11 @@
 package org.janusgraph.diskstorage.configuration;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -30,7 +30,7 @@ import java.util.Set;
 public class BasicConfiguration extends AbstractConfiguration {
 
     private static final Logger log =
-            LoggerFactory.getLogger(BasicConfiguration.class);
+        LoggerFactory.getLogger(BasicConfiguration.class);
 
     public enum Restriction { LOCAL, GLOBAL, NONE }
 
@@ -57,15 +57,15 @@ public class BasicConfiguration extends AbstractConfiguration {
 
 
     @Override
-    public boolean has(ConfigOption option, String... umbrellaElements) {
+    public boolean has(ConfigOption option, boolean includeRoot, String... umbrellaElements) {
         verifyOption(option);
-        return config.get(super.getPath(option,umbrellaElements),option.getDatatype())!=null;
+        return config.get(super.getPath(option, includeRoot, umbrellaElements),option.getDatatype())!=null;
     }
 
     @Override
-    public<O> O get(ConfigOption<O> option, String... umbrellaElements) {
+    public<O> O get(ConfigOption<O> option, boolean includeRoot, String... umbrellaElements) {
         verifyOption(option);
-        O result = config.get(super.getPath(option,umbrellaElements),option.getDatatype());
+        O result = config.get(super.getPath(option, includeRoot, umbrellaElements),option.getDatatype());
         return option.get(result);
     }
 
@@ -85,7 +85,7 @@ public class BasicConfiguration extends AbstractConfiguration {
     }
 
     public Map<ConfigElement.PathIdentifier,Object> getAll() {
-        Map<ConfigElement.PathIdentifier,Object> result = Maps.newHashMap();
+        Map<ConfigElement.PathIdentifier,Object> result = new HashMap<>();
 
         for (String key : config.getKeys("")) {
             Preconditions.checkArgument(StringUtils.isNotBlank(key));

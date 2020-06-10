@@ -41,6 +41,10 @@ import static org.janusgraph.diskstorage.cql.CQLConfigOptions.REPLICATION_STRATE
 import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_ENABLED;
 import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_TRUSTSTORE_LOCATION;
 import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_TRUSTSTORE_PASSWORD;
+import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_CLIENT_AUTHENTICATION_ENABLED;
+import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_KEYSTORE_LOCATION;
+import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_KEYSTORE_KEY_PASSWORD;
+import static org.janusgraph.diskstorage.cql.CQLConfigOptions.SSL_KEYSTORE_STORE_PASSWORD;
 import static org.janusgraph.diskstorage.cql.CQLConfigOptions.WRITE_CONSISTENCY;
 import static org.janusgraph.diskstorage.cql.CQLConfigOptions.USE_EXTERNAL_LOCKING;
 import static org.janusgraph.diskstorage.cql.CQLKeyColumnValueStore.EXCEPTION_MAPPER;
@@ -52,6 +56,7 @@ import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.ME
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.METRICS_SYSTEM_PREFIX_DEFAULT;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.buildGraphConfiguration;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.GRAPH_NAME;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.BASIC_METRICS;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -60,6 +65,7 @@ import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +78,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import javax.annotation.Resource;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
@@ -90,6 +98,7 @@ import org.janusgraph.diskstorage.keycolumnvalue.KeyRange;
 import org.janusgraph.diskstorage.keycolumnvalue.StandardStoreFeatures;
 import org.janusgraph.diskstorage.keycolumnvalue.StoreFeatures;
 import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
+import org.janusgraph.hadoop.CqlHadoopStoreManager;
 import org.janusgraph.util.system.NetworkUtil;
 
 import com.datastax.driver.core.BatchStatement;
@@ -137,7 +146,6 @@ public class CQLStoreManager extends DistributedStoreManager implements KeyColum
     private final String keyspace;
     private final int batchSize;
     private final boolean atomicBatch;
-    private final boolean allowCompactStorage;
 
     final ExecutorService executorService;
 
@@ -172,7 +180,6 @@ public class CQLStoreManager extends DistributedStoreManager implements KeyColum
 
         this.cluster = initializeCluster();
         this.session = initializeSession(this.keyspace);
-        this.allowCompactStorage = initializeCompactStorage();
 
         final Configuration global = buildGraphConfiguration()
                 .set(READ_CONSISTENCY, CONSISTENCY_QUORUM)
@@ -255,6 +262,16 @@ public class CQLStoreManager extends DistributedStoreManager implements KeyColum
 
         if (configuration.get(SSL_ENABLED)) {
             try {
+                KeyManager[] keyManagers = null;
+                if(configuration.get(SSL_CLIENT_AUTHENTICATION_ENABLED)) {
+                    try (final FileInputStream keyStoreStream = new FileInputStream(configuration.get(SSL_KEYSTORE_LOCATION))) {
+                        final KeyStore keystore = KeyStore.getInstance("jks");
+                        keystore.load(keyStoreStream, configuration.get(SSL_KEYSTORE_STORE_PASSWORD).toCharArray());
+                        final KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                        keyManagerFactory.init(keystore, configuration.get(SSL_KEYSTORE_KEY_PASSWORD).toCharArray());
+                        keyManagers = keyManagerFactory.getKeyManagers();
+                    }
+                }
                 final TrustManager[] trustManagers;
                 try (final FileInputStream keyStoreStream = new FileInputStream(configuration.get(SSL_TRUSTSTORE_LOCATION))) {
                     final KeyStore keystore = KeyStore.getInstance("jks");
@@ -265,16 +282,20 @@ public class CQLStoreManager extends DistributedStoreManager implements KeyColum
                 }
 
                 final SSLContext sslContext = SSLContext.getInstance("TLS");
-                sslContext.init(null, trustManagers, null);
+                sslContext.init(keyManagers, trustManagers, null);
 
                 final JdkSSLOptions sslOptions = JdkSSLOptions.builder()
                         .withSSLContext(sslContext)
                         .build();
                 builder.withSSL(sslOptions);
 
-            } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException | KeyManagementException e) {
+            } catch (UnrecoverableKeyException | NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException | KeyManagementException e) {
                 throw new PermanentBackendException("Error initialising SSL connection properties", e);
             }
+        }
+
+        if (!configuration.get(BASIC_METRICS)) {
+            builder.withoutMetrics();
         }
 
         // Build the PoolingOptions based on the configurations
@@ -324,23 +345,6 @@ public class CQLStoreManager extends DistributedStoreManager implements KeyColum
         return s;
     }
 
-    boolean initializeCompactStorage() throws PermanentBackendException {
-        try {
-            final ResultSet versionResultSet = this.session.execute(
-                select().column("release_version").from("system", "local") );
-            final String version = versionResultSet.one().getString(0);
-            final int major = Integer.parseInt(version.substring(0, version.indexOf(".")));
-            // starting with Cassandra 3 COMPACT STORAGE is deprecated and has no impact
-            return (major < 3);
-        } catch (NumberFormatException | NoHostAvailableException | QueryExecutionException | QueryValidationException e) {
-            throw new PermanentBackendException("Error determining Cassandra version", e);
-        }
-    }
-
-    boolean isCompactStorageAllowed() {
-        return this.allowCompactStorage;
-    }
-
     ExecutorService getExecutorService() {
         return this.executorService;
     }
@@ -366,10 +370,6 @@ public class CQLStoreManager extends DistributedStoreManager implements KeyColum
                 .getOrElseThrow(() -> new PermanentBackendException(String.format("Unknown keyspace '%s'", this.keyspace)));
         return Option.of(keyspaceMetadata.getTable(name))
                 .getOrElseThrow(() -> new PermanentBackendException(String.format("Unknown table '%s'", name)));
-    }
-
-    public String getPartitioner(){
-        return this.cluster.getMetadata().getPartitioner();
     }
 
     @Override
@@ -403,7 +403,7 @@ public class CQLStoreManager extends DistributedStoreManager implements KeyColum
     @Override
     public KeyColumnValueStore openDatabase(final String name, final Container metaData) throws BackendException {
         Supplier<Boolean> initializeTable = () -> Optional.ofNullable(this.cluster.getMetadata().getKeyspace(this.keyspace)).map(k -> k.getTable(name) == null).orElse(true);
-        return this.openStores.computeIfAbsent(name, n -> new CQLKeyColumnValueStore(this, n, getStorageConfig(), () -> this.openStores.remove(n), allowCompactStorage, initializeTable));
+        return this.openStores.computeIfAbsent(name, n -> new CQLKeyColumnValueStore(this, n, getStorageConfig(), () -> this.openStores.remove(n), initializeTable));
     }
 
     @Override
@@ -517,5 +517,10 @@ public class CQLStoreManager extends DistributedStoreManager implements KeyColum
     private String determineKeyspaceName(Configuration config) {
         if ((!config.has(KEYSPACE) && (config.has(GRAPH_NAME)))) return config.get(GRAPH_NAME);
         return config.get(KEYSPACE);
+    }
+
+    @Override
+    public Object getHadoopManager() {
+        return new CqlHadoopStoreManager(this.cluster);
     }
 }

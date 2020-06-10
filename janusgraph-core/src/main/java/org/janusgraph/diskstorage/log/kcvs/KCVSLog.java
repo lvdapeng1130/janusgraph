@@ -20,7 +20,6 @@ import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.diskstorage.*;
 import org.janusgraph.diskstorage.util.time.*;
 
-import org.janusgraph.graphdb.database.management.ManagementLogger;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.keycolumnvalue.*;
@@ -242,7 +241,7 @@ public class KCVSLog implements Log, BackendOperation.TransactionalProvider {
         this.times = config.get(TIMESTAMP_PROVIDER);
         this.keyConsistentOperations = config.get(LOG_KEY_CONSISTENT);
         this.numBuckets = config.get(LOG_NUM_BUCKETS);
-        Preconditions.checkArgument(numBuckets>=1 && numBuckets<=Integer.MAX_VALUE);
+        Preconditions.checkArgument(numBuckets >= 1);
 
         sendBatchSize = config.get(LOG_SEND_BATCH_SIZE);
         maxSendDelay = config.get(LOG_SEND_DELAY);
@@ -428,7 +427,7 @@ public class KCVSLog implements Log, BackendOperation.TransactionalProvider {
                 throw e;
             }
         } else if (outgoingMsg==null) {
-            sendMessages(ImmutableList.of(envelope));
+            sendMessages(Collections.singletonList(envelope));
         } else {
             try {
                 outgoingMsg.put(envelope); //Produces back pressure when full
@@ -484,7 +483,7 @@ public class KCVSLog implements Log, BackendOperation.TransactionalProvider {
                         muts.put(key,new KCVMutation(mutations.get(key),KeyColumnValueStore.NO_DELETIONS));
                         log.debug("Built mutation on key {} with {} additions", key, mutations.get(key).size());
                     }
-                    manager.storeManager.mutateMany(ImmutableMap.of(store.getName(),muts),txh);
+                    manager.storeManager.mutateMany(Collections.singletonMap(store.getName(),muts),txh);
                     log.debug("Wrote {} total envelopes with operation timestamp {}", msgEnvelopes.size(), txh.getConfiguration().getCommitTime());
                     return Boolean.TRUE;
                 }
@@ -741,6 +740,9 @@ public class KCVSLog implements Log, BackendOperation.TransactionalProvider {
                 }
                 messageTimeStart = messageTimeEnd;
             } catch (Throwable e) {
+                if (e.getCause() instanceof PermanentBackendException) {
+                    throw e;
+                }
                 log.warn("Could not read messages for timestamp ["+messageTimeStart+"] (this read will be retried)",e);
             }
         }
@@ -847,7 +849,7 @@ public class KCVSLog implements Log, BackendOperation.TransactionalProvider {
         Boolean status = BackendOperation.execute(new BackendOperation.Transactional<Boolean>() {
             @Override
             public Boolean call(StoreTransaction txh) throws BackendException {
-                store.mutate(key,ImmutableList.of(add),KeyColumnValueStore.NO_DELETIONS,txh);
+                store.mutate(key,Collections.singletonList(add),KeyColumnValueStore.NO_DELETIONS,txh);
                 return Boolean.TRUE;
             }
             @Override

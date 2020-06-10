@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.janusgraph</groupId>
         <artifactId>janusgraph</artifactId>
-        <version>0.5.0-SNAPSHOT</version>
+        <version>0.6.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>janusgraph-bigtable</artifactId>
@@ -17,7 +17,7 @@
     <dependencies>
         <dependency>
             <groupId>com.google.cloud.bigtable</groupId>
-            <artifactId>bigtable-hbase-1.x-shaded</artifactId>
+            <artifactId>bigtable-hbase-2.x-shaded</artifactId>
             <version>${bigtable.version}</version>
             <exclusions>
                   <exclusion>

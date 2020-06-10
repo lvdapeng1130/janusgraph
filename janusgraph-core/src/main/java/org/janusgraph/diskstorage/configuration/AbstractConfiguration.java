@@ -15,10 +15,10 @@
 package org.janusgraph.diskstorage.configuration;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -46,8 +46,12 @@ public abstract class AbstractConfiguration implements Configuration {
     }
 
     protected String getPath(ConfigElement option, String... umbrellaElements) {
+        return getPath(option, false, umbrellaElements);
+    }
+
+    protected String getPath(ConfigElement option, boolean includeRoot, String... umbrellaElements) {
         verifyElement(option);
-        return ConfigElement.getPath(option,umbrellaElements);
+        return ConfigElement.getPath(option, includeRoot, umbrellaElements);
     }
 
     protected Set<String> getContainedNamespaces(ReadConfiguration config, ConfigNamespace umbrella, String... umbrellaElements) {
@@ -55,7 +59,7 @@ public abstract class AbstractConfiguration implements Configuration {
         Preconditions.checkArgument(umbrella.isUmbrella());
 
         String prefix = ConfigElement.getPath(umbrella,umbrellaElements);
-        Set<String> result = Sets.newHashSet();
+        Set<String> result = new HashSet<>();
 
         for (String key : config.getKeys(prefix)) {
             Preconditions.checkArgument(key.startsWith(prefix));
@@ -73,7 +77,7 @@ public abstract class AbstractConfiguration implements Configuration {
         verifyElement(umbrella);
 
         String prefix = umbrella.isRoot() ? "" : ConfigElement.getPath(umbrella, umbrellaElements);
-        Map<String,Object> result = Maps.newHashMap();
+        Map<String,Object> result = new HashMap<>();
 
         for (String key : config.getKeys(prefix)) {
             Preconditions.checkArgument(key.startsWith(prefix));
@@ -102,19 +106,19 @@ public abstract class AbstractConfiguration implements Configuration {
             }
 
             @Override
-            public boolean has(ConfigOption option, String... umbrellaElements) {
+            public boolean has(ConfigOption option, boolean includeRoot, String... umbrellaElements) {
                 if (option.getNamespace().hasUmbrella())
-                    return config.has(option,concat(umbrellaElements));
+                    return config.has(option, includeRoot, concat(umbrellaElements));
                 else
-                    return config.has(option);
+                    return config.has(option, includeRoot);
             }
 
             @Override
-            public <O> O get(ConfigOption<O> option, String... umbrellaElements) {
+            public <O> O get(ConfigOption<O> option, boolean includeRoot, String... umbrellaElements) {
                 if (option.getNamespace().hasUmbrella())
-                    return config.get(option,concat(umbrellaElements));
+                    return config.get(option, includeRoot, concat(umbrellaElements));
                 else
-                    return config.get(option);
+                    return config.get(option, includeRoot);
             }
 
             @Override

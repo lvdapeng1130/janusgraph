@@ -38,7 +38,6 @@ import static io.vavr.API.$;
 import static io.vavr.API.Case;
 import static io.vavr.API.Match;
 import static io.vavr.Predicates.instanceOf;
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.CF_COMPACT_STORAGE;
 import static org.janusgraph.diskstorage.cql.CQLConfigOptions.CF_COMPRESSION;
 import static org.janusgraph.diskstorage.cql.CQLConfigOptions.CF_COMPRESSION_BLOCK_SIZE;
 import static org.janusgraph.diskstorage.cql.CQLConfigOptions.CF_COMPRESSION_TYPE;
@@ -46,6 +45,7 @@ import static org.janusgraph.diskstorage.cql.CQLConfigOptions.COMPACTION_OPTIONS
 import static org.janusgraph.diskstorage.cql.CQLConfigOptions.COMPACTION_STRATEGY;
 import static org.janusgraph.diskstorage.cql.CQLTransaction.getTransaction;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -54,7 +54,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import com.datastax.driver.core.PagingState;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.EntryList;
@@ -70,6 +69,7 @@ import org.janusgraph.diskstorage.keycolumnvalue.KeyRangeQuery;
 import org.janusgraph.diskstorage.keycolumnvalue.KeySliceQuery;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
+import org.janusgraph.diskstorage.util.RecordIterator;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.janusgraph.diskstorage.util.StaticArrayEntry.GetColVal;
 import org.janusgraph.diskstorage.util.StaticArrayEntryList;
@@ -147,10 +147,9 @@ public class CQLKeyColumnValueStore implements KeyColumnValueStore {
      * @param tableName the name of the database table for storing the key/column/values
      * @param configuration data used in creating this store
      * @param closer callback used to clean up references to this store in the store manager
-     * @param allowCompactStorage whether to use compact storage is allowed (true only for Cassandra 2 and earlier)
      * @param shouldInitializeTable if true is provided the table gets initialized
      */
-    public CQLKeyColumnValueStore(final CQLStoreManager storeManager, final String tableName, final Configuration configuration, final Runnable closer, final boolean allowCompactStorage, final Supplier<Boolean> shouldInitializeTable) {
+    public CQLKeyColumnValueStore(final CQLStoreManager storeManager, final String tableName, final Configuration configuration, final Runnable closer, final Supplier<Boolean> shouldInitializeTable) {
         this.storeManager = storeManager;
         this.executorService = this.storeManager.getExecutorService();
         this.tableName = tableName;
@@ -159,7 +158,7 @@ public class CQLKeyColumnValueStore implements KeyColumnValueStore {
         this.getter = new CQLColValGetter(storeManager.getMetaDataSchema(this.tableName));
 
         if(shouldInitializeTable.get()) {
-            initializeTable(this.session, this.storeManager.getKeyspaceName(), tableName, configuration, allowCompactStorage);
+            initializeTable(this.session, this.storeManager.getKeyspaceName(), tableName, configuration);
         }
 
         // @formatter:off
@@ -219,7 +218,7 @@ public class CQLKeyColumnValueStore implements KeyColumnValueStore {
         // @formatter:on
     }
 
-    private static void initializeTable(final Session session, final String keyspaceName, final String tableName, final Configuration configuration, final boolean allowCompactStorage) {
+    private static void initializeTable(final Session session, final String keyspaceName, final String tableName, final Configuration configuration) {
         final Options createTable = createTable(keyspaceName, tableName)
                 .ifNotExists()
                 .addPartitionKey(KEY_COLUMN_NAME, DataType.blob())
@@ -228,13 +227,8 @@ public class CQLKeyColumnValueStore implements KeyColumnValueStore {
                 .withOptions()
                 .compressionOptions(compressionOptions(configuration))
                 .compactionOptions(compactionOptions(configuration));
-        // COMPACT STORAGE is allowed on Cassandra 2 or earlier
-        // when COMPACT STORAGE is allowed, the default is to enable it
-        final boolean useCompactStorage =
-            (allowCompactStorage && configuration.has(CF_COMPACT_STORAGE))
-            ? configuration.get(CF_COMPACT_STORAGE)
-            : allowCompactStorage;
-        session.execute(useCompactStorage ? createTable.compactStorage() : createTable);
+
+        session.execute(createTable);
     }
 
     private static CompressionOptions compressionOptions(final Configuration configuration) {
@@ -316,17 +310,35 @@ public class CQLKeyColumnValueStore implements KeyColumnValueStore {
     }
 
     private static EntryList fromResultSet(final ResultSet resultSet, final GetColVal<Tuple3<StaticBuffer, StaticBuffer, Row>, StaticBuffer> getter) {
-        final Lazy<ArrayList<Row>> lazyList = Lazy.of(() -> Lists.newArrayList(resultSet));
-        // Use the Iterable overload of ofByteBuffer as it's able to allocate
-        // the byte array up front.
-        // To ensure that the Iterator instance is recreated, it is created
-        // within the closure otherwise
-        // the same iterator would be reused and would be exhausted.
-        return StaticArrayEntryList.ofStaticBuffer(() -> Iterator.ofAll(lazyList.get()).map(row -> Tuple.of(
-                        StaticArrayBuffer.of(row.getBytes(COLUMN_COLUMN_NAME)),
-                        StaticArrayBuffer.of(row.getBytes(VALUE_COLUMN_NAME)),
-                        row)),
-                getter);
+        return StaticArrayEntryList.ofStaticBuffer(new CQLResultSetIterator(resultSet), getter);
+    }
+
+    private static class CQLResultSetIterator implements RecordIterator<Tuple3<StaticBuffer, StaticBuffer, Row>> {
+
+        private java.util.Iterator<Row> resultSetIterator;
+
+        public CQLResultSetIterator(ResultSet rs) {
+            resultSetIterator = rs.iterator();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return resultSetIterator.hasNext();
+        }
+
+        @Override
+        public Tuple3<StaticBuffer, StaticBuffer, Row> next() {
+            Row nextRow = resultSetIterator.next();
+            return nextRow == null
+                ? null
+                : Tuple.of(StaticArrayBuffer.of(nextRow.getBytes(COLUMN_COLUMN_NAME)),
+                           StaticArrayBuffer.of(nextRow.getBytes(VALUE_COLUMN_NAME)), nextRow);
+        }
+
+        @Override
+        public void close() throws IOException {
+            // NOP
+        }
     }
 
     /*
@@ -427,7 +439,7 @@ public class CQLKeyColumnValueStore implements KeyColumnValueStore {
         private int paginatedResultSize;
         private final Supplier<Statement> statementSupplier;
 
-        private PagingState lastPagingState = null;
+        private byte[] lastPagingState = null;
 
         public CQLPagingIterator(final int pageSize, Supplier<Statement> statementSupplier) {
             this.index = 0;
@@ -448,7 +460,7 @@ public class CQLKeyColumnValueStore implements KeyColumnValueStore {
                 this.index = 0;
             }
             this.index++;
-            lastPagingState = currentResultSet.getExecutionInfo().getPagingState();
+            lastPagingState = currentResultSet.getExecutionInfo().getPagingStateUnsafe();
             return currentResultSet.one();
 
         }
@@ -456,7 +468,7 @@ public class CQLKeyColumnValueStore implements KeyColumnValueStore {
         private ResultSet getResultSet() {
             final Statement boundStmnt = statementSupplier.get();
             if (lastPagingState != null) {
-                boundStmnt.setPagingState(lastPagingState);
+                boundStmnt.setPagingStateUnsafe(lastPagingState);
             }
             return session.execute(boundStmnt);
         }

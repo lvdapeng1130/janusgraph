@@ -1,12 +1,10 @@
-Advanced Schema
-===============
+# Advanced Schema
 
 This page describes some of the advanced schema definition options that
 JanusGraph provides. For general information on JanusGraph’s schema and
 how to define it, refer to [Schema and Data Modeling](../basics/schema.md).
 
-Static Vertices
----------------
+## Static Vertices
 
 Vertex labels can be defined as **static** which means that vertices
 with that label cannot be modified outside the transaction in which they
@@ -21,8 +19,7 @@ Static vertex labels are a method of controlling the data lifecycle and
 useful when loading data into the graph that should not be modified
 after its creation.
 
-Edge and Vertex TTL
--------------------
+## Edge and Vertex TTL
 
 Edge and vertex labels can be configured with a **time-to-live (TTL)**.
 Edges and vertices with such labels will automatically be removed from
@@ -37,15 +34,15 @@ processing.
 
 The following storage backends support edge and vertex TTL.
 
--   Cassandra
-
+-   CQL compatible storage backends
 -   HBase
+-   BerkeleyDB - supports only hour-discrete TTL, thus the minimal TTL is one hour.
 
 ### Edge TTL
 
 Edge TTL is defined on a per-edge label basis, meaning that all edges of
 that label have the same time-to-live. Note that the backend must
-support cell level TTL. Currently only Cassandra and HBase support this.
+support cell level TTL. Currently only CQL, HBase and BerkeleyDB support this.
 ```groovy
 mgmt = graph.openManagement()
 visits = mgmt.makeEdgeLabel('visits').make()
@@ -64,7 +61,7 @@ same label.
 Property TTL is very similar to edge TTL and defined on a per-property
 key basis, meaning that all properties of that key have the same
 time-to-live. Note that the backend must support cell level TTL.
-Currently only Cassandra and HBase support this.
+Currently only CQL, HBase and BerkeleyDB support this.
 ```groovy
 mgmt = graph.openManagement()
 sensor = mgmt.makePropertyKey('sensor').cardinality(Cardinality.LIST).dataType(Double.class).make()
@@ -85,7 +82,7 @@ that the entire vertex is removed from the graph. For this reason, a
 vertex label must be defined as *static* before a TTL can be set to rule
 out any modifications that would invalidate the vertex TTL. Vertex TTL
 only applies to static vertex labels. Note that the backend must support
-store level TTL. Currently only Cassandra and HBase support this.
+store level TTL. Currently only CQL, HBase and BerkeleyDB support this.
 ```groovy
 mgmt = graph.openManagement()
 tweet = mgmt.makeVertexLabel('tweet').setStatic().make()
@@ -98,8 +95,7 @@ some time for this change to propagate to all running JanusGraph
 instances which means that two different TTLs can be temporarily in use
 for the same label.
 
-Multi-Properties
-----------------
+## Multi-Properties
 
 As discussed in [Schema and Data Modeling](../basics/schema.md), JanusGraph supports property keys with
 SET and LIST cardinality. Hence, JanusGraph supports multiple properties
@@ -132,8 +128,7 @@ properties in the same manner as they are supported for edges. Refer to
 use the corresponding API methods to define the same indexes for
 properties.
 
-Unidirected Edges
------------------
+## Unidirected Edges
 
 Unidirected edges are edges that can only be traversed in the out-going
 direction. Unidirected edges have a lower storage footprint but are

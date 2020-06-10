@@ -1,6 +1,4 @@
-
-Indexing for Better Performance
-===============================
+# Indexing for Better Performance
 
 JanusGraph supports two different kinds of indexing to speed up query
 processing: **graph indexes** and **vertex-centric indexes**. Most graph
@@ -10,8 +8,7 @@ retrieval operations efficient on large graphs. Vertex-centric indexes
 speed up the actual traversal through the graph, in particular when
 traversing through vertices with many incident edges.
 
-Graph Index
------------
+## Graph Index
 
 Graph indexes are global index structures over the entire graph which
 allow efficient retrieval of vertices or edges by their properties for
@@ -197,7 +194,7 @@ The mgmt.buildIndex example specified above uses text search as its
 default behavior. An index statement that explicitly defines the index
 as a text index can be written as follows:
 ```groovy
-mgmt.buildIndex('nameAndAge',Vertex.class).addKey(name,Mapping.TEXT.getParameter()).addKey(age,Mapping.TEXT.getParameter()).buildMixedIndex("search")
+mgmt.buildIndex('nameAndAge',Vertex.class).addKey(name,Mapping.TEXT.asParameter()).addKey(age,Mapping.TEXT.asParameter()).buildMixedIndex("search")
 ```
 
 See [Index Parameters and Full-Text Search](../index-backend/text-search.md) for more information on text and string
@@ -336,8 +333,7 @@ specified label.
     indexing. Also, using a mixed index can speed up the order().by()
     queries.
 
-Vertex-centric Indexes
-----------------------
+## Vertex-centric Indexes
 
 Vertex-centric indexes are local index structures built individually per
 vertex. In large graphs vertices can have thousands of incident edges.
@@ -348,7 +344,7 @@ can speed up such traversals by using localized index structures to
 retrieve only those edges that need to be traversed.
 
 Suppose that Hercules battled hundreds of monsters in addition to the
-three captured in the introductory [Graph of the Gods](../index.md#getting-started). Without a vertex-centric index, a query asking
+three captured in the introductory [Graph of the Gods](../getting-started/basic-usage.md). Without a vertex-centric index, a query asking
 for those monsters battled between time point `10` and `20` would
 require retrieving all `battled` edges even though there are only a
 handful of matching edges.
@@ -369,7 +365,7 @@ battled = mgmt.getEdgeLabel('battled')
 mgmt.buildEdgeIndex(battled, 'battlesByTime', Direction.BOTH, Order.desc, time)
 mgmt.commit()
 //Wait for the index to become available
-ManagementSystem.awaitRelationIndexStatus(graph, 'battlesByTime').call()
+ManagementSystem.awaitRelationIndexStatus(graph, 'battlesByTime', 'battled').call()
 //Reindex the existing data
 mgmt = graph.openManagement()
 mgmt.updateIndex(mgmt.getRelationIndex(battled, "battlesByTime"), SchemaAction.REINDEX).get()
@@ -445,10 +441,10 @@ range/interval constraints.
     The types that are currently supported are `Boolean`, `UUID`, `Byte`, `Float`, `Long`, `String`, 
     `Integer`, `Date`, `Double`, `Character`, and `Short`
 
-If the vertex-centric index is built against an edge label that is
-defined in the same management transaction, the index will be
-immediately available for querying. If the edge label has already been
-in use, building a vertex-centric index against it requires the
+If the vertex-centric index is built against either an edge label or at least one
+property key that is defined in the same management transaction, the index will be
+immediately available for querying. If both the edge label and all of the indexed
+property keys have already been in use, building a vertex-centric index against it requires the
 execution of a [reindex procedure](./index-reindexing.md) to ensure that the index
 contains all previously added edges. Until the reindex procedure has
 completed, the index will not be available.
@@ -466,13 +462,51 @@ increases. Often, such traversals can be rewritten as constrained
 traversals that can utilize a vertex-centric index to ensure acceptable
 performance at scale.
 
+### Using vertex-centric indexes on adjacent vertex ids
+
+In some cases it is relevant to find an edge based on properties of the adjacent vertex.
+Let's say we want to find out whether or not Hercules has battled Cerberus.
+```groovy
+h = g.V().has('name', 'hercules').next()
+g.V(h).out('battled').has('name', 'cerberus').hasNext()
+```
+
+A query like this can not use a vertex centric index because it filters
+on vertex properties rather than edge properties.
+But by restructuring the query, we can achieve exactly this.
+As both vertices are known, the vertex ids can be used to select the edge.
+```groovy
+h = g.V().has('name', 'hercules').next()
+c = g.V().has('name', 'cerberus').next()
+```
+
+In contrast to the name "Cebereus", which is a property of the adjacent vertex,
+the id of this vertex is already saved within the connecting edge itself.
+Therefore, this query runs much faster if hercules has battled many opponents:
+```groovy
+g.V(h).outE('battled').where(inV().is(c)).hasNext()
+```
+
+... or even shorter:
+```groovy
+g.V(h).out('battled').is(c).limit(1).hasNext()
+```
+
+Assuming there is a global index on the `name` property, this improves the performance
+a lot, because it's not necessary to fetch every adjacent vertex anymore.
+In addition, a vertex-centric index on adjacent vertex ids does not need to
+be constructed and maintained explicitly.
+Due to the [data model](../advanced-topics/data-model.md), efficient access to
+edges by their adjacent vertex id is already provided by the storage backend.
+
+
 ### Ordered Traversals
 
 The following queries specify an order in which the incident edges are
 to be traversed. Use the `localLimit` command to retrieve a subset of
 the edges (in a given order) for EACH vertex that is traversed.
 ```groovy
-h = g..V().has('name', 'hercules').next()
+h = g.V().has('name', 'hercules').next()
 g.V(h).local(outE('battled').order().by('time', desc).limit(10)).inV().values('name')
 g.V(h).local(outE('battled').has('rating', 5.0).order().by('time', desc).limit(10)).values('place')
 ```
@@ -491,8 +525,3 @@ and `battlesByRatingAndTime` applies to the second. Note, that the
 `battlesByRatingAndTime` index cannot be used to answer the first query
 because an equality constraint on `rating` must be present for the
 second key in the index to be effective.
-
-!!! note
-    Ordered vertex queries are a JanusGraph extension to Gremlin which
-    causes the verbose syntax and requires the `_()` step to convert the
-    JanusGraph result back into a Gremlin pipeline.

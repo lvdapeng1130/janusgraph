@@ -24,7 +24,6 @@ import org.janusgraph.graphdb.types.IndexType;
 import org.janusgraph.graphdb.types.MixedIndexType;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -100,9 +99,16 @@ public class JointIndexQuery extends BaseQuery implements BackendQuery<JointInde
 
     @Override
     public JointIndexQuery updateLimit(int newLimit) {
-        JointIndexQuery ji = new JointIndexQuery(Lists.newArrayList(queries));
-        ji.setLimit(newLimit);
-        return ji;
+        List<Subquery> subqueries;
+        if(queries.size() == 1){
+            subqueries = new ArrayList<>(1);
+            subqueries.add(queries.get(0).updateLimit(newLimit));
+        } else {
+            subqueries = new ArrayList<>(queries);
+        }
+        JointIndexQuery jointIndexQuery = new JointIndexQuery(subqueries);
+        jointIndexQuery.setLimit(newLimit);
+        return jointIndexQuery;
     }
 
     public static class Subquery implements BackendQuery<Subquery>, ProfileObservable {

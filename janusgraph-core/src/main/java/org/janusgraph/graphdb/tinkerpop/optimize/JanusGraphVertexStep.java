@@ -20,8 +20,8 @@ import org.janusgraph.core.JanusGraphMultiVertexQuery;
 import org.janusgraph.core.JanusGraphVertex;
 import org.janusgraph.core.JanusGraphVertexQuery;
 import org.janusgraph.graphdb.query.BaseQuery;
+import org.janusgraph.graphdb.query.JanusGraphPredicateUtils;
 import org.janusgraph.graphdb.query.Query;
-import org.janusgraph.graphdb.query.JanusGraphPredicate;
 import org.janusgraph.graphdb.query.profile.QueryProfiler;
 import org.janusgraph.graphdb.query.vertex.BasicVertexCentricQueryBuilder;
 import org.janusgraph.graphdb.tinkerpop.profile.TP3ProfileWrapper;
@@ -44,15 +44,9 @@ import org.apache.tinkerpop.gremlin.structure.Element;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -91,7 +85,7 @@ public class JanusGraphVertexStep<E extends Element> extends VertexStep<E> imple
         query.labels(getEdgeLabels());
         query.direction(getDirection());
         for (final HasContainer condition : hasContainers) {
-            query.has(condition.getKey(), JanusGraphPredicate.Converter.convert(condition.getBiPredicate()), condition.getValue());
+            query.has(condition.getKey(), JanusGraphPredicateUtils.convert(condition.getBiPredicate()), condition.getValue());
         }
         for (final OrderEntry order : orders) query.orderBy(order.key, order.order);
         if (limit != BaseQuery.NO_LIMIT) query.limit(limit);
@@ -189,7 +183,7 @@ public class JanusGraphVertexStep<E extends Element> extends VertexStep<E> imple
 
         if (useMultiQuery) {
             if (multiQueryResults == null || !multiQueryResults.containsKey(traverser.get())) {
-                initializeMultiQuery(Arrays.asList(traverser));
+                initializeMultiQuery(Collections.singletonList(traverser));
             }
             result = multiQueryResults.get(traverser.get());
         } else {
@@ -198,7 +192,7 @@ public class JanusGraphVertexStep<E extends Element> extends VertexStep<E> imple
         }
 
         if (batchPropertyPrefetching) {
-            Set<Vertex> vertices = Sets.newHashSet();
+            Set<Vertex> vertices = new HashSet<>();
             result.forEach(v -> {
                 if (vertices.size() < txVertexCacheSize ) {
                     vertices.add((Vertex) v);

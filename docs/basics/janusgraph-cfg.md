@@ -103,7 +103,7 @@ Configuration options for the individual indexing backends
 | index.[X].directory | Directory to store index data locally | String | (no default value) | MASKABLE |
 | index.[X].hostname | The hostname or comma-separated list of hostnames of index backend servers.  This is only applicable to some index backends, such as elasticsearch and solr. | String[] | 127.0.0.1 | MASKABLE |
 | index.[X].index-name | Name of the index if required by the indexing backend | String | janusgraph | GLOBAL_OFFLINE |
-| index.[X].map-name | Whether to use the name of the property key as the field name in the index. It must be ensured, that theindexed property key names are valid field names. Renaming the property key will NOT rename the field and its the developers responsibility to avoid field collisions. | Boolean | true | GLOBAL |
+| index.[X].map-name | Whether to use the name of the property key as the field name in the index. It must be ensured, that the indexed property key names are valid field names. Renaming the property key will NOT rename the field and its the developers responsibility to avoid field collisions. | Boolean | true | GLOBAL |
 | index.[X].max-result-set-size | Maximum number of results to return if no limit is specified. For index backends that support scrolling, it represents the number of results in each batch | Integer | 50 | MASKABLE |
 | index.[X].port | The port on which to connect to index backend servers | Integer | (no default value) | MASKABLE |
 
@@ -114,6 +114,7 @@ Elasticsearch index configuration
 | Name | Description | Datatype | Default Value | Mutability |
 | ---- | ---- | ---- | ---- | ---- |
 | index.[X].elasticsearch.bulk-refresh | Elasticsearch bulk API refresh setting used to control when changes made by this request are made visible to search | String | false | MASKABLE |
+| index.[X].elasticsearch.enable_index_names_cache | Enables cache for generated index store names. It is recommended to always enable index store names cache unless you have more then 50000 indexes per index store. | Boolean | true | MASKABLE |
 | index.[X].elasticsearch.health-request-timeout | When JanusGraph initializes its ES backend, JanusGraph waits up to this duration for the ES cluster health to reach at least yellow status.  This string should be formatted as a natural number followed by the lowercase letter "s", e.g. 3s or 60s. | String | 30s | MASKABLE |
 | index.[X].elasticsearch.interface | Interface for connecting to Elasticsearch. TRANSPORT_CLIENT and NODE were previously supported, but now are required to migrate to REST_CLIENT. See the JanusGraph upgrade instructions for more details. | String | REST_CLIENT | MASKABLE |
 | index.[X].elasticsearch.retry_on_conflict | Specify how many times should the operation be retried when a conflict occurs. | Integer | 0 | MASKABLE |
@@ -131,6 +132,16 @@ Settings related to index creation
 | index.[X].elasticsearch.create.allow-mapping-update | Whether JanusGraph should allow a mapping update when registering an index. Only applicable when use-external-mappings is true. | Boolean | false | MASKABLE |
 | index.[X].elasticsearch.create.sleep | How long to sleep, in milliseconds, between the successful completion of a (blocking) index creation request and the first use of that index.  This only applies when creating an index in ES, which typically only happens the first time JanusGraph is started on top of ES. If the index JanusGraph is configured to use already exists, then this setting has no effect. | Long | 200 | MASKABLE |
 | index.[X].elasticsearch.create.use-external-mappings | Whether JanusGraph should make use of an external mapping when registering an index. | Boolean | false | MASKABLE |
+
+### index.[X].elasticsearch.create.ext
+Overrides for arbitrary settings applied at index creation.
+See [Elasticsearch](../index-backend/elasticsearch.md#index-creation-options), The full list of possible setting is available at [Elasticsearch index settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules.html#index-modules-settings).
+
+
+| Name | Description | Datatype | Default Value | Mutability |
+| ---- | ---- | ---- | ---- | ---- |
+| index.[X].elasticsearch.create.ext.number_of_replicas | The number of replicas each primary shard has | Integer | 1 | MASKABLE |
+| index.[X].elasticsearch.create.ext.number_of_shards | The number of primary shards that an index should have.Default value is 5 on ES 6 and 1 on ES 7 | Integer | (no default value) | MASKABLE |
 
 ### index.[X].elasticsearch.http.auth
 Configuration options for HTTP(S) authentication.
@@ -315,6 +326,7 @@ Configuration options for query processing
 | query.fast-property | Whether to pre-fetch all properties on first singular vertex property access. This can eliminate backend calls on subsequentproperty access for the same vertex at the expense of retrieving all properties at once. This can be expensive for vertices with many properties | Boolean | true | MASKABLE |
 | query.force-index | Whether JanusGraph should throw an exception if a graph query cannot be answered using an index. Doing solimits the functionality of JanusGraph's graph queries but ensures that slow graph queries are avoided on large graphs. Recommended for production use of JanusGraph. | Boolean | false | MASKABLE |
 | query.ignore-unknown-index-key | Whether to ignore undefined types encountered in user-provided index queries | Boolean | false | MASKABLE |
+| query.index-select-threshold | Threshold of deciding whether to use brute force enumeration algorithm or fast approximation algorithm for selecting suitable indexes. Selecting optimal indexes for a query is a NP-complete set cover problem. When number of suitable index candidates is no larger than threshold, JanusGraph uses brute force search with exponential time complexity to ensure the best combination of indexes is selected. | Integer | 10 | MASKABLE |
 | query.smart-limit | Whether the query optimizer should try to guess a smart limit for the query to ensure responsiveness in light of possibly large result sets. Those will be loaded incrementally if this option is enabled. | Boolean | true | MASKABLE |
 
 ### schema
@@ -324,7 +336,7 @@ Schema related configuration options
 | Name | Description | Datatype | Default Value | Mutability |
 | ---- | ---- | ---- | ---- | ---- |
 | schema.constraints | Configures the schema constraints to be used by this graph. If config 'schema.constraints' is set to 'true' and 'schema.default' is set to 'none', then an 'IllegalArgumentException' is thrown for schema constraint violations. If 'schema.constraints' is set to 'true' and 'schema.default' is not set 'none', schema constraints are automatically created as described in the config option 'schema.default'. If 'schema.constraints' is set to 'false' which is the default, then no schema constraints are applied. | Boolean | false | GLOBAL_OFFLINE |
-| schema.default | Configures the DefaultSchemaMaker to be used by this graph. If set to 'none', automatic schema creation is disabled. Defaults to a blueprints compatible schema maker with MULTI edge labels and SINGLE property keys | String | default | MASKABLE |
+| schema.default | Configures the DefaultSchemaMaker to be used by this graph. Either one of the following shorthands can be used: <br> - `default` (a blueprints compatible schema maker with MULTI edge labels and SINGLE property keys),<br> - `none` (automatic schema creation is disabled)<br> - `logging` (same as default, but with a log done when an automatic schema creation is done)<br> - or to the full package and classname of a custom/third-party implementing the interface `org.janusgraph.core.schema.DefaultSchemaMaker` | String | default | MASKABLE |
 
 ### storage
 Configuration options for the storage backend.  Some options are applicable only for certain backends.
@@ -332,7 +344,7 @@ Configuration options for the storage backend.  Some options are applicable only
 
 | Name | Description | Datatype | Default Value | Mutability |
 | ---- | ---- | ---- | ---- | ---- |
-| storage.backend | The primary persistence provider used by JanusGraph.  This is required.  It should be set one of JanusGraph's built-in shorthand names for its standard storage backends (shorthands: berkeleyje, cassandrathrift, cassandra, astyanax, embeddedcassandra, cql, hbase, inmemory) or to the full package and classname of a custom/third-party StoreManager implementation. | String | (no default value) | LOCAL |
+| storage.backend | The primary persistence provider used by JanusGraph.  This is required.  It should be set one of JanusGraph's built-in shorthand names for its standard storage backends (shorthands: berkeleyje, cql, hbase, inmemory) or to the full package and classname of a custom/third-party StoreManager implementation. | String | (no default value) | LOCAL |
 | storage.batch-loading | Whether to enable batch loading into the storage backend | Boolean | false | LOCAL |
 | storage.buffer-size | Size of the batch in which mutations are persisted | Integer | 1024 | MASKABLE |
 | storage.conf-file | Path to a configuration file for those storage backends which require/support a single separate config file. | String | (no default value) | LOCAL |
@@ -358,87 +370,11 @@ BerkeleyDB JE configuration options
 
 | Name | Description | Datatype | Default Value | Mutability |
 | ---- | ---- | ---- | ---- | ---- |
+| storage.berkeleyje.cache-mode | Modes that can be specified for control over caching of records in the JE in-memory cache | String | DEFAULT | MASKABLE |
 | storage.berkeleyje.cache-percentage | Percentage of JVM heap reserved for BerkeleyJE's cache | Integer | 65 | MASKABLE |
 | storage.berkeleyje.isolation-level | The isolation level used by transactions | String | REPEATABLE_READ | MASKABLE |
 | storage.berkeleyje.lock-mode | The BDB record lock mode used for read operations | String | LockMode.DEFAULT | MASKABLE |
 | storage.berkeleyje.shared-cache | If true, the shared cache is used for all graph instances | Boolean | true | MASKABLE |
-
-### storage.cassandra
-Cassandra storage backend options
-
-
-| Name | Description | Datatype | Default Value | Mutability |
-| ---- | ---- | ---- | ---- | ---- |
-| storage.cassandra.atomic-batch-mutate | True to use Cassandra atomic batch mutation, false to use non-atomic batches | Boolean | true | MASKABLE |
-| storage.cassandra.compaction-strategy-class | The compaction strategy to use for JanusGraph tables | String | (no default value) | FIXED |
-| storage.cassandra.compaction-strategy-options | Compaction strategy options.  This list is interpreted as a map.  It must have an even number of elements in [key,val,key,val,...] form. | String[] | (no default value) | FIXED |
-| storage.cassandra.compression | Whether the storage backend should use compression when storing the data | Boolean | true | FIXED |
-| storage.cassandra.compression-block-size | The size of the compression blocks in kilobytes | Integer | 64 | FIXED |
-| storage.cassandra.compression-type | The sstable_compression value JanusGraph uses when creating column families. This accepts any value allowed by Cassandra's sstable_compression option. Leave this unset to disable sstable_compression on JanusGraph-created CFs. | String | LZ4Compressor | MASKABLE |
-| storage.cassandra.frame-size-mb | The thrift frame size in megabytes | Integer | 15 | MASKABLE |
-| storage.cassandra.keyspace | The name of JanusGraph's keyspace.  It will be created if it does not exist. If it is not supplied, but graph.graphname is, then the the keyspace will be set to that. | String | janusgraph | LOCAL |
-| storage.cassandra.read-consistency-level | The consistency level of read operations against Cassandra | String | QUORUM | MASKABLE |
-| storage.cassandra.replication-factor | The number of data replicas (including the original copy) that should be kept. This is only meaningful for storage backends that natively support data replication. | Integer | 1 | GLOBAL_OFFLINE |
-| storage.cassandra.replication-strategy-class | The replication strategy to use for JanusGraph keyspace | String | org.apache.cassandra.locator.SimpleStrategy | FIXED |
-| storage.cassandra.replication-strategy-options | Replication strategy options, e.g. factor or replicas per datacenter.  This list is interpreted as a map.  It must have an even number of elements in [key,val,key,val,...] form.  A replication_factor set here takes precedence over one set with storage.cassandra.replication-factor | String[] | (no default value) | FIXED |
-| storage.cassandra.write-consistency-level | The consistency level of write operations against Cassandra | String | QUORUM | MASKABLE |
-
-### storage.cassandra.astyanax
-Astyanax-specific Cassandra options
-
-
-| Name | Description | Datatype | Default Value | Mutability |
-| ---- | ---- | ---- | ---- | ---- |
-| storage.cassandra.astyanax.cluster-name | Default name for the Cassandra cluster | String | JanusGraph Cluster | MASKABLE |
-| storage.cassandra.astyanax.connection-pool-type | Astyanax's connection pooler implementation | String | TOKEN_AWARE | MASKABLE |
-| storage.cassandra.astyanax.frame-size | The thrift frame size in mega bytes | Integer | 15 | MASKABLE |
-| storage.cassandra.astyanax.host-supplier | Host supplier to use when discovery type is set to DISCOVERY_SERVICE or TOKEN_AWARE | String | (no default value) | MASKABLE |
-| storage.cassandra.astyanax.local-datacenter | The name of the local or closest Cassandra datacenter.  When set and not whitespace, this value will be passed into ConnectionPoolConfigurationImpl.setLocalDatacenter. When unset or set to whitespace, setLocalDatacenter will not be invoked. | String | (no default value) | MASKABLE |
-| storage.cassandra.astyanax.max-cluster-connections-per-host | Maximum pooled "cluster" connections per host | Integer | 3 | MASKABLE |
-| storage.cassandra.astyanax.max-connections | Maximum open connections allowed in the pool (counting all hosts) | Integer | -1 | MASKABLE |
-| storage.cassandra.astyanax.max-connections-per-host | Maximum pooled connections per host | Integer | 32 | MASKABLE |
-| storage.cassandra.astyanax.max-operations-per-connection | Maximum number of operations allowed per connection before the connection is closed | Integer | 100000 | MASKABLE |
-| storage.cassandra.astyanax.node-discovery-type | How Astyanax discovers Cassandra cluster nodes | String | RING_DESCRIBE | MASKABLE |
-| storage.cassandra.astyanax.read-page-size | The page size for Cassandra read operations | Integer | 4096 | MASKABLE |
-| storage.cassandra.astyanax.retry-backoff-strategy | Astyanax's retry backoff strategy with configuration parameters | String | com.netflix.astyanax.connectionpool.impl.FixedRetryBackoffStrategy,1000,5000 | MASKABLE |
-| storage.cassandra.astyanax.retry-delay-slice | Astyanax's connection pool "retryDelaySlice" parameter | Integer | 10000 | MASKABLE |
-| storage.cassandra.astyanax.retry-max-delay-slice | Astyanax's connection pool "retryMaxDelaySlice" parameter | Integer | 10 | MASKABLE |
-| storage.cassandra.astyanax.retry-policy | Astyanax's retry policy implementation with configuration parameters | String | com.netflix.astyanax.retry.BoundedExponentialBackoff,100,25000,8 | MASKABLE |
-| storage.cassandra.astyanax.retry-suspend-window | Astyanax's connection pool "retryMaxDelaySlice" parameter | Integer | 20000 | MASKABLE |
-
-### storage.cassandra.ssl
-Configuration options for SSL
-
-
-| Name | Description | Datatype | Default Value | Mutability |
-| ---- | ---- | ---- | ---- | ---- |
-| storage.cassandra.ssl.enabled | Controls use of the SSL connection to Cassandra | Boolean | false | LOCAL |
-
-### storage.cassandra.ssl.truststore
-Configuration options for SSL Truststore.
-
-
-| Name | Description | Datatype | Default Value | Mutability |
-| ---- | ---- | ---- | ---- | ---- |
-| storage.cassandra.ssl.truststore.location | Marks the location of the SSL Truststore. | String |  | LOCAL |
-| storage.cassandra.ssl.truststore.password | The password to access SSL Truststore. | String |  | LOCAL |
-
-### storage.cassandra.thrift.cpool
-Options for the Apache commons-pool connection manager
-
-
-| Name | Description | Datatype | Default Value | Mutability |
-| ---- | ---- | ---- | ---- | ---- |
-| storage.cassandra.thrift.cpool.evictor-period | Approximate number of milliseconds between runs of the idle connection evictor.  Set to -1 to never run the idle connection evictor. | Long | 30000 | MASKABLE |
-| storage.cassandra.thrift.cpool.idle-test | Whether the idle connection evictor validates idle connections and drops those that fail to validate | Boolean | false | MASKABLE |
-| storage.cassandra.thrift.cpool.idle-tests-per-eviction-run | When the value is negative, e.g. -n, roughly one nth of the idle connections are tested per run.  When the value is positive, e.g. n, the min(idle-count, n) connections are tested per run. | Integer | 0 | MASKABLE |
-| storage.cassandra.thrift.cpool.max-active | Maximum number of concurrently in-use connections (-1 to leave undefined) | Integer | 16 | MASKABLE |
-| storage.cassandra.thrift.cpool.max-idle | Maximum number of concurrently idle connections (-1 to leave undefined) | Integer | 4 | MASKABLE |
-| storage.cassandra.thrift.cpool.max-total | Max number of allowed Thrift connections, idle or active (-1 to leave undefined) | Integer | -1 | MASKABLE |
-| storage.cassandra.thrift.cpool.max-wait | Maximum number of milliseconds to block when storage.cassandra.thrift.cpool.when-exhausted is set to BLOCK.  Has no effect when set to actions besides BLOCK.  Set to -1 to wait indefinitely. | Long | -1 | MASKABLE |
-| storage.cassandra.thrift.cpool.min-evictable-idle-time | Minimum number of milliseconds a connection must be idle before it is eligible for eviction.  See also storage.cassandra.thrift.cpool.evictor-period.  Set to -1 to never evict idle connections. | Long | 60000 | MASKABLE |
-| storage.cassandra.thrift.cpool.min-idle | Minimum number of idle connections the pool attempts to maintain | Integer | 0 | MASKABLE |
-| storage.cassandra.thrift.cpool.when-exhausted | What to do when clients concurrently request more active connections than are allowed by the pool.  The value must be one of BLOCK, FAIL, or GROW. | String | BLOCK | MASKABLE |
 
 ### storage.cql
 CQL storage backend options
@@ -449,7 +385,6 @@ CQL storage backend options
 | storage.cql.atomic-batch-mutate | True to use Cassandra atomic batch mutation, false to use non-atomic batches | Boolean | false | MASKABLE |
 | storage.cql.batch-statement-size | The number of statements in each batch | Integer | 20 | MASKABLE |
 | storage.cql.cluster-name | Default name for the Cassandra cluster | String | JanusGraph Cluster | MASKABLE |
-| storage.cql.compact-storage | Whether the storage backend should use compact storage on tables. This option is only available for Cassandra 2 and earlier and defaults to true. | Boolean | true | FIXED |
 | storage.cql.compaction-strategy-class | The compaction strategy to use for JanusGraph tables | String | (no default value) | FIXED |
 | storage.cql.compaction-strategy-options | Compaction strategy options.  This list is interpreted as a map.  It must have an even number of elements in [key,val,key,val,...] form. | String[] | (no default value) | FIXED |
 | storage.cql.compression | Whether the storage backend should use compression when storing the data | Boolean | true | FIXED |
@@ -478,7 +413,18 @@ Configuration options for SSL
 
 | Name | Description | Datatype | Default Value | Mutability |
 | ---- | ---- | ---- | ---- | ---- |
+| storage.cql.ssl.client-authentication-enabled | Enables use of a client key to authenticate with Cassandra | Boolean | false | LOCAL |
 | storage.cql.ssl.enabled | Controls use of the SSL connection to Cassandra | Boolean | false | LOCAL |
+
+### storage.cql.ssl.keystore
+Configuration options for SSL Keystore.
+
+
+| Name | Description | Datatype | Default Value | Mutability |
+| ---- | ---- | ---- | ---- | ---- |
+| storage.cql.ssl.keystore.keypassword | The password to access the key in SSL Keystore. | String |  | LOCAL |
+| storage.cql.ssl.keystore.location | Marks the location of the SSL Keystore. | String |  | LOCAL |
+| storage.cql.ssl.keystore.storepassword | The password to access the SSL Keystore. | String |  | LOCAL |
 
 ### storage.cql.ssl.truststore
 Configuration options for SSL Truststore.

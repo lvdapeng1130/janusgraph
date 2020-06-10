@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.janusgraph</groupId>
         <artifactId>janusgraph</artifactId>
-        <version>0.5.0-SNAPSHOT</version>
+        <version>0.6.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>janusgraph-all</artifactId>
@@ -25,6 +25,11 @@
     <dependencies>
         <dependency>
             <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-driver</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-core</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -37,17 +42,6 @@
             <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-inmemory</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.janusgraph</groupId>
-            <artifactId>janusgraph-cassandra</artifactId>
-            <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.ning</groupId>
-                    <artifactId>compress-lzf</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.janusgraph</groupId>
@@ -70,7 +64,7 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
+            <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-hadoop</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -181,11 +175,23 @@
                     <groupId>org.apache.hbase</groupId>
                     <artifactId>hbase-shaded-client</artifactId>
                     <version>${hbase1.version}</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>junit</groupId>
+                            <artifactId>junit</artifactId>
+                        </exclusion>
+                    </exclusions>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hbase</groupId>
                     <artifactId>hbase-shaded-server</artifactId>
                     <version>${hbase1.version}</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>junit</groupId>
+                            <artifactId>junit</artifactId>
+                        </exclusion>
+                    </exclusions>
                 </dependency>
             </dependencies>
         </profile>
@@ -201,11 +207,23 @@
                     <groupId>org.apache.hbase</groupId>
                     <artifactId>hbase-shaded-client</artifactId>
                     <version>${hbase2.version}</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>junit</groupId>
+                            <artifactId>junit</artifactId>
+                        </exclusion>
+                    </exclusions>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hbase</groupId>
                     <artifactId>hbase-shaded-mapreduce</artifactId>
                     <version>${hbase2.version}</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>junit</groupId>
+                            <artifactId>junit</artifactId>
+                        </exclusion>
+                    </exclusions>
                 </dependency>
             </dependencies>
         </profile>

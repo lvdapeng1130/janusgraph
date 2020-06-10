@@ -15,9 +15,9 @@
 package org.janusgraph.diskstorage.configuration;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -39,15 +39,15 @@ public class MixedConfiguration extends AbstractConfiguration {
     }
 
     @Override
-    public boolean has(ConfigOption option, String... umbrellaElements) {
-        final String key = super.getPath(option, umbrellaElements);
+    public boolean has(ConfigOption option, boolean includeRoot, String... umbrellaElements) {
+        final String key = super.getPath(option, includeRoot, umbrellaElements);
         return option.isLocal() && local.get(key, option.getDatatype()) != null
               || option.isGlobal() && global.get(key, option.getDatatype()) != null;
     }
 
     @Override
-    public<O> O get(ConfigOption<O> option, String... umbrellaElements) {
-        final String key = super.getPath(option,umbrellaElements);
+    public<O> O get(ConfigOption<O> option, boolean includeRoot, String... umbrellaElements) {
+        final String key = super.getPath(option, includeRoot, umbrellaElements);
         Object result = null;
         if (option.isLocal()) {
             result = local.get(key,option.getDatatype());
@@ -67,10 +67,9 @@ public class MixedConfiguration extends AbstractConfiguration {
     }
 
     public Map<String,Object> getSubset(ConfigNamespace umbrella, String... umbrellaElements) {
-        Map<String,Object> result = Maps.newHashMap();
-        for (ReadConfiguration config : new ReadConfiguration[]{global,local}) {
-            result.putAll(super.getSubset(config,umbrella,umbrellaElements));
-        }
+        Map<String,Object> result = new HashMap<>();
+        result.putAll(super.getSubset(global,umbrella,umbrellaElements));
+        result.putAll(super.getSubset(local,umbrella,umbrellaElements));
         return result;
     }
 

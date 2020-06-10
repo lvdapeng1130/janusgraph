@@ -15,14 +15,15 @@
 package org.janusgraph.diskstorage.keycolumnvalue.keyvalue;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.Entry;
+import org.janusgraph.diskstorage.EntryMetaData;
 import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
 import org.janusgraph.diskstorage.StoreMetaData;
 import org.janusgraph.diskstorage.keycolumnvalue.*;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +41,7 @@ public class OrderedKeyValueStoreManagerAdapter implements KeyColumnValueStoreMa
 
     private final OrderedKeyValueStoreManager manager;
 
-    private final ImmutableMap<String, Integer> keyLengths;
+    private final Map<String, Integer> keyLengths;
 
     private final Map<String, OrderedKeyValueStoreAdapter> stores;
 
@@ -51,9 +52,11 @@ public class OrderedKeyValueStoreManagerAdapter implements KeyColumnValueStoreMa
     public OrderedKeyValueStoreManagerAdapter(OrderedKeyValueStoreManager manager, Map<String, Integer> keyLengths) {
         Preconditions.checkArgument(manager.getFeatures().isKeyOrdered(), "Expected backing store to be ordered: %s", manager);
         this.manager = manager;
-        ImmutableMap.Builder<String, Integer> mb = ImmutableMap.builder();
-        if (keyLengths != null && !keyLengths.isEmpty()) mb.putAll(keyLengths);
-        this.keyLengths = mb.build();
+        if (keyLengths != null && !keyLengths.isEmpty()) {
+            this.keyLengths = Collections.unmodifiableMap(new HashMap<>(keyLengths));
+        } else {
+            this.keyLengths = Collections.emptyMap();
+        }
         this.stores = new HashMap<>();
     }
 
@@ -110,7 +113,9 @@ public class OrderedKeyValueStoreManagerAdapter implements KeyColumnValueStoreMa
                 KCVMutation mutation = entry.getValue();
                 if (mutation.hasAdditions()) {
                     for (Entry addition : mutation.getAdditions()) {
-                        mut.addition(store.concatenate(key,addition));
+                        KeyValueEntry concatenate = store.concatenate(key, addition);
+                        concatenate.setTTL((Integer) addition.getMetaData().get(EntryMetaData.TTL));
+                        mut.addition(concatenate);
                     }
                 }
 
