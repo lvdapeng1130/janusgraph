@@ -186,7 +186,8 @@
                             <goal>wget</goal>
                         </goals>
                         <configuration>
-                            <url>https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${elasticsearch.version}-linux-x86_64.tar.gz</url>
+                            <!--<url>https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${elasticsearch.version}-linux-x86_64.tar.gz</url>-->
+                            <url>https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${elasticsearch.version}.tar.gz</url>
                             <outputFileName>elasticsearch.tar.gz</outputFileName>
                             <outputDirectory>${project.build.directory}</outputDirectory>
                         </configuration>
