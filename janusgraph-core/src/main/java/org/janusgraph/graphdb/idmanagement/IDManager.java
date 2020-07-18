@@ -360,6 +360,7 @@ public class IDManager {
 
     /**
      * Id of the partition that schema elements are assigned to
+     * 分配架构元素的分区的ID
      */
     public static final int SCHEMA_PARTITION = 0;
 
@@ -375,7 +376,7 @@ public class IDManager {
     /**
      * Total number of bits available to a JanusGraph assigned id
      * We use only 63 bits to make sure that all ids are positive
-     *
+     * JanusGraph分配的ID可用的位数,我们仅使用63位来确保所有ID均为正
      */
     private static final long TOTAL_BITS = Long.SIZE-1;
 
@@ -386,15 +387,18 @@ public class IDManager {
     private static final long MAX_PARTITION_BITS = 16;
     /**
      * Default number of bits used for the partition prefix. 0 means there is no partition prefix
+     * 用于分区前缀的默认位数。 0表示没有分区前缀
      */
     private static final long DEFAULT_PARTITION_BITS = 0;
     /**
      * The padding bit width for user vertices
+     * 用户顶点的填充位宽度
      */
     public static final long USERVERTEX_PADDING_BITWIDTH = VertexIDType.NormalVertex.offset();
 
     /**
      * The maximum number of padding bits of any type
+     * 任何类型的最大填充位数
      */
     public static final long MAX_PADDING_BITWIDTH = VertexIDType.UserEdgeLabel.offset();
 
