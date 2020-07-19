@@ -103,6 +103,7 @@ public class KCVSLogManager implements LogManager {
 
     /**
      * Keeps track of all open logs
+     * 跟踪所有打开的日志
      */
     private final Map<String,KCVSLog> openLogs;
 
