@@ -18,17 +18,19 @@ import org.janusgraph.diskstorage.BackendException;
 
 /**
  * Manager interface for opening {@link Log}s against a particular Log implementation.
- *
+ * 管理器界面，用于针对特定的Log实现打开{@link Log}。
  * @author Matthias Broecheler (me@matthiasb.com)
  */
 public interface LogManager {
 
     /**
      * Opens a log for the given name.
+     * 打开给定名称的日志。
      * <p>
      * If a log with the given name already exists, the existing log is returned.
+     * 如果已经存在具有给定名称的日志，则返回现有日志。
      *
-     * @param name Name of the log to be opened
+     * @param name Name of the log to be opened 要打开的日志名称
      * @return
      * @throws org.janusgraph.diskstorage.BackendException
      */
@@ -36,7 +38,7 @@ public interface LogManager {
 
     /**
      * Closes the log manager and all open logs (if they haven't already been explicitly closed)
-     *
+     * 关闭日志管理器和所有打开的日志（如果尚未明确关闭它们）
      * @throws org.janusgraph.diskstorage.BackendException
      */
     void close() throws BackendException;

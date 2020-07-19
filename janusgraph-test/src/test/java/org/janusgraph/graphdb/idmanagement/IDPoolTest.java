@@ -67,6 +67,13 @@ public class IDPoolTest {
         testIDPoolWith(partitionID -> new StandardIDPool(idAuthority, partitionID, partitionID, Integer.MAX_VALUE, Duration.ofMillis(2000), 0.2), 10, 20, 100000);
     }
 
+    @Test
+    public void testStandardIDPool4() throws InterruptedException {
+        final MockIDAuthority idAuthority = new MockIDAuthority(10000, Integer.MAX_VALUE, 2000);
+        testIDPoolWith(partitionID -> new StandardIDPool(idAuthority, partitionID, partitionID, Integer.MAX_VALUE, Duration.ofMillis(400000), 0.1),
+            1, 1, 100);
+    }
+
     private void testIDPoolWith(IDPoolFactory poolFactory, final int numPartitions,
                                        final int numThreads, final int attemptsPerThread) throws InterruptedException {
         final Random random = new Random();

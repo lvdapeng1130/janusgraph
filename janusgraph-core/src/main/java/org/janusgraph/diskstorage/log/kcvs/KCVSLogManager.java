@@ -41,6 +41,8 @@ import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
 /**
  * Implementation of {@link LogManager} against an arbitrary {@link KeyColumnValueStoreManager}. Issues {@link Log} instances
  * which wrap around a {@link KeyColumnValueStore}.
+ * 针对任意{@link KeyColumnValueStoreManager}实现{@link LogManager}。发出{@link Log}实例，
+ * 这些实例环绕{@link KeyColumnValueStore}。
  *
  * @author Matthias Broecheler (me@matthiasb.com)
  */

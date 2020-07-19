@@ -339,6 +339,12 @@ public class IDManager {
 
         abstract boolean isProper();
 
+        /**
+         * (count << offset()) 把count向左移位offset()位，高位舍去，空出的低位使用0补位
+         * (count << offset()) | suffix()
+         * @param count
+         * @return
+         */
         public final long addPadding(long count) {
             assert offset()>0;
             Preconditions.checkArgument(count>0 && count<(1L <<(TOTAL_BITS-offset())),"Count out of range for type [%s]: %s",this,count);
@@ -349,6 +355,13 @@ public class IDManager {
             return id >>> offset();
         }
 
+        /**
+         * 取低`offset()`位和`suffix()`进行比较
+         * byte->: 11110101 & 00000111 =00000101
+         * (id & ((1L << offset()) - 1)) 取id低位`offset()`位。
+         * @param id
+         * @return
+         */
         public final boolean is(long id) {
             return (id & ((1L << offset()) - 1)) == suffix();
         }
