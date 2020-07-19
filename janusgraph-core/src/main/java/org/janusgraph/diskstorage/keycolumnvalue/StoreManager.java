@@ -29,13 +29,14 @@ public interface StoreManager {
 
     /**
      * Returns a transaction handle for a new transaction according to the given configuration.
-     *
+     * 根据给定的配置返回新事务的事务句柄。
      * @return New Transaction Handle
      */
     StoreTransaction beginTransaction(BaseTransactionConfig config) throws BackendException;
 
     /**
      * Closes the Storage Manager and all databases that have been opened.
+     * 关闭存储管理器和所有已打开的数据库。
      */
     void close() throws BackendException;
 
