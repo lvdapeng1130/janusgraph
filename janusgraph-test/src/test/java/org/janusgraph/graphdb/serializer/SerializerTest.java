@@ -53,6 +53,22 @@ public class SerializerTest extends SerializerTestCommon {
             LoggerFactory.getLogger(SerializerTest.class);
 
     @Test
+    public void testReadInteger(){
+        DataOutput out = serialize.getDataOutput(128);
+        out.putInt(10);
+        out.putLong(11);
+        out.writeObjectNotNull("xxbbb");
+        out.writeObjectNotNull("吕大鹏下发");
+        ReadBuffer b = out.getStaticBuffer().asReadBuffer();
+        System.out.println(b.getInt());
+        System.out.println(b.getLong());
+        String i=serialize.readObjectNotNull(b,String.class);
+        System.out.println(i);
+        i=serialize.readObjectNotNull(b,String.class);
+        System.out.println(i);
+    }
+
+    @Test
     public void objectWriteReadTest() {
         serialize.registerClass(2,TClass1.class, new TClass1Serializer());
         serialize.registerClass(80342,TClass2.class, new TClass2Serializer());
