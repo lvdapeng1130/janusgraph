@@ -24,7 +24,7 @@ import java.util.Map;
 
 /**
  * An index entry is a key-value pair (or field-value pair).
- *
+ * 索引条目是键值对（或字段-值对）
  * @author Matthias Broecheler (me@matthiasb.com)
  */
 

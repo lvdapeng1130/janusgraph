@@ -26,6 +26,7 @@ public interface IndexInformation {
 
     /**
      * Whether the index supports executing queries with the given predicate against a key with the given information
+     * 索引是否支持对具有给定信息的键的给定谓词执行查询
      * @param information
      * @param janusgraphPredicate
      * @return
@@ -34,6 +35,7 @@ public interface IndexInformation {
 
     /**
      * Whether the index supports indexing a key with the given information
+     * 索引是否支持使用给定信息对键进行索引
      * @param information
      * @return
      */
@@ -46,7 +48,9 @@ public interface IndexInformation {
      * <p>
      * Note, that mapped field names (either configured on a per key basis or through a global configuration)
      * are not adjusted and handed to the index verbatim.
-     *
+     *调整键的名称，以便它是可以在索引中使用的有效字段名称。
+     * JanusGraph存储此信息，并将在与索引的所有交互中使用返回的名称。
+     * 请注意，映射字段名称（基于每个键或通过全局配置进行配置）不会调整并逐字传递给索引。
      * @param key
      * @param information
      * @return
