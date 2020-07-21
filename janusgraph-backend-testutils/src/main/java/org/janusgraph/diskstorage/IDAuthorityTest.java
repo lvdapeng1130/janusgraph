@@ -18,7 +18,6 @@ import com.carrotsearch.hppc.LongHashSet;
 import com.carrotsearch.hppc.LongSet;
 import com.google.common.base.Preconditions;
 import org.janusgraph.StorageSetup;
-
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 import org.janusgraph.diskstorage.configuration.WriteConfiguration;
@@ -26,16 +25,10 @@ import org.janusgraph.diskstorage.idmanagement.ConflictAvoidanceMode;
 import org.janusgraph.diskstorage.idmanagement.ConsistentKeyIDAuthority;
 import org.janusgraph.diskstorage.keycolumnvalue.*;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
-
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
-
 import org.janusgraph.graphdb.database.idassigner.IDBlockSizer;
 import org.janusgraph.graphdb.database.idassigner.IDPoolExhaustedException;
 import org.janusgraph.graphdb.idmanagement.UniqueInstanceIdRetriever;
 import org.janusgraph.testutil.TestGraphConfigs;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -45,13 +38,12 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.stream.Stream;
+
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)

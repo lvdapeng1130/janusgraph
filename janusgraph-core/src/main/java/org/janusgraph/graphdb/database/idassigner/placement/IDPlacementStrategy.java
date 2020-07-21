@@ -25,8 +25,10 @@ import java.util.Map;
  * Determines how vertices are placed in individual graph partitions.
  * A particular implementation determines the partition id of a (newly created) vertex. The vertex is
  * then assigned to said partition by JanusGraph.
+ * 确定如何在各个图形分区中放置顶点。特定的实现确定（新创建的）顶点的分区ID。顶点然后由JanusGraph分配给所述分区。
  *
  * The id placement strategy is configurable.
+ * id放置策略是可配置的。
  *
  * @author Matthias Broecheler (me@matthiasb.com)
  */
