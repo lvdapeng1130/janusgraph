@@ -21,7 +21,6 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.JanusGraph;
 import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.core.Multiplicity;
-import org.janusgraph.core.RelationType;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.schema.JanusGraphManagement;
 import org.slf4j.Logger;
@@ -31,7 +30,7 @@ public class JanusGraphApp extends GraphApp {
     private static final Logger LOGGER = LoggerFactory.getLogger(JanusGraphApp.class);
 
     protected static final String APP_NAME = "jgex";
-    protected static final String MIXED_INDEX_CONFIG_NAME = "jgex";
+    protected static final String MIXED_INDEX_CONFIG_NAME = "search";
 
     // Storage backends
 
@@ -102,18 +101,19 @@ public class JanusGraphApp extends GraphApp {
         final JanusGraphManagement management = getJanusGraph().openManagement();
         try {
             // ;
-            if (management.getRelationTypes(RelationType.class).iterator().hasNext()) {
+            /*if (management.getRelationTypes(RelationType.class).iterator().hasNext()) {
                 management.rollback();
                 return;
-            }
+            }*/
             LOGGER.info("creating schema");
             createProperties(management);
             createVertexLabels(management);
-            createEdgeLabels(management);
-            createCompositeIndexes(management);
-            createMixedIndexes(management);
+            //createEdgeLabels(management);
+            //createCompositeIndexes(management);
+            /*createMixedIndexes(management);*/
             management.commit();
         } catch (Exception e) {
+            LOGGER.error(e.getMessage(),e);
             management.rollback();
         }
     }
