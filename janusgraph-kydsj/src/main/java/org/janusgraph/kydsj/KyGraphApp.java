@@ -146,7 +146,7 @@ public class KyGraphApp extends JanusGraphApp {
             createProperties(management);
             createVertexLabels(management);
             createEdgeLabels(management);
-            //createCompositeIndexes(management);
+            createCompositeIndexes(management);
             createMixedIndexes(management);
             management.commit();
         } catch (Exception e) {
