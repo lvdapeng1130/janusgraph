@@ -14,6 +14,7 @@
 
 package org.janusgraph.diskstorage.indexing;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransaction;
@@ -24,12 +25,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import com.google.common.base.Preconditions;
-
 /**
  * External index for querying.
  * An index can contain an arbitrary number of index stores which are updated and queried separately.
- *
+ * 用于查询的外部索引。 索引可以包含任意数量的索引存储，这些存储分别进行更新和查询。
  * @author Matthias Broecheler (me@matthiasb.com)
  */
 

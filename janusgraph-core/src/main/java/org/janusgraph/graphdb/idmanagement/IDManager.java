@@ -339,6 +339,12 @@ public class IDManager {
 
         abstract boolean isProper();
 
+        /**
+         * (count << offset()) 把count向左移位offset()位，高位舍去，空出的低位使用0补位
+         * (count << offset()) | suffix()
+         * @param count
+         * @return
+         */
         public final long addPadding(long count) {
             assert offset()>0;
             Preconditions.checkArgument(count>0 && count<(1L <<(TOTAL_BITS-offset())),"Count out of range for type [%s]: %s",this,count);
@@ -349,6 +355,13 @@ public class IDManager {
             return id >>> offset();
         }
 
+        /**
+         * 取低`offset()`位和`suffix()`进行比较
+         * byte->: 11110101 & 00000111 =00000101
+         * (id & ((1L << offset()) - 1)) 取id低位`offset()`位。
+         * @param id
+         * @return
+         */
         public final boolean is(long id) {
             return (id & ((1L << offset()) - 1)) == suffix();
         }
@@ -360,6 +373,7 @@ public class IDManager {
 
     /**
      * Id of the partition that schema elements are assigned to
+     * 分配架构元素的分区的ID
      */
     public static final int SCHEMA_PARTITION = 0;
 
@@ -368,31 +382,36 @@ public class IDManager {
 
     /**
      * Number of bits that need to be reserved from the type ids for storing additional information during serialization
+     * 需要在类型ID中保留的位数，以在序列化期间存储其他信息
      */
     public static final int TYPE_LEN_RESERVE = 3;
 
     /**
      * Total number of bits available to a JanusGraph assigned id
      * We use only 63 bits to make sure that all ids are positive
-     *
+     * JanusGraph分配的ID可用的位数,我们仅使用63位来确保所有ID均为正
      */
     private static final long TOTAL_BITS = Long.SIZE-1;
 
     /**
      * Maximum number of bits that can be used for the partition prefix of an id
+     * 可用于ID的分区前缀的最大位数
      */
     private static final long MAX_PARTITION_BITS = 16;
     /**
      * Default number of bits used for the partition prefix. 0 means there is no partition prefix
+     * 用于分区前缀的默认位数。 0表示没有分区前缀
      */
     private static final long DEFAULT_PARTITION_BITS = 0;
     /**
      * The padding bit width for user vertices
+     * 用户顶点的填充位宽度
      */
     public static final long USERVERTEX_PADDING_BITWIDTH = VertexIDType.NormalVertex.offset();
 
     /**
      * The maximum number of padding bits of any type
+     * 任何类型的最大填充位数
      */
     public static final long MAX_PADDING_BITWIDTH = VertexIDType.UserEdgeLabel.offset();
 

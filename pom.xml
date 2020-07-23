@@ -146,6 +146,7 @@
         <module>janusgraph-doc</module>
         <module>janusgraph-solr</module>
         <module>janusgraph-examples</module>
+        <module>janusgraph-kydsj</module>
     </modules>
     <repositories>
         <repository>

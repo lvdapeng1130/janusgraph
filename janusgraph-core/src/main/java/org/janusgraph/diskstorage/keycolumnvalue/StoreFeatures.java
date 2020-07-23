@@ -20,7 +20,7 @@ import org.janusgraph.diskstorage.util.time.TimestampProviders;
 
 /**
  * Describes features supported by a storage backend.
- *
+ * 描述存储后端支持的功能。
  * @author Matthias Broecheler (me@matthiasb.com)
  * @author Dan LaRocque (dalaro@hopcount.org)
  */

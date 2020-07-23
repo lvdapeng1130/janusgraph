@@ -22,9 +22,11 @@ import java.util.Map;
 
 /**
  * KeyColumnValueStoreManager provides the persistence context to the graph database storage backend.
+ * KeyColumnValueStoreManager向图数据库存储后端提供持久性上下文。
  * <p>
  * A KeyColumnValueStoreManager provides transaction handles across multiple data stores that
  * are managed by this KeyColumnValueStoreManager.
+ * KeyColumnValueStoreManager提供跨多个数据存储的事务句柄，这些数据存储由此KeyColumnValueStoreManager管理。
  *
  * @author Matthias Br&ouml;cheler (me@matthiasb.com);
  */
@@ -33,7 +35,7 @@ public interface KeyColumnValueStoreManager extends StoreManager {
     /**
      * Opens an ordered database by the given name. If the database does not exist, it is
      * created. If it has already been opened, the existing handle is returned.
-     *
+     * 通过给定名称打开有序数据库。如果数据库不存在，则创建。如果已经打开，则返回现有的句柄。
      * @param name Name of database
      * @return Database Handle
      * @throws org.janusgraph.diskstorage.BackendException
