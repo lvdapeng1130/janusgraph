@@ -22,7 +22,7 @@ import java.util.*;
  */
 public enum StandardIndexProvider {
     LUCENE("org.janusgraph.diskstorage.lucene.LuceneIndex", "lucene"),
-    ELASTICSEARCH("org.janusgraph.diskstorage.es.ElasticSearchIndex", Arrays.asList("elasticsearch", "es")),
+    ELASTICSEARCH("org.janusgraph.diskstorage.es.KGElasticSearchIndex", Arrays.asList("elasticsearch", "es")),
     SOLR("org.janusgraph.diskstorage.solr.SolrIndex", "solr");
 
     private static final Set<String> ALL_SHORTHANDS;

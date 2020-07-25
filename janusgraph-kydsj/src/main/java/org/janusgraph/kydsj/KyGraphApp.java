@@ -1,6 +1,7 @@
 package org.janusgraph.kydsj;
 
 import org.apache.tinkerpop.gremlin.process.traversal.P;
+import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.*;
 import org.janusgraph.core.attribute.Geoshape;
@@ -8,6 +9,7 @@ import org.janusgraph.core.schema.JanusGraphManagement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -55,10 +57,17 @@ public class KyGraphApp extends JanusGraphApp {
     @Override
     protected void createProperties(final JanusGraphManagement management) {
         management.makePropertyKey("name").dataType(String.class).cardinality(Cardinality.SET).make();
-       /* management.makePropertyKey("age").dataType(Integer.class).make();
+        management.makePropertyKey("age").dataType(Integer.class).make();
         management.makePropertyKey("time").dataType(Integer.class).make();
         management.makePropertyKey("reason").dataType(String.class).make();
-        management.makePropertyKey("place").dataType(Geoshape.class).make();*/
+        management.makePropertyKey("place").dataType(Geoshape.class).make();
+
+        //属性内置属性定义
+        management.makePropertyKey("startDate").dataType(Date.class).make();
+        management.makePropertyKey("endDate").dataType(Date.class).make();
+        management.makePropertyKey("geo").dataType(Geoshape.class).make();
+        management.makePropertyKey("dsr").dataType(String.class).cardinality(Cardinality.SET).make();
+        management.makePropertyKey("role").dataType(String.class).make();
     }
 
     /**
@@ -78,10 +87,11 @@ public class KyGraphApp extends JanusGraphApp {
     @Override
     protected void createMixedIndexes(final JanusGraphManagement management) {
         if (useMixedIndex) {
-            management.buildIndex("person", Vertex.class)
+        /* management.buildIndex("person", Vertex.class)
                 .addKey(management.getPropertyKey("name"))
-                .buildMixedIndex(mixedIndexConfigName);
-            /*management.buildIndex("person", Vertex.class).addKey(management.getPropertyKey("age"))
+                .buildMixedIndex(mixedIndexConfigName);*/
+            management.buildIndex("person", Vertex.class)
+                .addKey(management.getPropertyKey("age"))
                 .addKey(management.getPropertyKey("time"))
                 .addKey(management.getPropertyKey("place"))
                 .addKey(management.getPropertyKey("name"))
@@ -92,7 +102,7 @@ public class KyGraphApp extends JanusGraphApp {
                 .indexOnly(management.getVertexLabel("phone"))
                 .buildMixedIndex(mixedIndexConfigName);
             management.buildIndex("eReasonPlace", Edge.class).addKey(management.getPropertyKey("reason"))
-                .addKey(management.getPropertyKey("place")).buildMixedIndex(mixedIndexConfigName);*/
+                .addKey(management.getPropertyKey("place")).buildMixedIndex(mixedIndexConfigName);
         }
     }
 
@@ -102,16 +112,31 @@ public class KyGraphApp extends JanusGraphApp {
     public void createElements() {
         try {
             // naive check if the graph was previously created
-            if (g.V().has("name", "saturn").hasNext()) {
+            /*if (g.V().has("name", "saturn").hasNext()) {
                 if (supportsTransactions) {
                     g.tx().rollback();
                 }
                 return;
-            }
+            }*/
+
             LOGGER.info("creating elements");
             // see GraphOfTheGodsFactory.java
+            /*final Vertex saturn = g.addV("person")
+                .property("name", "saturn",
+                    "startDate",new Date(),
+                    "endDate",new Date(),
+                    "dsr","测试dsr写入","dsr","ceshi",
+                    "geo",Geoshape.point(22.22,113.1122),
+                    "role","测试role"
+                ) .next();*/
             final Vertex saturn = g.addV("person")
-                .property("name", "saturn")
+                .property("name", "saturn",
+                    "startDate",new Date(),
+                    "endDate",new Date(),
+                    "dsr","测试dsr写入","dsr","测试dsr2",
+                    "geo",Geoshape.point(22.22,113.1122),
+                    "role","测试role"
+                )
                 .property("age", 10000).next();
             final Vertex phone = g.addV("phone")
                 .property("name", "saturn")
@@ -143,6 +168,40 @@ public class KyGraphApp extends JanusGraphApp {
         }
     }
 
+    public void appendOtherDsr() {
+        try {
+            // naive check if the graph was previously created
+            LOGGER.info("追加图库dsr");
+            // see GraphOfTheGodsFactory.java
+            g.V().hasLabel("person").has("age", P.eq(10000))
+                .property("name", "saturn",
+                    "startDate",new Date(),
+                    "endDate",new Date(),
+                    "dsr","我是徐小侠",
+                    "geo",Geoshape.point(22.22,113.1122),
+                    "role","测试rol1111e"
+                ).property("age", 10000).next();
+
+            if (supportsTransactions) {
+                g.tx().commit();
+            }
+
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage(), e);
+            if (supportsTransactions) {
+                g.tx().rollback();
+            }
+        }
+        if (useMixedIndex) {
+            try {
+                // mixed indexes typically have a delayed refresh interval
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                LOGGER.error(e.getMessage(), e);
+            }
+        }
+    }
+
     @Override
     public void createSchema() {
         final JanusGraphManagement management = getJanusGraph().openManagement();
@@ -154,9 +213,9 @@ public class KyGraphApp extends JanusGraphApp {
             }
             LOGGER.info("creating schema");
             createProperties(management);
-            //createVertexLabels(management);
-            //createEdgeLabels(management);
-            //createCompositeIndexes(management);
+            createVertexLabels(management);
+            createEdgeLabels(management);
+            createCompositeIndexes(management);
             createMixedIndexes(management);
             management.commit();
         } catch (Exception e) {
@@ -182,9 +241,9 @@ public class KyGraphApp extends JanusGraphApp {
             }
             LOGGER.info("reading elements");
             // look up vertex by name can use a composite index in JanusGraph
-            final List<Map<Object, Object>> v = g.V().has("age", P.eq(5000)).valueMap(true).next(2);
+            final List<Map<Object, Object>> v = g.V().hasLabel("person","phone").has("age", P.eq(5000)).valueMap(true).next(2);
             // numerical range query can use a mixed index in JanusGraph
-            final List<Object> list = g.V().has("age", P.gte(5000)).values("age").toList();
+            final List<Object> list = g.V().hasLabel("person","phone").has("age", P.eq(5000)).values("age").toList();
             LOGGER.info(list.toString());
 
 
@@ -212,12 +271,13 @@ public class KyGraphApp extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-           if (supportsSchema) {
+           /*if (supportsSchema) {
                 createSchema();
             }
 
-            // build the graph structure
+            // build the graph structure*/
             //createElements();
+            appendOtherDsr();
             // read to see they were made
             //readElements();
             //indexQuery();

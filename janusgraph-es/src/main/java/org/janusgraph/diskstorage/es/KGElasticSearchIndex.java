@@ -69,179 +69,6 @@ public class KGElasticSearchIndex implements IndexProvider {
 
     private static final String STRING_MAPPING_SUFFIX = "__STRING";
 
-   /* public static final ConfigNamespace ELASTICSEARCH_NS =
-            new ConfigNamespace(INDEX_NS, "elasticsearch", "Elasticsearch index configuration");
-
-    public static final ConfigOption<String> INTERFACE =
-            new ConfigOption<>(ELASTICSEARCH_NS, "interface",
-            "Interface for connecting to Elasticsearch. " +
-            "TRANSPORT_CLIENT and NODE were previously supported, but now are required to migrate to REST_CLIENT. " +
-            "See the JanusGraph upgrade instructions for more details.",
-            ConfigOption.Type.MASKABLE, String.class, ElasticSearchSetup.REST_CLIENT.toString(),
-            disallowEmpty(String.class));
-
-    public static final ConfigOption<String> HEALTH_REQUEST_TIMEOUT =
-            new ConfigOption<>(ELASTICSEARCH_NS, "health-request-timeout",
-            "When JanusGraph initializes its ES backend, JanusGraph waits up to this duration for the " +
-            "ES cluster health to reach at least yellow status.  " +
-            "This string should be formatted as a natural number followed by the lowercase letter " +
-            "\"s\", e.g. 3s or 60s.", ConfigOption.Type.MASKABLE, "30s");
-
-    public static final ConfigOption<String> BULK_REFRESH =
-            new ConfigOption<>(ELASTICSEARCH_NS, "bulk-refresh",
-            "Elasticsearch bulk API refresh setting used to control when changes made by this request are made " +
-            "visible to search", ConfigOption.Type.MASKABLE, "false");
-
-    public static final ConfigNamespace ES_CREATE_NS =
-            new ConfigNamespace(ELASTICSEARCH_NS, "create", "Settings related to index creation");
-
-    public static final ConfigOption<Long> CREATE_SLEEP =
-            new ConfigOption<>(ES_CREATE_NS, "sleep",
-            "How long to sleep, in milliseconds, between the successful completion of a (blocking) index " +
-            "creation request and the first use of that index.  This only applies when creating an index in ES, " +
-            "which typically only happens the first time JanusGraph is started on top of ES. If the index JanusGraph is " +
-            "configured to use already exists, then this setting has no effect.", ConfigOption.Type.MASKABLE, 200L);
-
-    public static final ConfigNamespace ES_CREATE_EXTRAS_NS =
-            new ConfigNamespace(ES_CREATE_NS, "ext", "Overrides for arbitrary settings applied at index creation.\n" +
-            		"See [Elasticsearch](../index-backend/elasticsearch.md#index-creation-options), The full list of possible setting is available at " +
-            		"[Elasticsearch index settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules.html#index-modules-settings).");
-
-    public static final ConfigOption<Boolean> USE_EXTERNAL_MAPPINGS =
-            new ConfigOption<>(ES_CREATE_NS, "use-external-mappings",
-            "Whether JanusGraph should make use of an external mapping when registering an index.", ConfigOption.Type.MASKABLE, false);
-
-    public static final ConfigOption<Integer> NUMBER_OF_REPLICAS =
-            new ConfigOption<>(ES_CREATE_EXTRAS_NS, "number_of_replicas",
-            "The number of replicas each primary shard has", ConfigOption.Type.MASKABLE, 1);
-
-    public static final ConfigOption<Integer> NUMBER_OF_SHARDS =
-            new ConfigOption<>(ES_CREATE_EXTRAS_NS, "number_of_shards",
-            "The number of primary shards that an index should have." +
-            "Default value is 5 on ES 6 and 1 on ES 7", ConfigOption.Type.MASKABLE, Integer.class);
-
-
-    public static final ConfigOption<Boolean> ALLOW_MAPPING_UPDATE =
-            new ConfigOption<>(ES_CREATE_NS, "allow-mapping-update",
-            "Whether JanusGraph should allow a mapping update when registering an index. " +
-            "Only applicable when " + USE_EXTERNAL_MAPPINGS.getName() + " is true.", ConfigOption.Type.MASKABLE, false);
-
-    public static final ConfigOption<Boolean> USE_ALL_FIELD =
-        new ConfigOption<>(ELASTICSEARCH_NS, "use-all-field",
-            "Whether JanusGraph should add an \"all\" field mapping. When enabled field mappings will " +
-            "include a \"copy_to\" parameter referencing the \"all\" field. This is supported since Elasticsearch 6.x " +
-            " and is required when using wildcard fields starting in Elasticsearch 6.x.", ConfigOption.Type.GLOBAL_OFFLINE, true);
-
-    public static final ConfigOption<Integer> ES_SCROLL_KEEP_ALIVE =
-            new ConfigOption<>(ELASTICSEARCH_NS, "scroll-keep-alive",
-            "How long (in seconds) elasticsearch should keep alive the scroll context.", ConfigOption.Type.GLOBAL_OFFLINE, 60);
-
-    public static final ConfigNamespace ES_INGEST_PIPELINES =
-            new ConfigNamespace(ELASTICSEARCH_NS, "ingest-pipeline", "Ingest pipeline applicable to a store of an index.");
-
-    public static final ConfigNamespace SSL_NS =
-            new ConfigNamespace(ELASTICSEARCH_NS, "ssl", "Elasticsearch SSL configuration");
-
-    public static final ConfigOption<Boolean> SSL_ENABLED =
-            new ConfigOption<>(SSL_NS, "enabled",
-            "Controls use of the SSL connection to Elasticsearch.", ConfigOption.Type.LOCAL, false);
-
-    public static final ConfigOption<Boolean> SSL_DISABLE_HOSTNAME_VERIFICATION =
-            new ConfigOption<>(SSL_NS, "disable-hostname-verification",
-            "Disables the SSL hostname verification if set to true. Hostname verification is enabled by default.",
-            ConfigOption.Type.LOCAL, false);
-
-    public static final ConfigOption<Boolean> SSL_ALLOW_SELF_SIGNED_CERTIFICATES =
-            new ConfigOption<>(SSL_NS, "allow-self-signed-certificates",
-            "Controls the accepting of the self-signed SSL certificates.",
-            ConfigOption.Type.LOCAL, false);
-
-    public static final ConfigNamespace SSL_TRUSTSTORE_NS =
-            new ConfigNamespace(SSL_NS, "truststore", "Configuration options for SSL Truststore.");
-
-    public static final ConfigOption<String> SSL_TRUSTSTORE_LOCATION =
-            new ConfigOption<>(SSL_TRUSTSTORE_NS, "location",
-            "Marks the location of the SSL Truststore.", ConfigOption.Type.LOCAL, "");
-
-    public static final ConfigOption<String> SSL_TRUSTSTORE_PASSWORD =
-            new ConfigOption<>(SSL_TRUSTSTORE_NS, "password",
-            "The password to access SSL Truststore.", ConfigOption.Type.LOCAL, "", Objects::nonNull);
-
-    public static final ConfigNamespace SSL_KEYSTORE_NS =
-            new ConfigNamespace(SSL_NS, "keystore", "Configuration options for SSL Keystore.");
-
-    public static final ConfigOption<String> SSL_KEYSTORE_LOCATION =
-            new ConfigOption<>(SSL_KEYSTORE_NS, "location",
-            "Marks the location of the SSL Keystore.", ConfigOption.Type.LOCAL, "");
-
-    public static final ConfigOption<String> SSL_KEYSTORE_PASSWORD =
-            new ConfigOption<>(SSL_KEYSTORE_NS, "storepassword",
-            "The password to access SSL Keystore.", ConfigOption.Type.LOCAL, "", Objects::nonNull);
-
-    public static final ConfigOption<String> SSL_KEY_PASSWORD =
-            new ConfigOption<>(SSL_KEYSTORE_NS, "keypassword",
-            "The password to access the key in the SSL Keystore. If the option is not present, the value of \"storepassword\" is used.",
-            ConfigOption.Type.LOCAL, "", Objects::nonNull);
-
-    public static final ConfigNamespace ES_HTTP_NS =
-            new ConfigNamespace(ELASTICSEARCH_NS, "http", "Configuration options for HTTP(S) transport.");
-
-    public static final ConfigNamespace ES_HTTP_AUTH_NS =
-            new ConfigNamespace(ES_HTTP_NS, "auth", "Configuration options for HTTP(S) authentication.");
-
-    public static final ConfigOption<String> ES_HTTP_AUTH_TYPE =
-            new ConfigOption<>(ES_HTTP_AUTH_NS, "type",
-            "Authentication type to be used for HTTP(S) access.", ConfigOption.Type.LOCAL, HttpAuthTypes.NONE.toString());
-
-    public static final ConfigNamespace ES_HTTP_AUTH_BASIC_NS =
-            new ConfigNamespace(ES_HTTP_AUTH_NS, "basic", "Configuration options for HTTP(S) Basic authentication.");
-
-    public static final ConfigOption<String> ES_HTTP_AUTH_USERNAME =
-            new ConfigOption<>(ES_HTTP_AUTH_BASIC_NS, "username",
-            "Username for HTTP(S) authentication.", ConfigOption.Type.LOCAL, "");
-
-    public static final ConfigOption<String> ES_HTTP_AUTH_PASSWORD =
-            new ConfigOption<>(ES_HTTP_AUTH_BASIC_NS, "password",
-            "Password for HTTP(S) authentication.", ConfigOption.Type.LOCAL, "");
-
-    public static final ConfigOption<String> ES_HTTP_AUTH_REALM = new ConfigOption<>(ES_HTTP_AUTH_BASIC_NS,
-            "realm", "Realm value for HTTP(S) authentication. If empty, any realm is accepted.",
-            ConfigOption.Type.LOCAL, "");
-
-    public static final ConfigNamespace ES_HTTP_AUTH_CUSTOM_NS =
-            new ConfigNamespace(ES_HTTP_AUTH_NS, "custom", "Configuration options for custom HTTP(S) authenticator.");
-
-    public static final ConfigOption<String> ES_HTTP_AUTHENTICATOR_CLASS = new ConfigOption<>(
-            ES_HTTP_AUTH_CUSTOM_NS, "authenticator-class", "Authenticator fully qualified class name.",
-            ConfigOption.Type.LOCAL, "");
-
-    public static final ConfigOption<String[]> ES_HTTP_AUTHENTICATOR_ARGS = new ConfigOption<>(
-            ES_HTTP_AUTH_CUSTOM_NS, "authenticator-args", "Comma-separated custom authenticator constructor arguments.",
-            ConfigOption.Type.LOCAL, new String[0]);
-
-    public static final ConfigOption<Boolean> SETUP_MAX_OPEN_SCROLL_CONTEXTS =
-        new ConfigOption<>(ELASTICSEARCH_NS, "setup-max-open-scroll-contexts",
-            "Whether JanusGraph should setup max_open_scroll_context to maximum value for the cluster or not.",
-            ConfigOption.Type.MASKABLE, true);
-
-    public static final ConfigOption<Boolean> USE_MAPPING_FOR_ES7 =
-        new ConfigOption<>(ELASTICSEARCH_NS, "use-mapping-for-es7",
-            "Mapping types are deprecated in ElasticSearch 7 and JanusGraph will not use mapping types by default " +
-                "for ElasticSearch 7 but if you want to preserve mapping types, you can setup this parameter to true. " +
-                "If you are updating ElasticSearch from 6 to 7 and you don't want to reindex your indexes, you may setup " +
-                "this parameter to true but we do recommend to reindex your indexes and don't use this parameter.",
-            ConfigOption.Type.MASKABLE, false);
-
-    public static final ConfigOption<Integer> RETRY_ON_CONFLICT =
-        new ConfigOption<>(ELASTICSEARCH_NS, "retry_on_conflict",
-            "Specify how many times should the operation be retried when a conflict occurs.", ConfigOption.Type.MASKABLE, 0);
-
-    public static final ConfigOption<Boolean> ENABLE_INDEX_STORE_NAMES_CACHE =
-        new ConfigOption<>(ELASTICSEARCH_NS, "enable_index_names_cache",
-            "Enables cache for generated index store names. " +
-                "It is recommended to always enable index store names cache unless you have more then 50000 indexes " +
-                "per index store.", ConfigOption.Type.MASKABLE, true);*/
-
     public static final int HOST_PORT_DEFAULT = 9200;
 
     /**
@@ -266,7 +93,7 @@ public class KGElasticSearchIndex implements IndexProvider {
             "        }",
             "    }",
             "}");
-    private static final String PARAMETERIZED_ADDITION_SCRIPT = parameterizedScriptPrepare("",
+    private static final String PARAMETERIZED_ADDITION_SCRIPT1 = parameterizedScriptPrepare("",
         "for (field in params.fields) {",
         "    def fieldValueName = field.name+'.value';",
         "    def startDateFieldName = field.name+'.startDate';",
@@ -297,6 +124,99 @@ public class KGElasticSearchIndex implements IndexProvider {
         "      }",
         "    }",
         "}");
+    private static final String PARAMETERIZED_ADDITION_SCRIPT = parameterizedScriptPrepare("",
+        "for (field in params.fields){",
+        "            def fieldValueArray = ctx._source.get(field.name);",
+        "            boolean isExists=false;",
+        "            if (fieldValueArray != null) {",
+        "                Map existMap=null;",
+        "                for (Map simple : fieldValueArray) {",
+        "                    if (simple != null && simple.containsKey(\"value\")) {",
+        "                        Object v=simple.get(\"value\");",
+        "                        if(v!=null&&simple.get(\"value\").equals(field.value)){",
+        "                            isExists=true;",
+        "                            existMap=simple;",
+        "                        }",
+        "                    }",
+        "                }",
+        "                if(isExists&&existMap!=null){",
+        "                    if (field.startDate != null) {",
+        "                        existMap.put(\"startDate\", field.startDate);",
+        "                    }",
+        "                    if (field.endDate != null) {",
+        "                        existMap.put(\"endDate\", field.endDate);",
+        "                    }",
+        "                    if (field.role != null) {",
+        "                        existMap.put(\"role\", field.role);",
+        "                    }",
+        "                    if(field.geo!=null){",
+        "                        existMap.put(\"geo\",field.geo);",
+        "                    }",
+        "                    if(field.dsr!=null&&field.dsr.size()>0) {",
+        "                        Object dsrObjects = existMap.get(\"dsr\");",
+        "                        if (dsrObjects != null) {",
+        "                            if (dsrObjects instanceof List) {",
+        "                                Set existsDsrs=new HashSet((List)dsrObjects);",
+        "                                for(String dsr:field.dsr){",
+        "                                    if(!existsDsrs.contains(dsr)){",
+        "                                        ((List)dsrObjects).add(dsr);",
+        "                                    }",
+        "                                }",
+        "                            } else {",
+        "                                existMap.put(\"dsr\",field.dsr);",
+        "                            }",
+        "                        }else{",
+        "                            existMap.put(\"dsr\",field.dsr);",
+        "                        }",
+        "                    }",
+        "                }else{",
+        "                    Map newValueMap=new HashMap();",
+        "                    if(field.value!=null){",
+        "                        newValueMap.put(\"value\",field.value);",
+        "                    }",
+        "                    if (field.startDate != null) {",
+        "                        newValueMap.put(\"startDate\", field.startDate);",
+        "                    }",
+        "                    if (field.endDate != null) {",
+        "                        newValueMap.put(\"endDate\", field.endDate);",
+        "                    }" ,
+        "                    if (field.role != null) {" ,
+        "                        newValueMap.put(\"role\", field.role);" ,
+        "                    }" ,
+        "                    if(field.geo!=null){" ,
+        "                        newValueMap.put(\"geo\",field.geo);" ,
+        "                    }" ,
+        "                    if(field.dsr!=null&&field.dsr.size()>0) {" ,
+        "                        newValueMap.put(\"dsr\",field.dsr);" ,
+        "                    }" ,
+        "                    fieldValueArray.add(newValueMap);" ,
+        "                }" ,
+        "            }else{" ,
+        "                ArrayList fieldValueList=new ArrayList();" ,
+        "                Map newValueMap=new HashMap();" ,
+        "                if(field.value!=null){" ,
+        "                    newValueMap.put(\"value\",field.value);" ,
+        "                }" ,
+        "                if (field.startDate != null) {" ,
+        "                    newValueMap.put(\"startDate\", field.startDate);" ,
+        "                }" ,
+        "                if (field.endDate != null) {" ,
+        "                    newValueMap.put(\"endDate\", field.endDate);" ,
+        "                }" ,
+        "                if (field.role != null) {" ,
+        "                    newValueMap.put(\"role\", field.role);" ,
+        "                }" ,
+        "                if(field.geo!=null){" ,
+        "                    newValueMap.put(\"geo\",field.geo);" ,
+        "                }" ,
+        "                if(field.dsr!=null&&field.dsr.size()>0) {" ,
+        "                    newValueMap.put(\"dsr\",field.dsr);" ,
+        "                }" ,
+        "                fieldValueList.add(newValueMap);" ,
+        "                ctx._source.put(field.name,fieldValueList);" ,
+        "            }",
+        "        }"
+    );
 
     static final String INDEX_NAME_SEPARATOR = "_";
     private static final String SCRIPT_ID_SEPARATOR = "-";
@@ -697,7 +617,7 @@ public class KGElasticSearchIndex implements IndexProvider {
                     if(StringUtils.isNotBlank(lastEntry.getRole())) {
                         fieldValues.put(KG_PROPERTY_ROLE, lastEntry.getRole().trim());
                     }
-                    doc.put(add.getKey(), fieldValues);
+                    doc.put(add.getKey(), new Object[]{fieldValues});
                     break;
                 case SET:
                 case LIST:
