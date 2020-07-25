@@ -1,13 +1,16 @@
 package org.janusgraph.kydsj;
 
-import org.apache.tinkerpop.gremlin.structure.Edge;
+import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.janusgraph.core.Cardinality;
-import org.janusgraph.core.Multiplicity;
+import org.janusgraph.core.*;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.schema.JanusGraphManagement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * @author: ldp
@@ -25,9 +28,9 @@ public class KyGraphApp extends JanusGraphApp {
      */
     @Override
     protected void createVertexLabels(final JanusGraphManagement management) {
-        management.makeVertexLabel("titan").make();
+        management.makeVertexLabel("person").make();
         management.makeVertexLabel("location").make();
-        management.makeVertexLabel("god").make();
+        management.makeVertexLabel("phone").make();
         management.makeVertexLabel("demigod").make();
         management.makeVertexLabel("human").make();
         management.makeVertexLabel("monster").make();
@@ -52,10 +55,10 @@ public class KyGraphApp extends JanusGraphApp {
     @Override
     protected void createProperties(final JanusGraphManagement management) {
         management.makePropertyKey("name").dataType(String.class).cardinality(Cardinality.SET).make();
-        management.makePropertyKey("age").dataType(Integer.class).make();
+       /* management.makePropertyKey("age").dataType(Integer.class).make();
         management.makePropertyKey("time").dataType(Integer.class).make();
         management.makePropertyKey("reason").dataType(String.class).make();
-        management.makePropertyKey("place").dataType(Geoshape.class).make();
+        management.makePropertyKey("place").dataType(Geoshape.class).make();*/
     }
 
     /**
@@ -75,17 +78,21 @@ public class KyGraphApp extends JanusGraphApp {
     @Override
     protected void createMixedIndexes(final JanusGraphManagement management) {
         if (useMixedIndex) {
-            management.buildIndex("god_index", Vertex.class).addKey(management.getPropertyKey("age"))
+            management.buildIndex("person", Vertex.class)
+                .addKey(management.getPropertyKey("name"))
+                .buildMixedIndex(mixedIndexConfigName);
+            /*management.buildIndex("person", Vertex.class).addKey(management.getPropertyKey("age"))
                 .addKey(management.getPropertyKey("time"))
                 .addKey(management.getPropertyKey("place"))
                 .addKey(management.getPropertyKey("name"))
-                .indexOnly(management.getVertexLabel("god"))
+                .indexOnly(management.getVertexLabel("person"))
                 .buildMixedIndex(mixedIndexConfigName);
-            management.buildIndex("titan_index", Vertex.class).addKey(management.getPropertyKey("age"))
-                .indexOnly(management.getVertexLabel("titan"))
+            management.buildIndex("phone", Vertex.class)
+                .addKey(management.getPropertyKey("age"))
+                .indexOnly(management.getVertexLabel("phone"))
                 .buildMixedIndex(mixedIndexConfigName);
             management.buildIndex("eReasonPlace", Edge.class).addKey(management.getPropertyKey("reason"))
-                .addKey(management.getPropertyKey("place")).buildMixedIndex(mixedIndexConfigName);
+                .addKey(management.getPropertyKey("place")).buildMixedIndex(mixedIndexConfigName);*/
         }
     }
 
@@ -103,10 +110,13 @@ public class KyGraphApp extends JanusGraphApp {
             }
             LOGGER.info("creating elements");
             // see GraphOfTheGodsFactory.java
-            final Vertex saturn = g.addV("titan")
+            final Vertex saturn = g.addV("person")
                 .property("name", "saturn")
                 .property("age", 10000).next();
-            final Vertex jupiter = g.addV("god")
+            final Vertex phone = g.addV("phone")
+                .property("name", "saturn")
+                .property("age", 5000).next();
+            final Vertex jupiter = g.addV("person")
                 .property("name", "jupiter")
                 .property("name", "jupiter1")
                 .property("name", "jupiter2")
@@ -138,20 +148,53 @@ public class KyGraphApp extends JanusGraphApp {
         final JanusGraphManagement management = getJanusGraph().openManagement();
         try {
             // ;
-            /*if (management.getRelationTypes(RelationType.class).iterator().hasNext()) {
+            if (management.getRelationTypes(RelationType.class).iterator().hasNext()) {
                 management.rollback();
                 return;
-            }*/
+            }
             LOGGER.info("creating schema");
             createProperties(management);
-            createVertexLabels(management);
-            createEdgeLabels(management);
+            //createVertexLabels(management);
+            //createEdgeLabels(management);
             //createCompositeIndexes(management);
             createMixedIndexes(management);
             management.commit();
         } catch (Exception e) {
             LOGGER.error(e.getMessage(),e);
             management.rollback();
+        }
+    }
+
+    public void indexQuery(){
+        Stream<JanusGraphIndexQuery.Result<JanusGraphVertex>> resultStream = getJanusGraph().indexQuery("person", "v.age:5000").vertexStream();
+        resultStream.forEach(r->{
+            JanusGraphVertex element = r.getElement();
+            System.out.println(element);
+        });
+    }
+    /**
+     * Runs some traversal queries to get data from the graph.
+     */
+    public void readElements() {
+        try {
+            if (g == null) {
+                return;
+            }
+            LOGGER.info("reading elements");
+            // look up vertex by name can use a composite index in JanusGraph
+            final List<Map<Object, Object>> v = g.V().has("age", P.eq(5000)).valueMap(true).next(2);
+            // numerical range query can use a mixed index in JanusGraph
+            final List<Object> list = g.V().has("age", P.gte(5000)).values("age").toList();
+            LOGGER.info(list.toString());
+
+
+        } finally {
+            // the default behavior automatically starts a transaction for
+            // any graph interaction, so it is best to finish the transaction
+            // even for read-only graph query operations
+            if (supportsTransactions) {
+                g.tx().rollback();
+            }
         }
     }
     /**
@@ -169,16 +212,17 @@ public class KyGraphApp extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-            if (supportsSchema) {
+           if (supportsSchema) {
                 createSchema();
             }
 
             // build the graph structure
-            createElements();
+            //createElements();
             // read to see they were made
-            /*readElements();
+            //readElements();
+            //indexQuery();
 
-            for (int i = 0; i < 3; i++) {
+            /*for (int i = 0; i < 3; i++) {
                 try {
                     Thread.sleep((long) (Math.random() * 500) + 500);
                 } catch (InterruptedException e) {
