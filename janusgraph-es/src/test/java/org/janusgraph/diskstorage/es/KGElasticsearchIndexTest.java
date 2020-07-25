@@ -95,7 +95,7 @@ public class KGElasticsearchIndexTest extends IndexProviderTest {
 
     @AfterAll
     public static void cleanupElasticsearch() throws IOException {
-        IOUtils.closeQuietly(httpClient.execute(host, new HttpDelete("janusgraph*")));
+       // IOUtils.closeQuietly(httpClient.execute(host, new HttpDelete("janusgraph*")));
         IOUtils.closeQuietly(httpClient);
     }
 
@@ -222,7 +222,7 @@ public class KGElasticsearchIndexTest extends IndexProviderTest {
         updateDoc.put(PHONE_SET, "$123");
         add("vertex", "unescaped", updateDoc, false);
 
-        add("vertex", "other", getRandomDocument(), true);
+        //add("vertex", "other", getRandomDocument(), true);
 
         clopen();
 

@@ -16,6 +16,7 @@ package org.janusgraph.diskstorage.es;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
+import org.apache.commons.lang3.StringUtils;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.core.attribute.Cmp;
@@ -258,22 +259,44 @@ public class KGElasticSearchIndex implements IndexProvider {
             "    if (field.cardinality == 'SINGLE') {",
             "        ctx._source.remove(field.name);",
             "    } else if (ctx._source.containsKey(field.name)) {",
-            "        def fieldIndex = ctx._source[field.name].indexOf(field.value);",
+            "        def fieldValueName = field.name+'.value';",
+            "        def fieldIndex = ctx._source[fieldValueName].indexOf(field.value);",
             "        if (fieldIndex >= 0 && fieldIndex < ctx._source[field.name].size()) {",
             "            ctx._source[field.name].remove(fieldIndex);",
             "        }",
             "    }",
             "}");
-
     private static final String PARAMETERIZED_ADDITION_SCRIPT = parameterizedScriptPrepare("",
-            "for (field in params.fields) {",
-            "    if (ctx._source[field.name] == null) {",
-            "        ctx._source[field.name] = [];",
-            "    }",
-            "    if (field.cardinality != 'SET' || ctx._source[field.name].indexOf(field.value) == -1) {",
-            "        ctx._source[field.name].add(field.value);",
-            "    }",
-            "}");
+        "for (field in params.fields) {",
+        "    def fieldValueName = field.name+'.value';",
+        "    def startDateFieldName = field.name+'.startDate';",
+        "    def endDateFieldName = field.name+'.endDate';",
+        "    def roleFieldName = field.name+'.role';",
+        "    def geoFieldName = field.name+'.geo';",
+        "    def dsrFieldName = field.name+'.dsr';",
+        "    if (ctx._source[fieldValueName] == null) {",
+        "        ctx._source[fieldValueName] = [];",
+        "    }",
+        "    if (field.cardinality != 'SET' || ctx._source[fieldValueName].indexOf(field.value) == -1) {",
+        "        ctx._source[fieldValueName].add(field.value);",
+        "    }",
+        "    ctx._source[startDateFieldName] = field.startDate;",
+        "    ctx._source[endDateFieldName] = field.endDate;",
+        "    ctx._source[roleFieldName] = field.role;",
+        "    if (field.geo != null && field.geo.length == 2) {",
+        "        ctx._source[geoFieldName] = field.geo;",
+        "    }",
+        "    if (ctx._source[dsrFieldName] == null) {",
+        "        ctx._source[dsrFieldName] = [];",
+        "    }",
+        "    if (field.dsr != null && field.dsr.length > 0) {",
+        "      for (dsrvalue in field.dsr) {",
+        "         if (ctx._source[dsrFieldName].indexOf(dsrvalue) == -1) {",
+        "             ctx._source[dsrFieldName].add(dsrvalue);",
+        "         }",
+        "      }",
+        "    }",
+        "}");
 
     static final String INDEX_NAME_SEPARATOR = "_";
     private static final String SCRIPT_ID_SEPARATOR = "-";
@@ -447,9 +470,9 @@ public class KGElasticSearchIndex implements IndexProvider {
         }
     }
 
-    private static String getDualMappingName(String key) {
+    /*private static String getDualMappingName(String key) {
         return key + STRING_MAPPING_SUFFIX;
-    }
+    }*/
 
     private String generateScriptId(String uniqueScriptSuffix){
         return indexName + SCRIPT_ID_SEPARATOR + uniqueScriptSuffix;
@@ -523,14 +546,15 @@ public class KGElasticSearchIndex implements IndexProvider {
                 = stringAnalyzer == null ? compat.createKeywordMapping() : compat.createTextMapping(stringAnalyzer);
             switch (map) {
                 case STRING:
-                    properties.put(key,this.constructKGField(information,stringMapping,dataType));
+                    //properties.put(key,this.constructKGField(information,stringMapping,dataType));
+                    properties.put(key, this.constructKGField(information,compat.createTextMapping(textAnalyzer),dataType));
                     break;
                 case TEXT:
                     properties.put(key, this.constructKGField(information,compat.createTextMapping(textAnalyzer),dataType));
                     break;
                 case TEXTSTRING:
                     properties.put(key, this.constructKGField(information,compat.createTextMapping(textAnalyzer),dataType));
-                    properties.put(getDualMappingName(key), this.constructKGField(information,stringMapping,dataType));
+                    //properties.put(getDualMappingName(key), this.constructKGField(information,stringMapping,dataType));
                     break;
                 default: throw new AssertionError("Unexpected mapping: "+map);
             }
@@ -606,6 +630,15 @@ public class KGElasticSearchIndex implements IndexProvider {
                 mapping.put("copy_to", ElasticSearchConstants.CUSTOM_ALL_FIELD);
             }
         }
+        //"ignore_malformed": true
+        if(!AttributeUtils.isString(information.getDataType())&&dataType !=Boolean.class){
+            mapping.put("ignore_malformed",true);
+        }
+        Mapping map = Mapping.getMapping(information);
+        if (dataType != Geoshape.class && map!=Mapping.PREFIX_TREE) {
+            mapping.put("fields", ImmutableMap.of("keyword", ImmutableMap.of("type",
+                "keyword", "ignore_above", 100)));
+        }
         final Map<String,Object> innerFieldMapping = new HashMap<>();
         innerFieldMapping.put(KG_PROPERTY_DSR,compat.createKeywordMapping());
         innerFieldMapping.put(KG_PROPERTY_STARTDATE,ImmutableMap.of(ES_TYPE_KEY, "date"));
@@ -641,43 +674,70 @@ public class KGElasticSearchIndex implements IndexProvider {
         final Map<String, Object> doc = new HashMap<>();
         for (final Map.Entry<String, Collection<IndexEntry>> add : unique.asMap().entrySet()) {
             final KeyInformation keyInformation = information.get(add.getKey());
-            final Object value;
+            Collection<IndexEntry> indexEntries=add.getValue();
             switch (keyInformation.getCardinality()) {
                 case SINGLE:
-                    value = convertToEsType(Iterators.getLast(add.getValue().iterator()).value,
+                    IndexEntry lastEntry=Iterators.getLast(indexEntries.iterator());
+                    Object fValue = convertToEsType(lastEntry.value,
                             Mapping.getMapping(keyInformation));
+                    Map<String,Object> fieldValues=new HashMap<>();
+                    fieldValues.put(KG_PROPERTY_VALUE,fValue);
+                    if(lastEntry.getStartDate()!=null) {
+                        fieldValues.put(KG_PROPERTY_STARTDATE, lastEntry.getStartDate());
+                    }
+                    if(lastEntry.getEndDate()!=null) {
+                        fieldValues.put(KG_PROPERTY_ENDDATE, lastEntry.getEndDate());
+                    }
+                    if(lastEntry.getGeo()!=null&&lastEntry.getGeo().length==2) {
+                        fieldValues.put(KG_PROPERTY_GEO, lastEntry.getGeo());
+                    }
+                    if(lastEntry.getDsr()!=null&&lastEntry.getDsr().size()>0) {
+                        fieldValues.put(KG_PROPERTY_DSR, lastEntry.getDsr().toArray(new String[lastEntry.getDsr().size()]));
+                    }
+                    if(StringUtils.isNotBlank(lastEntry.getRole())) {
+                        fieldValues.put(KG_PROPERTY_ROLE, lastEntry.getRole().trim());
+                    }
+                    doc.put(add.getKey(), fieldValues);
                     break;
                 case SET:
                 case LIST:
-                    value = add.getValue().stream()
-                        .map(v -> convertToEsType(v.value, Mapping.getMapping(keyInformation)))
-                        .filter(v -> {
-                            Preconditions.checkArgument(!(v instanceof byte[]),
-                                "Collections not supported for " + add.getKey());
+                    Object[] fieldContent = indexEntries.stream().map(entry -> {
+                        Object fieldValue = convertToEsType(entry.value, Mapping.getMapping(keyInformation));
+                        Map<String, Object> fieValues = new HashMap<>();
+                        fieValues.put(KG_PROPERTY_VALUE, fieldValue);
+                        if (entry.getStartDate() != null) {
+                            fieValues.put(KG_PROPERTY_STARTDATE, entry.getStartDate());
+                        }
+                        if (entry.getEndDate() != null) {
+                            fieValues.put(KG_PROPERTY_ENDDATE, entry.getEndDate());
+                        }
+                        if (entry.getGeo() != null && entry.getGeo().length == 2) {
+                            fieValues.put(KG_PROPERTY_GEO, entry.getGeo());
+                        }
+                        if (entry.getDsr() != null && entry.getDsr().size() > 0) {
+                            fieValues.put(KG_PROPERTY_DSR, entry.getDsr().toArray(new String[entry.getDsr().size()]));
+                        }
+                        if (StringUtils.isNotBlank(entry.getRole())) {
+                            fieValues.put(KG_PROPERTY_ROLE, entry.getRole().trim());
+                        }
+                        return fieValues;
+                    }).filter(map -> {
+                        Object fieldValue = map.get(KG_PROPERTY_VALUE);
+                        if(fieldValue instanceof byte[]){
+                            return false;
+                        }else {
                             return true;
-                        }).toArray();
+                        }
+                    }).toArray();
+                    doc.put(add.getKey(), fieldContent);
                     break;
                 default:
-                    value = null;
                     break;
             }
-
-            Map<String,Object> fieldValues=new HashMap<>();
-            fieldValues.put(KG_PROPERTY_VALUE,value);
-            fieldValues.put(KG_PROPERTY_STARTDATE,new Date());
-            fieldValues.put(KG_PROPERTY_ENDDATE,new Date());
-            fieldValues.put(KG_PROPERTY_GEO,new double[]{113.11,23.123});
-            fieldValues.put(KG_PROPERTY_DSR,"测试dsr");
-            fieldValues.put(KG_PROPERTY_ROLE,"测试role");
-            doc.put(add.getKey(), fieldValues);
-            if (hasDualStringMapping(information.get(add.getKey())) && keyInformation.getDataType() == String.class) {
+            /*if (hasDualStringMapping(information.get(add.getKey())) && keyInformation.getDataType() == String.class) {
                 doc.put(getDualMappingName(add.getKey()), fieldValues);
-            }
-
-
-
+            }*/
         }
-
         return doc;
     }
 
@@ -826,14 +886,25 @@ public class KGElasticSearchIndex implements IndexProvider {
             }
             Object jsValue = deletion && info.getCardinality() == Cardinality.SINGLE ?
                 "" : convertToEsType(entry.value, Mapping.getMapping(info));
-            result.add(ImmutableMap.of("name", entry.field,
-                    "value", jsValue,
-                    "cardinality", info.getCardinality().name()));
-            if (hasDualStringMapping(info)) {
+            Map<String, Object> params=new HashMap<>();
+            params.put("name", entry.field);
+            params.put("value", jsValue);
+            params.put("cardinality", info.getCardinality().name());
+            params.put(KG_PROPERTY_STARTDATE,entry.getStartDate());
+            params.put(KG_PROPERTY_ENDDATE,entry.getEndDate());
+            params.put(KG_PROPERTY_GEO, entry.getGeo());
+            if(entry.getDsr()!=null&&entry.getDsr().size()>0) {
+                params.put(KG_PROPERTY_DSR, entry.getDsr().toArray(new String[entry.getDsr().size()]));
+            }else{
+                params.put(KG_PROPERTY_DSR,null);
+            }
+            params.put(KG_PROPERTY_ROLE, entry.getRole());
+            result.add(params);
+            /*if (hasDualStringMapping(info)) {
                 result.add(ImmutableMap.of("name", getDualMappingName(entry.field),
                         "value", jsValue,
                         "cardinality", info.getCardinality().name()));
-            }
+            }*/
         }
         return result;
     }
@@ -844,10 +915,27 @@ public class KGElasticSearchIndex implements IndexProvider {
         for (final IndexEntry e : mutation.getAdditions()) {
             final KeyInformation keyInformation = information.get(store).get(e.field);
             if (keyInformation.getCardinality() == Cardinality.SINGLE) {
-                doc.put(e.field, convertToEsType(e.value, Mapping.getMapping(keyInformation)));
-                if (hasDualStringMapping(keyInformation)) {
-                    doc.put(getDualMappingName(e.field), convertToEsType(e.value, Mapping.getMapping(keyInformation)));
+                IndexEntry lastEntry=e;
+                Object fValue = convertToEsType(lastEntry.value,
+                    Mapping.getMapping(keyInformation));
+                Map<String,Object> fieldValues=new HashMap<>();
+                fieldValues.put(KG_PROPERTY_VALUE,fValue);
+                if(lastEntry.getStartDate()!=null) {
+                    fieldValues.put(KG_PROPERTY_STARTDATE, lastEntry.getStartDate());
                 }
+                if(lastEntry.getEndDate()!=null) {
+                    fieldValues.put(KG_PROPERTY_ENDDATE, lastEntry.getEndDate());
+                }
+                if(lastEntry.getGeo()!=null&&lastEntry.getGeo().length==2) {
+                    fieldValues.put(KG_PROPERTY_GEO, lastEntry.getGeo());
+                }
+                if(lastEntry.getDsr()!=null&&lastEntry.getDsr().size()>0) {
+                    fieldValues.put(KG_PROPERTY_DSR, lastEntry.getDsr().toArray(new String[lastEntry.getDsr().size()]));
+                }
+                if(StringUtils.isNotBlank(lastEntry.getRole())) {
+                    fieldValues.put(KG_PROPERTY_ROLE, lastEntry.getRole().trim());
+                }
+                doc.put(e.field, fieldValues);
             }
         }
 
@@ -938,7 +1026,8 @@ public class KGElasticSearchIndex implements IndexProvider {
                 if (mapping==Mapping.STRING && Text.HAS_CONTAINS.contains(predicate))
                     throw new IllegalArgumentException("String mapped string values do not support CONTAINS queries: " + predicate);
                 if (mapping==Mapping.TEXTSTRING && !(Text.HAS_CONTAINS.contains(predicate) || (predicate instanceof Cmp && predicate != Cmp.EQUAL))) {
-                    fieldName =  this.getQueryFieldName(getDualMappingName(key));
+                    //fieldName =  this.getQueryFieldName(getDualMappingName(key));
+                    fieldName =  queryField+".keyword";
                 } else {
                     fieldName = queryField;
                 }
