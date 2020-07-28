@@ -335,6 +335,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
                 .put(SYSTEM_MGMT_LOG_NAME, "m")
                 .put(SYSTEM_TX_LOG_NAME, "l")
                 .put(ATTACHMENT_FAMILY_NAME, "a")
+                .put(NOTE_FAMILY_NAME, "n")
                 .build();
     }
 
@@ -510,7 +511,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
             ensureTableExists(
                 tableName, getCfNameForStoreName(GraphDatabaseConfiguration.SYSTEM_PROPERTIES_STORE_NAME), 0);
             if(this.isCreateAttachmentTable) {
-                this.ensureAttachmentTableExists(tableName, getCfNameForStoreName(ATTACHMENT_FAMILY_NAME), 0);
+                this.ensureAttachmentTableExists(tableName, 0);
             }
             Map<KeyRange, ServerName> normed = normalizeKeyBounds(cnx.getRegionLocations(tableName));
 
@@ -733,7 +734,6 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         HTableDescriptor desc = compat.newTableDescriptor(tableName);
 
         HColumnDescriptor columnDescriptor = new HColumnDescriptor(cfName);
-        columnDescriptor.setMobEnabled(true);
         setCFOptions(columnDescriptor, ttlInSeconds);
 
         compat.addColumnFamilyToTableDescriptor(desc, columnDescriptor);
@@ -763,7 +763,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
     }
 
 
-    private HTableDescriptor ensureAttachmentTableExists(String vertexTableName, String initialCFName, int ttlInSeconds) throws BackendException {
+    private HTableDescriptor ensureAttachmentTableExists(String vertexTableName, int ttlInSeconds) throws BackendException {
         String attachmentTableName=this.getAttachmentTableName(vertexTableName);
         AdminMask adm = null;
         HTableDescriptor desc;
@@ -773,7 +773,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
             if (adm.tableExists(attachmentTableName)) {
                 desc = adm.getTableDescriptor(attachmentTableName);
             } else {
-                desc = createTable(attachmentTableName, initialCFName, ttlInSeconds, adm);
+                desc = this.createAttachmentTable(attachmentTableName, ttlInSeconds, adm);
             }
         } catch (IOException e) {
             throw new TemporaryBackendException(e);
@@ -789,20 +789,25 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
     /**
      * 创建附件表，保存顶点对应的一些附件。
      * @param vertexTableName
-     * @param cfName 列族
      * @param ttlInSeconds
      * @param adm
      * @return
      * @throws IOException
      */
-    private HTableDescriptor createAttachmentTable(String vertexTableName, String cfName, int ttlInSeconds, AdminMask adm) throws IOException {
+    private HTableDescriptor createAttachmentTable(String vertexTableName, int ttlInSeconds, AdminMask adm) throws IOException {
         String attachmentTableName=this.getAttachmentTableName(vertexTableName);
         HTableDescriptor desc = compat.newTableDescriptor(attachmentTableName);
 
-        HColumnDescriptor columnDescriptor = new HColumnDescriptor(cfName);
-        setCFOptions(columnDescriptor, ttlInSeconds);
-
-        compat.addColumnFamilyToTableDescriptor(desc, columnDescriptor);
+        String attachmentFamily=ATTACHMENT_FAMILY_NAME;
+        String noteFamily=NOTE_FAMILY_NAME;
+        HColumnDescriptor attachmentColumnDescriptor = new HColumnDescriptor(attachmentFamily);
+        attachmentColumnDescriptor.setMobEnabled(true);
+        setCFOptions(attachmentColumnDescriptor, ttlInSeconds);
+        compat.addColumnFamilyToTableDescriptor(desc, attachmentColumnDescriptor);
+        HColumnDescriptor noteColumnDescriptor = new HColumnDescriptor(noteFamily);
+        noteColumnDescriptor.setMobEnabled(true);
+        setCFOptions(noteColumnDescriptor, ttlInSeconds);
+        compat.addColumnFamilyToTableDescriptor(desc, noteColumnDescriptor);
 
         int count; // total regions to create
         String src;
@@ -862,7 +867,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
             adm = getAdminInterface();
             HTableDescriptor desc = ensureTableExists(tableName, columnFamily, ttlInSeconds);
             if(this.isCreateAttachmentTable) {
-                this.ensureAttachmentTableExists(tableName, getCfNameForStoreName(ATTACHMENT_FAMILY_NAME), ttlInSeconds);
+                this.ensureAttachmentTableExists(tableName, ttlInSeconds);
             }
             Preconditions.checkNotNull(desc);
 

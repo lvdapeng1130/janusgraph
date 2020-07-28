@@ -23,6 +23,7 @@ import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.query.vertex.VertexCentricQueryBuilder;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.graphdb.types.VertexLabelVertex;
+import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.graphdb.types.system.BaseLabel;
 import org.janusgraph.graphdb.types.system.BaseVertexLabel;
 import org.janusgraph.graphdb.util.ElementHelper;
@@ -149,16 +150,26 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
 	 */
 
     public<V> JanusGraphVertexProperty<V> property(final String key, final V value, final Object... keyValues) {
-        JanusGraphVertexProperty<V> p = tx().addProperty(it(), tx().getOrCreatePropertyKey(key, value), value);
-        ElementHelper.attachProperties(p,keyValues);
-        return p;
+        if(!key.equals(BaseKey.VertexAttachment.name())) {
+            JanusGraphVertexProperty<V> p = tx().addProperty(it(), tx().getOrCreatePropertyKey(key, value), value);
+            ElementHelper.attachProperties(p, keyValues);
+            return p;
+        }else{
+            tx().addAttachment(it(), BaseKey.VertexAttachment, value);
+            return null;
+        }
     }
 
     @Override
     public <V> JanusGraphVertexProperty<V> property(final VertexProperty.Cardinality cardinality, final String key, final V value, final Object... keyValues) {
-        JanusGraphVertexProperty<V> p = tx().addProperty(cardinality, it(), tx().getOrCreatePropertyKey(key, value, cardinality), value);
-        ElementHelper.attachProperties(p,keyValues);
-        return p;
+        if(!key.equals(BaseKey.VertexAttachment.name())) {
+            JanusGraphVertexProperty<V> p = tx().addProperty(cardinality, it(), tx().getOrCreatePropertyKey(key, value, cardinality), value);
+            ElementHelper.attachProperties(p, keyValues);
+            return p;
+        }else{
+            tx().addProperty(cardinality, it(), BaseKey.VertexAttachment, value);
+            return null;
+        }
     }
 
     @Override
