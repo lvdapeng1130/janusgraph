@@ -794,8 +794,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
      * @return
      * @throws IOException
      */
-    private HTableDescriptor createAttachmentTable(String vertexTableName, int ttlInSeconds, AdminMask adm) throws IOException {
-        String attachmentTableName=this.getAttachmentTableName(vertexTableName);
+    private HTableDescriptor createAttachmentTable(String attachmentTableName, int ttlInSeconds, AdminMask adm) throws IOException {
         HTableDescriptor desc = compat.newTableDescriptor(attachmentTableName);
 
         String attachmentFamily=ATTACHMENT_FAMILY_NAME;
