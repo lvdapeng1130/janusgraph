@@ -332,15 +332,15 @@ public class KyGraphApp extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-          /* if (supportsSchema) {
+           if (supportsSchema) {
                 createSchema();
             }
 
             // build the graph structure
-            createElements();*/
+            /*createElements();*/
             //appendOtherDsr();
             // read to see they were made
-            hideVertex();
+            //hideVertex();
             //readElements();
             //indexQuery();
 

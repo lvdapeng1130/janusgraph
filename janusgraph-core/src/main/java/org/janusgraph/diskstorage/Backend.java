@@ -103,6 +103,8 @@ public class Backend implements LockerProvider, AutoCloseable {
 
     public static final String SYSTEM_TX_LOG_NAME = "txlog";
     public static final String SYSTEM_MGMT_LOG_NAME = "systemlog";
+    //存储顶点附件表的列族名称
+    public static final String ATTACHMENT_FAMILY_NAME = "attachment";
 
     public static final double EDGESTORE_CACHE_PERCENT = 0.8;
     public static final double INDEXSTORE_CACHE_PERCENT = 0.2;

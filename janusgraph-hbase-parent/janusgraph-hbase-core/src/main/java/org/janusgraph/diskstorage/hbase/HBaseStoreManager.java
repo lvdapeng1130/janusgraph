@@ -14,28 +14,6 @@
 
 package org.janusgraph.diskstorage.hbase;
 
-import static org.janusgraph.diskstorage.Backend.EDGESTORE_NAME;
-import static org.janusgraph.diskstorage.Backend.INDEXSTORE_NAME;
-import static org.janusgraph.diskstorage.Backend.LOCK_STORE_SUFFIX;
-import static org.janusgraph.diskstorage.Backend.SYSTEM_MGMT_LOG_NAME;
-import static org.janusgraph.diskstorage.Backend.SYSTEM_TX_LOG_NAME;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.DROP_ON_CLEAR;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.IDS_STORE_NAME;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.SYSTEM_PROPERTIES_STORE_NAME;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.GRAPH_NAME;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -43,46 +21,19 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
-
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableNotEnabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.janusgraph.core.JanusGraphException;
-import org.janusgraph.diskstorage.BackendException;
-import org.janusgraph.diskstorage.BaseTransactionConfig;
-import org.janusgraph.diskstorage.Entry;
-import org.janusgraph.diskstorage.EntryMetaData;
-import org.janusgraph.diskstorage.PermanentBackendException;
-import org.janusgraph.diskstorage.StaticBuffer;
-import org.janusgraph.diskstorage.StoreMetaData;
-import org.janusgraph.diskstorage.TemporaryBackendException;
+import org.janusgraph.diskstorage.*;
 import org.janusgraph.diskstorage.common.DistributedStoreManager;
 import org.janusgraph.diskstorage.configuration.ConfigElement;
 import org.janusgraph.diskstorage.configuration.ConfigNamespace;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
-import org.janusgraph.diskstorage.keycolumnvalue.KCVMutation;
-import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStore;
-import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStoreManager;
-import org.janusgraph.diskstorage.keycolumnvalue.KeyRange;
-import org.janusgraph.diskstorage.keycolumnvalue.StandardStoreFeatures;
-import org.janusgraph.diskstorage.keycolumnvalue.StoreFeatures;
-import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
+import org.janusgraph.diskstorage.keycolumnvalue.*;
 import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.janusgraph.diskstorage.util.time.TimestampProviders;
@@ -93,6 +44,16 @@ import org.janusgraph.util.system.IOUtils;
 import org.janusgraph.util.system.NetworkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+
+import static org.janusgraph.diskstorage.Backend.*;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
 
 /**
  * Storage Manager for HBase
@@ -238,6 +199,10 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
             "When this option is unset, JanusGraph calls HBase's VersionInfo.getVersion() and loads the matching compat class " +
             "at runtime.  Setting this option forces JanusGraph to instead reflectively load and instantiate the specified class.",
             ConfigOption.Type.MASKABLE, String.class);
+    public static final ConfigOption<String> ATTACHMENT_TABLE_NAME =
+            new ConfigOption<>(HBASE_NS, "attachment-table-name",
+            "存储顶点附件的附件表名称",
+            ConfigOption.Type.MASKABLE, String.class,"attachment");
 
     public static final int PORT_DEFAULT = 2181;  // Not used. Just for the parent constructor.
 
@@ -257,6 +222,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
     private final ConnectionMask cnx;
     private final boolean shortCfNames;
     private final boolean skipSchemaCheck;
+    private final String attachmentSuffix;
     private final HBaseCompat compat;
     // Cached return value of getDeployment() as requesting it can be expensive.
     private Deployment deployment = null;
@@ -330,6 +296,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         }
 
         this.shortCfNames = config.get(SHORT_CF_NAMES);
+        this.attachmentSuffix = config.get(ATTACHMENT_TABLE_NAME);
 
         try {
             //this.cnx = HConnectionManager.createConnection(hconf);
@@ -363,6 +330,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
                 .put(SYSTEM_PROPERTIES_STORE_NAME + LOCK_STORE_SUFFIX, "t")
                 .put(SYSTEM_MGMT_LOG_NAME, "m")
                 .put(SYSTEM_TX_LOG_NAME, "l")
+                .put(ATTACHMENT_FAMILY_NAME, "a")
                 .build();
     }
 
@@ -537,6 +505,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         try {
             ensureTableExists(
                 tableName, getCfNameForStoreName(GraphDatabaseConfiguration.SYSTEM_PROPERTIES_STORE_NAME), 0);
+            this.ensureAttachmentTableExists(tableName, getCfNameForStoreName(ATTACHMENT_FAMILY_NAME),0);
             Map<KeyRange, ServerName> normed = normalizeKeyBounds(cnx.getRegionLocations(tableName));
 
             for (Map.Entry<KeyRange, ServerName> e : normed.entrySet()) {
@@ -758,6 +727,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         HTableDescriptor desc = compat.newTableDescriptor(tableName);
 
         HColumnDescriptor columnDescriptor = new HColumnDescriptor(cfName);
+        columnDescriptor.setMobEnabled(true);
         setCFOptions(columnDescriptor, ttlInSeconds);
 
         compat.addColumnFamilyToTableDescriptor(desc, columnDescriptor);
@@ -781,6 +751,72 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         } else {
             adm.createTable(desc);
             logger.debug("Created table {} with default start key, end key, and region count", tableName);
+        }
+
+        return desc;
+    }
+
+
+    private HTableDescriptor ensureAttachmentTableExists(String vertexTableName, String initialCFName, int ttlInSeconds) throws BackendException {
+        String attachmentTableName=this.getAttachmentTableName(vertexTableName);
+        AdminMask adm = null;
+        HTableDescriptor desc;
+
+        try { // Create our table, if necessary
+            adm = getAdminInterface();
+            if (adm.tableExists(attachmentTableName)) {
+                desc = adm.getTableDescriptor(attachmentTableName);
+            } else {
+                desc = createTable(attachmentTableName, initialCFName, ttlInSeconds, adm);
+            }
+        } catch (IOException e) {
+            throw new TemporaryBackendException(e);
+        } finally {
+            IOUtils.closeQuietly(adm);
+        }
+        return desc;
+    }
+
+    private String getAttachmentTableName(String vertexTableName){
+        return vertexTableName+"_"+this.attachmentSuffix;
+    }
+    /**
+     * 创建附件表，保存顶点对应的一些附件。
+     * @param vertexTableName
+     * @param cfName 列族
+     * @param ttlInSeconds
+     * @param adm
+     * @return
+     * @throws IOException
+     */
+    private HTableDescriptor createAttachmentTable(String vertexTableName, String cfName, int ttlInSeconds, AdminMask adm) throws IOException {
+        String attachmentTableName=this.getAttachmentTableName(vertexTableName);
+        HTableDescriptor desc = compat.newTableDescriptor(attachmentTableName);
+
+        HColumnDescriptor columnDescriptor = new HColumnDescriptor(cfName);
+        setCFOptions(columnDescriptor, ttlInSeconds);
+
+        compat.addColumnFamilyToTableDescriptor(desc, columnDescriptor);
+
+        int count; // total regions to create
+        String src;
+
+        if (MIN_REGION_COUNT <= (count = regionCount)) {
+            src = "region count configuration";
+        } else if (0 < regionsPerServer &&
+                   MIN_REGION_COUNT <= (count = regionsPerServer * adm.getEstimatedRegionServerCount())) {
+            src = "ClusterStatus server count";
+        } else {
+            count = -1;
+            src = "default";
+        }
+
+        if (MIN_REGION_COUNT < count) {
+            adm.createTable(desc, getStartKey(count), getEndKey(count), count);
+            logger.debug("Created table {} with region count {} from {}", attachmentTableName, count, src);
+        } else {
+            adm.createTable(desc);
+            logger.debug("Created table {} with default start key, end key, and region count", attachmentTableName);
         }
 
         return desc;
@@ -819,7 +855,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         try {
             adm = getAdminInterface();
             HTableDescriptor desc = ensureTableExists(tableName, columnFamily, ttlInSeconds);
-
+            this.ensureAttachmentTableExists(tableName, getCfNameForStoreName(ATTACHMENT_FAMILY_NAME),ttlInSeconds);
             Preconditions.checkNotNull(desc);
 
             HColumnDescriptor cf = desc.getFamily(Bytes.toBytes(columnFamily));
