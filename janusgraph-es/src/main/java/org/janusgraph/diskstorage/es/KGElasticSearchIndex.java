@@ -713,6 +713,10 @@ public class KGElasticSearchIndex implements IndexProvider {
         }
     }
 
+    /**
+     * @param mutations <String, Map<String, IndexMutation>>类型其中第一个key是所有名称，第二个key是documentID
+     * @throws BackendException
+     */
     @Override
     public void mutate(Map<String, Map<String, IndexMutation>> mutations, KeyInformation.IndexRetriever information,
                        BaseTransaction tx) throws BackendException {
