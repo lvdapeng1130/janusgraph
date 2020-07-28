@@ -199,6 +199,8 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
             "When this option is unset, JanusGraph calls HBase's VersionInfo.getVersion() and loads the matching compat class " +
             "at runtime.  Setting this option forces JanusGraph to instead reflectively load and instantiate the specified class.",
             ConfigOption.Type.MASKABLE, String.class);
+    public static final ConfigOption<Boolean> IS_CRATE_ATTACHMENT_TABLE =
+        new ConfigOption<>(HBASE_NS, "create-attachmen-table","是否为顶点创建附件表", ConfigOption.Type.FIXED, true);
     public static final ConfigOption<String> ATTACHMENT_TABLE_NAME =
             new ConfigOption<>(HBASE_NS, "attachment-table-name",
             "存储顶点附件的附件表名称",
@@ -222,6 +224,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
     private final ConnectionMask cnx;
     private final boolean shortCfNames;
     private final boolean skipSchemaCheck;
+    private final boolean isCreateAttachmentTable;
     private final String attachmentSuffix;
     private final HBaseCompat compat;
     // Cached return value of getDeployment() as requesting it can be expensive.
@@ -296,6 +299,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         }
 
         this.shortCfNames = config.get(SHORT_CF_NAMES);
+        this.isCreateAttachmentTable = config.get(IS_CRATE_ATTACHMENT_TABLE);
         this.attachmentSuffix = config.get(ATTACHMENT_TABLE_NAME);
 
         try {
@@ -505,7 +509,9 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         try {
             ensureTableExists(
                 tableName, getCfNameForStoreName(GraphDatabaseConfiguration.SYSTEM_PROPERTIES_STORE_NAME), 0);
-            this.ensureAttachmentTableExists(tableName, getCfNameForStoreName(ATTACHMENT_FAMILY_NAME),0);
+            if(this.isCreateAttachmentTable) {
+                this.ensureAttachmentTableExists(tableName, getCfNameForStoreName(ATTACHMENT_FAMILY_NAME), 0);
+            }
             Map<KeyRange, ServerName> normed = normalizeKeyBounds(cnx.getRegionLocations(tableName));
 
             for (Map.Entry<KeyRange, ServerName> e : normed.entrySet()) {
@@ -855,7 +861,9 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         try {
             adm = getAdminInterface();
             HTableDescriptor desc = ensureTableExists(tableName, columnFamily, ttlInSeconds);
-            this.ensureAttachmentTableExists(tableName, getCfNameForStoreName(ATTACHMENT_FAMILY_NAME),ttlInSeconds);
+            if(this.isCreateAttachmentTable) {
+                this.ensureAttachmentTableExists(tableName, getCfNameForStoreName(ATTACHMENT_FAMILY_NAME), ttlInSeconds);
+            }
             Preconditions.checkNotNull(desc);
 
             HColumnDescriptor cf = desc.getFamily(Bytes.toBytes(columnFamily));
