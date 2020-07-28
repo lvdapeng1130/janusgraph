@@ -1,11 +1,13 @@
 package org.janusgraph.kydsj;
 
 import org.apache.tinkerpop.gremlin.process.traversal.P;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.*;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.schema.JanusGraphManagement;
+import org.janusgraph.graphdb.types.system.BaseKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +33,10 @@ public class KyGraphApp extends JanusGraphApp {
     @Override
     protected void createVertexLabels(final JanusGraphManagement management) {
         management.makeVertexLabel("person").make();
-        management.makeVertexLabel("location").make();
+        management.makeVertexLabel("doctor").make();
+        management.makeVertexLabel("teacher").make();
         management.makeVertexLabel("phone").make();
+        management.makeVertexLabel("location").make();
         management.makeVertexLabel("demigod").make();
         management.makeVertexLabel("human").make();
         management.makeVertexLabel("monster").make();
@@ -58,6 +62,8 @@ public class KyGraphApp extends JanusGraphApp {
     protected void createProperties(final JanusGraphManagement management) {
         management.makePropertyKey("name").dataType(String.class).cardinality(Cardinality.SET).make();
         management.makePropertyKey("age").dataType(Integer.class).make();
+        management.makePropertyKey("school_name").dataType(String.class).make();
+        management.makePropertyKey("hospital_name").dataType(String.class).make();
         management.makePropertyKey("time").dataType(Integer.class).make();
         management.makePropertyKey("reason").dataType(String.class).make();
         management.makePropertyKey("place").dataType(Geoshape.class).make();
@@ -97,10 +103,23 @@ public class KyGraphApp extends JanusGraphApp {
                 .addKey(management.getPropertyKey("name"))
                 .indexOnly(management.getVertexLabel("person"))
                 .buildMixedIndex(mixedIndexConfigName);
-            management.buildIndex("phone", Vertex.class)
+            management.buildIndex("doctor", Vertex.class)
                 .addKey(management.getPropertyKey("age"))
-                .indexOnly(management.getVertexLabel("phone"))
+                .addKey(management.getPropertyKey("time"))
+                .addKey(management.getPropertyKey("place"))
+                .addKey(management.getPropertyKey("name"))
+                .addKey(management.getPropertyKey("hospital_name"))
+                .indexOnly(management.getVertexLabel("doctor"))
                 .buildMixedIndex(mixedIndexConfigName);
+            management.buildIndex("teacher", Vertex.class)
+                .addKey(management.getPropertyKey("age"))
+                .addKey(management.getPropertyKey("time"))
+                .addKey(management.getPropertyKey("place"))
+                .addKey(management.getPropertyKey("name"))
+                .addKey(management.getPropertyKey("school_name"))
+                .indexOnly(management.getVertexLabel("teacher"))
+                .buildMixedIndex(mixedIndexConfigName);
+
             management.buildIndex("eReasonPlace", Edge.class).addKey(management.getPropertyKey("reason"))
                 .addKey(management.getPropertyKey("place")).buildMixedIndex(mixedIndexConfigName);
         }
@@ -129,25 +148,45 @@ public class KyGraphApp extends JanusGraphApp {
                     "geo",Geoshape.point(22.22,113.1122),
                     "role","测试role"
                 ) .next();*/
-            final Vertex saturn = g.addV("person")
-                .property("name", "saturn",
+            //添加两个person类型的数据
+            final Vertex zhangsan = g.addV("person")
+                .property("name", "张三",
                     "startDate",new Date(),
                     "endDate",new Date(),
-                    "dsr","测试dsr写入","dsr","测试dsr2",
+                    "dsr","测试dsr写入",
                     "geo",Geoshape.point(22.22,113.1122),
                     "role","测试role"
-                )
-                .property("age", 10000).next();
-            final Vertex phone = g.addV("phone")
-                .property("name", "saturn")
-                .property("age", 5000).next();
-            final Vertex jupiter = g.addV("person")
-                .property("name", "jupiter")
-                .property("name", "jupiter1")
-                .property("name", "jupiter2")
-                .property("age", 5000,"time",22)
+                ).property("age", 66)
+                .next();
+            final Vertex zhangguoquan = g.addV("person")
+                .property("name", "张国权")
+                .property("name", "小张")
+                .property("name", "小小张")
+                .property("age", 30)
+                .property("time", 199011)
                 .property("place", Geoshape.point(38.1f, 23.7f)).next();
-            g.V(jupiter).as("a").V(saturn).addE("father").from("a").next();
+            //添加张三是张国权的父亲。
+            g.V(zhangsan).as("a").V(zhangguoquan).addE("father").to("a").next();
+
+            final Vertex zhangxiaoli = g.addV("doctor")
+                .property("name", "张晓丽")
+                .property("age", 30)
+                .property("time", 199011)
+                .property("place", Geoshape.point(38.1f, 23.7f)).next();
+            //添加张三是张晓丽的父亲。
+            g.V(zhangsan).as("a").V(zhangxiaoli).addE("father").to("a").next();
+
+            //同名同姓同年龄的老师张三
+            final Vertex zhangsanTeacher = g.addV("teacher")
+                .property("name", "张三",
+                    "startDate",new Date(),
+                    "endDate",new Date(),
+                    "dsr","我是一个老师",
+                    "geo",Geoshape.point(23.33,114.4444),
+                    "role","测试role"
+                ).property("age", 66)
+                .property("time", 197011)
+                .next();
             if (supportsTransactions) {
                 g.tx().commit();
             }
@@ -172,14 +211,14 @@ public class KyGraphApp extends JanusGraphApp {
         try {
             // naive check if the graph was previously created
             LOGGER.info("追加图库dsr");
-            // see GraphOfTheGodsFactory.java
-            g.V().hasLabel("person").has("age", P.eq(10000))
-                .property("name", "saturn",
+            g.V().hasLabel("person")
+                .has("age", P.eq(66)).has("name","张三")
+                .property("name", "张三",
                     "startDate",new Date(),
                     "endDate",new Date(),
                     "dsr","我是徐小侠",
                     "geo",Geoshape.point(22.22,113.1122),
-                    "role","测试rol1111e"
+                    "role","更改后的role"
                 ).property("age", 10000).next();
 
             if (supportsTransactions) {
@@ -215,7 +254,7 @@ public class KyGraphApp extends JanusGraphApp {
             createProperties(management);
             createVertexLabels(management);
             createEdgeLabels(management);
-            createCompositeIndexes(management);
+            //createCompositeIndexes(management);
             createMixedIndexes(management);
             management.commit();
         } catch (Exception e) {
@@ -241,9 +280,17 @@ public class KyGraphApp extends JanusGraphApp {
             }
             LOGGER.info("reading elements");
             // look up vertex by name can use a composite index in JanusGraph
-            final List<Map<Object, Object>> v = g.V().hasLabel("person","phone").has("age", P.eq(5000)).valueMap(true).next(2);
+            //final List<Map<Object, Object>> v = g.V().hasLabel("person","teacher").has("name","张三").has("age", P.eq(66)).valueMap(true).next(2);
+            final List<Map<Object, Object>> v1= g.V().or(
+                __.hasLabel("person")
+                    .has("name","张三")
+                    .has("age", P.eq(66)),
+                __.hasLabel("teacher")
+                    .has("name","张三")
+                    .has("age", P.eq(66))).has("time",197011)
+                .valueMap(true).next(2);
             // numerical range query can use a mixed index in JanusGraph
-            final List<Object> list = g.V().hasLabel("person","phone").has("age", P.eq(5000)).values("age").toList();
+            final List<Object> list = g.V().hasLabel("person","teacher").has("name","张三").has("age", P.eq(66)).values("age").toList();
             LOGGER.info(list.toString());
 
 
@@ -256,6 +303,20 @@ public class KyGraphApp extends JanusGraphApp {
             }
         }
     }
+
+    public void hideVertex(){
+        g.V().hasLabel("teacher")
+            .has("name", "张三")
+            .has("age", P.eq(66)).has("time", 197011).property(BaseKey.VertexExists.name(),false).next();
+        if (supportsTransactions) {
+            g.tx().commit();
+        }
+        List<Map<Object, Object>> maps = g.V().hasLabel("teacher")
+            .has("name", "张三")
+            .has("age", P.eq(66)).has("time", 197011).elementMap().toList();
+        System.out.println(maps);
+    }
+
     /**
      * Run the entire application:
      * 1. Open and initialize the graph
@@ -271,14 +332,15 @@ public class KyGraphApp extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-           /*if (supportsSchema) {
+          /* if (supportsSchema) {
                 createSchema();
             }
 
-            // build the graph structure*/
-            //createElements();
-            appendOtherDsr();
+            // build the graph structure
+            createElements();*/
+            //appendOtherDsr();
             // read to see they were made
+            hideVertex();
             //readElements();
             //indexQuery();
 
