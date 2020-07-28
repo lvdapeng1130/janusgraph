@@ -150,25 +150,31 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
 	 */
 
     public<V> JanusGraphVertexProperty<V> property(final String key, final V value, final Object... keyValues) {
-        if(!key.equals(BaseKey.VertexAttachment.name())) {
+        if(key.equals(BaseKey.VertexAttachment.name())) {
+            tx().addAttachment(it(), BaseKey.VertexAttachment, value);
+            return null;
+        }else if(key.equals(BaseKey.VertexNote.name())) {
+            tx().addNote(it(), BaseKey.VertexNote, value);
+            return null;
+        }else{
             JanusGraphVertexProperty<V> p = tx().addProperty(it(), tx().getOrCreatePropertyKey(key, value), value);
             ElementHelper.attachProperties(p, keyValues);
             return p;
-        }else{
-            tx().addAttachment(it(), BaseKey.VertexAttachment, value);
-            return null;
         }
     }
 
     @Override
     public <V> JanusGraphVertexProperty<V> property(final VertexProperty.Cardinality cardinality, final String key, final V value, final Object... keyValues) {
-        if(!key.equals(BaseKey.VertexAttachment.name())) {
+        if(key.equals(BaseKey.VertexAttachment.name())) {
+            tx().addAttachment(cardinality, it(), BaseKey.VertexAttachment, value);
+            return null;
+        }else if(key.equals(BaseKey.VertexNote.name())) {
+            tx().addNote(cardinality, it(), BaseKey.VertexNote, value);
+            return null;
+        }else{
             JanusGraphVertexProperty<V> p = tx().addProperty(cardinality, it(), tx().getOrCreatePropertyKey(key, value, cardinality), value);
             ElementHelper.attachProperties(p, keyValues);
             return p;
-        }else{
-            tx().addProperty(cardinality, it(), BaseKey.VertexAttachment, value);
-            return null;
         }
     }
 

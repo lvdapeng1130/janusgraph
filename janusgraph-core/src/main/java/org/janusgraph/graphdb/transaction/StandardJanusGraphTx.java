@@ -843,74 +843,38 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         checkPropertyConstraintForVertexOrCreatePropertyConstraint(vertex, key);
         final Object normalizedValue = verifyAttribute(key, value);
         Cardinality keyCardinality = key.cardinality();
-
-        //Determine unique indexes
-        final List<IndexLockTuple> uniqueIndexTuples = new ArrayList<>();
-        for (CompositeIndexType index : TypeUtil.getUniqueIndexes(key)) {
-            IndexSerializer.IndexRecords matches = IndexSerializer.indexMatches(vertex, index, key, normalizedValue);
-            for (Object[] match : matches.getRecordValues()) uniqueIndexTuples.add(new IndexLockTuple(index,match));
-        }
-
-        TransactionLock uniqueLock = getUniquenessLock(vertex, (InternalRelationType) key, normalizedValue);
-        //Add locks for unique indexes
-        for (IndexLockTuple lockTuple : uniqueIndexTuples) uniqueLock = new CombinerLock(uniqueLock,getLock(lockTuple),times);
-        uniqueLock.lock(LOCK_TIMEOUT);
         try {
-//            //Check vertex-centric uniqueness -> this doesn't really make sense to check
-//            if (config.hasVerifyUniqueness()) {
-//                if (cardinality == Cardinality.SINGLE) {
-//                    if (!Iterables.isEmpty(query(vertex).type(key).properties()))
-//                        throw new SchemaViolationException("A property with the given key [%s] already exists on the vertex [%s] and the property key is defined as single-valued", key.name(), vertex);
-//                }
-//                if (cardinality == Cardinality.SET) {
-//                    if (!Iterables.isEmpty(Iterables.filter(query(vertex).type(key).properties(), new Predicate<JanusGraphVertexProperty>() {
-//                        @Override
-//                        public boolean apply(@Nullable JanusGraphVertexProperty janusgraphProperty) {
-//                            return normalizedValue.equals(janusgraphProperty.value());
-//                        }
-//                    })))
-//                        throw new SchemaViolationException("A property with the given key [%s] and value [%s] already exists on the vertex and the property key is defined as set-valued", key.name(), normalizedValue);
-//                }
-//            }
-
-            //Delete properties if the cardinality is restricted
-            if (cardinality==VertexProperty.Cardinality.single || cardinality== VertexProperty.Cardinality.set) {
-                Consumer<JanusGraphRelation> propertyRemover;
-                if (cardinality == VertexProperty.Cardinality.single)
-                    propertyRemover = JanusGraphElement::remove;
-                else
-                    propertyRemover = p -> { if (((JanusGraphVertexProperty)p).value().equals(normalizedValue)) p.remove(); };
-
-                /* If we are simply overwriting a vertex property, then we don't have to explicitly remove it thereby saving a read operation
-                   However, this only applies if
-                   1) we don't lock on the property key or consistency checks are disabled and
-                   2) there are no indexes for this property key
-                   3) the cardinalities match (if we overwrite a set with single, we need to read all other values to delete)
-                */
-
-                if ( (!config.hasVerifyUniqueness() || ((InternalRelationType)key).getConsistencyModifier()!=ConsistencyModifier.LOCK) &&
-                    !TypeUtil.hasAnyIndex(key) && cardinality==keyCardinality.convert()) {
-                    //Only delete in-memory so as to not trigger a read from the database which isn't necessary because we will overwrite blindly
-                    ((InternalVertex) vertex).getAddedRelations(p -> p.getType().equals(key)).forEach(propertyRemover);
-                } else {
-                    ((InternalVertex) vertex).query().types(key).properties().forEach(propertyRemover);
-                }
-            }
-
-            //Check index uniqueness
-            if (config.hasVerifyUniqueness()) {
-                //Check all unique indexes
-                for (IndexLockTuple lockTuple : uniqueIndexTuples) {
-                    if (!Iterables.isEmpty(IndexHelper.getQueryResults(lockTuple.getIndex(), lockTuple.getAll(), this)))
-                        throw new SchemaViolationException("Adding this property for key [%s] and value [%s] violates a uniqueness constraint [%s]", key.name(), normalizedValue, lockTuple.getIndex());
-                }
-            }
             StandardVertexProperty prop = new StandardVertexProperty(IDManager.getTemporaryRelationID(temporaryIds.nextID()), key, (InternalVertex) vertex, normalizedValue, ElementLifeCycle.New);
             if (config.hasAssignIDsImmediately()) graph.assignID(prop);
             connectRelation(prop);
             return prop;
         } finally {
-            uniqueLock.unlock();
+
+        }
+
+    }
+
+    public JanusGraphVertexProperty addNote(JanusGraphVertex vertex, PropertyKey key, Object value) {
+        return addNote(key.cardinality().convert(), vertex, key, value);
+    }
+
+    public JanusGraphVertexProperty addNote(VertexProperty.Cardinality cardinality, JanusGraphVertex vertex, PropertyKey key, Object value) {
+        if (key.cardinality().convert()!=cardinality && cardinality!=VertexProperty.Cardinality.single)
+            throw new SchemaViolationException("Key is defined for %s cardinality which conflicts with specified: %s",key.cardinality(),cardinality);
+        verifyWriteAccess(vertex);
+        Preconditions.checkArgument(!(key instanceof ImplicitKey),"Cannot create a property of implicit type: %s",key.name());
+        vertex = ((InternalVertex) vertex).it();
+        Preconditions.checkNotNull(key);
+        checkPropertyConstraintForVertexOrCreatePropertyConstraint(vertex, key);
+        final Object normalizedValue = verifyAttribute(key, value);
+        Cardinality keyCardinality = key.cardinality();
+        try {
+            StandardVertexProperty prop = new StandardVertexProperty(IDManager.getTemporaryRelationID(temporaryIds.nextID()), key, (InternalVertex) vertex, normalizedValue, ElementLifeCycle.New);
+            if (config.hasAssignIDsImmediately()) graph.assignID(prop);
+            connectRelation(prop);
+            return prop;
+        } finally {
+
         }
 
     }
