@@ -728,7 +728,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
     public void commit(final Collection<InternalRelation> addedRelations,
                        final Collection<InternalRelation> deletedRelations, final HashMultimap<Long, MediaData> attachments, final HashMultimap<Long, Note> notes, final StandardJanusGraphTx tx) {
-        if (addedRelations.isEmpty() && deletedRelations.isEmpty()) return;
+        if (addedRelations.isEmpty() && deletedRelations.isEmpty()&&attachments.isEmpty()&&notes.isEmpty()) return;
         //1. Finalize transaction
         log.debug("Saving transaction. Added {}, removed {}", addedRelations.size(), deletedRelations.size());
         if (!tx.getConfiguration().hasCommitTime()) tx.getConfiguration().setCommitTime(times.getTime());

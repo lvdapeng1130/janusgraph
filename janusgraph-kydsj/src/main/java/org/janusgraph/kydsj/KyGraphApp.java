@@ -154,26 +154,7 @@ public class KyGraphApp extends JanusGraphApp {
                     "geo",Geoshape.point(22.22,113.1122),
                     "role","测试role"
                 ) .next();*/
-            MediaData mediaData=new MediaData();
-            mediaData.setAclId("我是附件的aclID");
-            mediaData.setFilename("文件名");
-            mediaData.setMediaTitle("附件标题");
-            mediaData.setKey("我是附件的key");
-            mediaData.setMediaData("我是附件的内容".getBytes());
-            mediaData.setDsr(Sets.newHashSet("我是附件的一个dsr"));
-            Note note=new Note();
-            note.setId("我是注释的id");
-            note.setNoteTitle("我是注释的标题");
-            note.setNoteData("我是注释的内容");
-            note.setDsr(Sets.newHashSet("我是注释的dsr"));
-
-            //添加两个person类型的数据
-            final Vertex mediaAndNote=g.addV("person")
-                .property("name", "测试附件和注释")
-                .property(BaseKey.VertexAttachment.name(),mediaData)
-                .property(BaseKey.VertexNote.name(),note)
-                .next();
-            /*final Vertex zhangsan = g.addV("person")
+            final Vertex zhangsan = g.addV("person")
                 .property("name", "张三",
                     "startDate",new Date(),
                     "endDate",new Date(),
@@ -211,7 +192,50 @@ public class KyGraphApp extends JanusGraphApp {
                     "role","测试role"
                 ).property("age", 66)
                 .property("time", 197011)
-                .next();*/
+                .next();
+            if (supportsTransactions) {
+                g.tx().commit();
+            }
+
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage(), e);
+            if (supportsTransactions) {
+                g.tx().rollback();
+            }
+        }
+        if (useMixedIndex) {
+            try {
+                // mixed indexes typically have a delayed refresh interval
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                LOGGER.error(e.getMessage(), e);
+            }
+        }
+    }
+
+    public void createElementsMediaDataAndNote() {
+        try {
+            LOGGER.info("创建一个顶点并添加一个附件和注释");
+            MediaData mediaData=new MediaData();
+            mediaData.setAclId("我是附件的aclID");
+            mediaData.setFilename("文件名");
+            mediaData.setMediaTitle("附件标题");
+            mediaData.setKey("我是附件的key");
+            mediaData.setMediaData("我是附件的内容".getBytes());
+            mediaData.setDsr(Sets.newHashSet("我是附件的一个dsr"));
+            Note note=new Note();
+            note.setId("我是注释的id");
+            note.setNoteTitle("我是注释的标题");
+            note.setNoteData("我是注释的内容");
+            note.setDsr(Sets.newHashSet("我是注释的dsr"));
+
+            //为顶点添加一个附件和注释
+            final Vertex mediaAndNote=g.addV("person")
+                .property("name", "测试附件和注释")
+                .property(BaseKey.VertexAttachment.name(),mediaData)
+                .property(BaseKey.VertexNote.name(),note)
+                .next();
+
             if (supportsTransactions) {
                 g.tx().commit();
             }
@@ -266,6 +290,39 @@ public class KyGraphApp extends JanusGraphApp {
         }
     }
 
+    public void appendOtherMediaData() {
+        try {
+            LOGGER.info("给图库顶点添加附件");
+            MediaData mediaData=new MediaData();
+            mediaData.setAclId("我是附件ewwew的aclID");
+            mediaData.setFilename("文件eweew名");
+            mediaData.setMediaTitle("附件标题");
+            mediaData.setKey("列一份附件的key");
+            mediaData.setMediaData("我是附件的二位翁内容".getBytes());
+            mediaData.setDsr(Sets.newHashSet("我是附件的一个dsr"));
+            g.V().hasLabel("person").has("name", Text.textContains("测试附件和注释"))
+                .property(BaseKey.VertexAttachment.name(),mediaData).next();
+
+            if (supportsTransactions) {
+                g.tx().commit();
+            }
+
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage(), e);
+            if (supportsTransactions) {
+                g.tx().rollback();
+            }
+        }
+        if (useMixedIndex) {
+            try {
+                // mixed indexes typically have a delayed refresh interval
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                LOGGER.error(e.getMessage(), e);
+            }
+        }
+    }
+
     @Override
     public void createSchema() {
         final JanusGraphManagement management = getJanusGraph().openManagement();
@@ -279,7 +336,7 @@ public class KyGraphApp extends JanusGraphApp {
             createProperties(management);
             createVertexLabels(management);
             createEdgeLabels(management);
-            //createCompositeIndexes(management);
+            createCompositeIndexes(management);
             createMixedIndexes(management);
             management.commit();
         } catch (Exception e) {
@@ -342,7 +399,7 @@ public class KyGraphApp extends JanusGraphApp {
         System.out.println(maps);
     }
 
-    public void readElements1() {
+    public void readMediaDataAndNotes() {
         try {
             if (g == null) {
                 return;
@@ -353,8 +410,24 @@ public class KyGraphApp extends JanusGraphApp {
             Vertex next = g.V().hasLabel("person").has("name", Text.textContains("测试附件和注释")).next();
             long vertexId =Long.parseLong(next.id().toString());
             List<MediaData> mediaDatas = this.getJanusGraph().getMediaDatas(vertexId);
+            List<Note> notes = this.getJanusGraph().getNotes(vertexId);
             // numerical range query can use a mixed index in JanusGraph
-            LOGGER.info(next.toString());
+            LOGGER.info(String.format("当前顶点id->%s",vertexId));
+            LOGGER.info("读取到的附件------------------------------------");
+            if(mediaDatas!=null) {
+                for (MediaData mediaData : mediaDatas) {
+                    LOGGER.info(mediaData.toString());
+                    LOGGER.info("--------------------------------------------");
+                }
+            }
+            LOGGER.info("读取到的注释------------------------------------");
+            if(notes!=null) {
+                for (Note note : notes) {
+                    LOGGER.info(note.toString());
+                    LOGGER.info("--------------------------------------------");
+                }
+            }
+
 
 
         } finally {
@@ -383,16 +456,18 @@ public class KyGraphApp extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-           /* if (supportsSchema) {
+            if (supportsSchema) {
                 createSchema();
-            }*/
+            }
             // build the graph structure
             //createElements();
+            createElementsMediaDataAndNote();
             //appendOtherDsr();
+            //appendOtherMediaData();
             // read to see they were made
             //hideVertex();
             //readElements();
-            readElements1();
+            readMediaDataAndNotes();
             //indexQuery();
 
             /*for (int i = 0; i < 3; i++) {
