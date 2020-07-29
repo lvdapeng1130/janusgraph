@@ -1,5 +1,6 @@
 package org.janusgraph.kydsj;
 
+import com.google.common.collect.Sets;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Edge;
@@ -153,21 +154,25 @@ public class KyGraphApp extends JanusGraphApp {
                     "role","测试role"
                 ) .next();*/
             MediaData mediaData=new MediaData();
-            mediaData.setAclId("xxxx");
+            mediaData.setAclId("我是附件的aclID");
             mediaData.setFilename("文件名");
             mediaData.setMediaTitle("附件标题");
-            mediaData.setMediaData(new byte[10]);
+            mediaData.setKey("我是附件的key");
+            mediaData.setMediaData("我是附件的内容".getBytes());
+            mediaData.setDsr(Sets.newHashSet("我是附件的一个dsr"));
             Note note=new Note();
             note.setId("我是注释的id");
             note.setNoteTitle("我是注释的标题");
             note.setNoteData("我是注释的内容");
+            note.setDsr(Sets.newHashSet("我是注释的dsr"));
+
             //添加两个person类型的数据
             final Vertex mediaAndNote=g.addV("person")
                 .property("name", "测试附件和注释")
                 .property(BaseKey.VertexAttachment.name(),mediaData)
-                .property(BaseKey.VertexNote,note)
+                .property(BaseKey.VertexNote.name(),note)
                 .next();
-            final Vertex zhangsan = g.addV("person")
+            /*final Vertex zhangsan = g.addV("person")
                 .property("name", "张三",
                     "startDate",new Date(),
                     "endDate",new Date(),
@@ -205,7 +210,7 @@ public class KyGraphApp extends JanusGraphApp {
                     "role","测试role"
                 ).property("age", 66)
                 .property("time", 197011)
-                .next();
+                .next();*/
             if (supportsTransactions) {
                 g.tx().commit();
             }
@@ -351,10 +356,9 @@ public class KyGraphApp extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-           if (supportsSchema) {
+            if (supportsSchema) {
                 createSchema();
             }
-
             // build the graph structure
             createElements();
             //appendOtherDsr();

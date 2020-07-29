@@ -39,7 +39,6 @@ import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.janusgraph.diskstorage.util.time.TimestampProviders;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
-import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.hadoop.HBaseHadoopStoreManager;
 import org.janusgraph.util.system.IOUtils;
 import org.janusgraph.util.system.NetworkUtil;
@@ -398,42 +397,69 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         return fb.build();
     }
 
+    public Map<String,Map<String, Map<StaticBuffer, KCVMutation>>> getSplitByTable(Map<String, Map<StaticBuffer, KCVMutation>> mutations){
+        Map<String,Map<String, Map<StaticBuffer, KCVMutation>>> mapMap=new HashMap<>();
+        for (Map.Entry<String, Map<StaticBuffer, KCVMutation>> entry : mutations.entrySet()) {
+            String cfString = entry.getKey();
+            if(cfString.startsWith(ATTACHMENT_FAMILY_NAME)||cfString.startsWith(NOTE_FAMILY_NAME)){
+                String attachmentTableName = this.getAttachmentTableName(this.tableName);
+                Map<String, Map<StaticBuffer, KCVMutation>> stringMapMap = mapMap.get(attachmentTableName);
+                if(stringMapMap==null){
+                    stringMapMap=new HashMap<>();
+                    mapMap.put(attachmentTableName,stringMapMap);
+                }
+                stringMapMap.put(cfString,entry.getValue());
+            }else{
+                Map<String, Map<StaticBuffer, KCVMutation>> stringMapMap = mapMap.get(this.tableName);
+                if(stringMapMap==null){
+                    stringMapMap=new HashMap<>();
+                    mapMap.put(this.tableName,stringMapMap);
+                }
+                stringMapMap.put(cfString,entry.getValue());
+            }
+        }
+        return mapMap;
+    }
+
     @Override
     public void mutateMany(Map<String, Map<StaticBuffer, KCVMutation>> mutations, StoreTransaction txh) throws BackendException {
         final MaskedTimestamp commitTime = new MaskedTimestamp(txh);
         // In case of an addition and deletion with identical timestamps, the
         // deletion tombstone wins.
         // https://hbase.apache.org/book/versions.html#d244e4250
-        final Map<StaticBuffer, Pair<List<Put>, Delete>> commandsPerKey =
+        Map<String, Map<String, Map<StaticBuffer, KCVMutation>>> mutationsByTable = this.getSplitByTable(mutations);
+        for(Map.Entry <String, Map<String, Map<StaticBuffer, KCVMutation>>> entry:mutationsByTable.entrySet()){
+            Map<String, Map<StaticBuffer, KCVMutation>> hbaseMutations=entry.getValue();
+            final Map<StaticBuffer, Pair<List<Put>, Delete>> commandsPerKey =
                 convertToCommands(
-                        mutations,
-                        commitTime.getAdditionTime(times),
-                        commitTime.getDeletionTime(times));
+                    hbaseMutations,
+                    commitTime.getAdditionTime(times),
+                    commitTime.getDeletionTime(times));
 
-        final List<Row> batch = new ArrayList<>(commandsPerKey.size()); // actual batch operation
+            final List<Row> batch = new ArrayList<>(commandsPerKey.size()); // actual batch operation
 
-        // convert sorted commands into representation required for 'batch' operation
-        for (Pair<List<Put>, Delete> commands : commandsPerKey.values()) {
-            if (commands.getFirst() != null && !commands.getFirst().isEmpty())
-                batch.addAll(commands.getFirst());
+            // convert sorted commands into representation required for 'batch' operation
+            for (Pair<List<Put>, Delete> commands : commandsPerKey.values()) {
+                if (commands.getFirst() != null && !commands.getFirst().isEmpty())
+                    batch.addAll(commands.getFirst());
 
-            if (commands.getSecond() != null)
-                batch.add(commands.getSecond());
-        }
-
-        try {
-            TableMask table = null;
+                if (commands.getSecond() != null)
+                    batch.add(commands.getSecond());
+            }
 
             try {
-                table = cnx.getTable(tableName);
-                table.batch(batch, new Object[batch.size()]);
-            } finally {
-                IOUtils.closeQuietly(table);
-            }
-        } catch (IOException | InterruptedException e) {
-            throw new TemporaryBackendException(e);
-        }
+                TableMask table = null;
 
+                try {
+                    table = cnx.getTable(entry.getKey());
+                    table.batch(batch, new Object[batch.size()]);
+                } finally {
+                    IOUtils.closeQuietly(table);
+                }
+            } catch (IOException | InterruptedException e) {
+                throw new TemporaryBackendException(e);
+            }
+        }
         sleepAfterWrite(txh, commitTime);
     }
 
@@ -448,29 +474,57 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         if (store == null) {
             String hbaseTableName=tableName;
             String cfName;
-            if(longName.equals(BaseKey.VertexAttachment.name())){
-                cfName=ATTACHMENT_FAMILY_NAME;
+            if(longName.startsWith(ATTACHMENT_FAMILY_NAME)){
+                cfName=longName;
                 hbaseTableName=this.getAttachmentTableName(tableName);
-            }else if(longName.equals(BaseKey.VertexNote.name())){
-                cfName=NOTE_FAMILY_NAME;
+                HBaseKeyColumnValueStore newStore = new HBaseKeyColumnValueStore(this, cnx, hbaseTableName, cfName, longName);
+                store = openStores.putIfAbsent(longName, newStore); // nothing bad happens if we loose to other thread
+                if (store == null) {
+                    if (!skipSchemaCheck) {
+                        int cfTTLInSeconds = -1;
+                        if (metaData.contains(StoreMetaData.TTL)) {
+                            cfTTLInSeconds = metaData.get(StoreMetaData.TTL);
+                        }
+                        if(this.isCreateAttachmentTable) {
+                            this.ensureAttachmentTableExists(tableName, cfTTLInSeconds);
+                        }
+                    }
+                    store = newStore;
+                }
+            }else if(longName.startsWith(NOTE_FAMILY_NAME)){
+                cfName=longName;
                 hbaseTableName=this.getAttachmentTableName(tableName);
+                HBaseKeyColumnValueStore newStore = new HBaseKeyColumnValueStore(this, cnx, hbaseTableName, cfName, longName);
+                store = openStores.putIfAbsent(longName, newStore); // nothing bad happens if we loose to other thread
+                if (store == null) {
+                    if (!skipSchemaCheck) {
+                        int cfTTLInSeconds = -1;
+                        if (metaData.contains(StoreMetaData.TTL)) {
+                            cfTTLInSeconds = metaData.get(StoreMetaData.TTL);
+                        }
+                        if(this.isCreateAttachmentTable) {
+                            this.ensureAttachmentTableExists(tableName, cfTTLInSeconds);
+                        }
+                    }
+                    store = newStore;
+                }
             }else {
                 cfName = getCfNameForStoreName(longName);
-            }
-            HBaseKeyColumnValueStore newStore = new HBaseKeyColumnValueStore(this, cnx, hbaseTableName, cfName, longName);
-            store = openStores.putIfAbsent(longName, newStore); // nothing bad happens if we loose to other thread
-            if (store == null) {
-                if (!skipSchemaCheck) {
-                    int cfTTLInSeconds = -1;
-                    if (metaData.contains(StoreMetaData.TTL)) {
-                        cfTTLInSeconds = metaData.get(StoreMetaData.TTL);
+                HBaseKeyColumnValueStore newStore = new HBaseKeyColumnValueStore(this, cnx, hbaseTableName, cfName, longName);
+                store = openStores.putIfAbsent(longName, newStore); // nothing bad happens if we loose to other thread
+                if (store == null) {
+                    if (!skipSchemaCheck) {
+                        int cfTTLInSeconds = -1;
+                        if (metaData.contains(StoreMetaData.TTL)) {
+                            cfTTLInSeconds = metaData.get(StoreMetaData.TTL);
+                        }
+                        ensureColumnFamilyExists(tableName, cfName, cfTTLInSeconds);
                     }
-                    ensureColumnFamilyExists(tableName, cfName, cfTTLInSeconds);
+                    store = newStore;
                 }
-                store = newStore;
             }
-        }
 
+        }
         return store;
     }
 
@@ -805,7 +859,9 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         HTableDescriptor desc = compat.newTableDescriptor(attachmentTableName);
 
         String attachmentFamily=ATTACHMENT_FAMILY_NAME;
+        String attachmentFamilyLock=ATTACHMENT_FAMILY_NAME+"_lock_";
         String noteFamily=NOTE_FAMILY_NAME;
+        String noteFamilyLock=NOTE_FAMILY_NAME+"_lock_";
         HColumnDescriptor attachmentColumnDescriptor = new HColumnDescriptor(attachmentFamily);
         attachmentColumnDescriptor.setMobEnabled(true);
         setCFOptions(attachmentColumnDescriptor, ttlInSeconds);
@@ -814,6 +870,12 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         noteColumnDescriptor.setMobEnabled(true);
         setCFOptions(noteColumnDescriptor, ttlInSeconds);
         compat.addColumnFamilyToTableDescriptor(desc, noteColumnDescriptor);
+        HColumnDescriptor attachmentLockColumnDescriptor = new HColumnDescriptor(attachmentFamilyLock);
+        setCFOptions(attachmentLockColumnDescriptor, ttlInSeconds);
+        compat.addColumnFamilyToTableDescriptor(desc, attachmentLockColumnDescriptor);
+        HColumnDescriptor noteLockColumnDescriptor = new HColumnDescriptor(noteFamilyLock);
+        setCFOptions(noteLockColumnDescriptor, ttlInSeconds);
+        compat.addColumnFamilyToTableDescriptor(desc, noteLockColumnDescriptor);
 
         int count; // total regions to create
         String src;
@@ -872,9 +934,6 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         try {
             adm = getAdminInterface();
             HTableDescriptor desc = ensureTableExists(tableName, columnFamily, ttlInSeconds);
-            if(this.isCreateAttachmentTable) {
-                this.ensureAttachmentTableExists(tableName, ttlInSeconds);
-            }
             Preconditions.checkNotNull(desc);
 
             HColumnDescriptor cf = desc.getFamily(Bytes.toBytes(columnFamily));
@@ -919,6 +978,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
             IOUtils.closeQuietly(adm);
         }
     }
+
 
     private void setCFOptions(HColumnDescriptor columnDescriptor, int ttlInSeconds) {
         if (null != compression && !compression.equals(COMPRESSION_DEFAULT))

@@ -151,11 +151,11 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
 
     public<V> JanusGraphVertexProperty<V> property(final String key, final V value, final Object... keyValues) {
         if(key.equals(BaseKey.VertexAttachment.name())) {
-            tx().addAttachment(it(), BaseKey.VertexAttachment, value);
-            return null;
+            JanusGraphVertexProperty p = tx().addAttachment(it(), BaseKey.VertexAttachment, value);
+            return p;
         }else if(key.equals(BaseKey.VertexNote.name())) {
-            tx().addNote(it(), BaseKey.VertexNote, value);
-            return null;
+            JanusGraphVertexProperty p =  tx().addNote(it(), BaseKey.VertexNote, value);
+            return p;
         }else{
             JanusGraphVertexProperty<V> p = tx().addProperty(it(), tx().getOrCreatePropertyKey(key, value), value);
             ElementHelper.attachProperties(p, keyValues);
@@ -166,11 +166,11 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
     @Override
     public <V> JanusGraphVertexProperty<V> property(final VertexProperty.Cardinality cardinality, final String key, final V value, final Object... keyValues) {
         if(key.equals(BaseKey.VertexAttachment.name())) {
-            tx().addAttachment(cardinality, it(), BaseKey.VertexAttachment, value);
-            return null;
+            JanusGraphVertexProperty p = tx().addAttachment(cardinality, it(), BaseKey.VertexAttachment, value);
+            return p;
         }else if(key.equals(BaseKey.VertexNote.name())) {
-            tx().addNote(cardinality, it(), BaseKey.VertexNote, value);
-            return null;
+            JanusGraphVertexProperty p = tx().addNote(cardinality, it(), BaseKey.VertexNote, value);
+            return p;
         }else{
             JanusGraphVertexProperty<V> p = tx().addProperty(cardinality, it(), tx().getOrCreatePropertyKey(key, value, cardinality), value);
             ElementHelper.attachProperties(p, keyValues);

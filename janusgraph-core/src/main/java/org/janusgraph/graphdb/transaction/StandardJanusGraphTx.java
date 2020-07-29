@@ -863,7 +863,8 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         Preconditions.checkArgument(mediaData!=null,"为顶点指定的附件MediaData对象不能为null");
         Preconditions.checkArgument(StringUtils.isNotBlank(mediaData.getKey()),"为顶点指定的附件MediaData对象的key不能为null或空字符串");
         addedAttachments.add(vertex.longId(), mediaData);
-        return null;
+        StandardVertexProperty prop = new StandardVertexProperty(IDManager.getTemporaryRelationID(temporaryIds.nextID()), key, (InternalVertex) vertex, "", ElementLifeCycle.New);
+        return prop;
     }
 
     public JanusGraphVertexProperty addNote(JanusGraphVertex vertex, PropertyKey key, Object value) {
@@ -880,7 +881,8 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         Preconditions.checkArgument(note!=null,"为顶点指定的注释Note对象不能为null");
         Preconditions.checkArgument(StringUtils.isNotBlank(note.getId()),"为顶点指定的注释Note对象的id不能为null或空字符串");
         addedNotes.add(vertex.longId(), note);
-        return null;
+        StandardVertexProperty prop = new StandardVertexProperty(IDManager.getTemporaryRelationID(temporaryIds.nextID()), key, (InternalVertex) vertex, "", ElementLifeCycle.New);
+        return prop;
     }
 
 
