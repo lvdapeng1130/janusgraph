@@ -296,9 +296,9 @@ public class KyGraphApp extends JanusGraphApp {
             MediaData mediaData=new MediaData();
             mediaData.setAclId("我是附件ewwew的aclID");
             mediaData.setFilename("文件eweew名");
-            mediaData.setMediaTitle("附件标题");
-            mediaData.setKey("列一份附件的key");
-            mediaData.setMediaData("我是附件的二位翁内容".getBytes());
+            mediaData.setMediaTitle("附件标题4444444444444444444444444444");
+            mediaData.setKey("列一份附件的key332222222222222");
+            mediaData.setMediaData("我是附件的二位翁内容呃呃呃223323232".getBytes());
             mediaData.setDsr(Sets.newHashSet("我是附件的一个dsr"));
             g.V().hasLabel("person").has("name", Text.textContains("测试附件和注释"))
                 .property(BaseKey.VertexAttachment.name(),mediaData).next();
@@ -407,7 +407,8 @@ public class KyGraphApp extends JanusGraphApp {
             LOGGER.info("reading elements");
             // look up vertex by name can use a composite index in JanusGraph
             //final List<Map<Object, Object>> v = g.V().hasLabel("person","teacher").has("name","张三").has("age", P.eq(66)).valueMap(true).next(2);
-            Vertex next = g.V().hasLabel("person").has("name", Text.textContains("测试附件和注释")).next();
+            Vertex next = g.V().hasLabel("person").has("name",
+                Text.textContains("测试附件和注释")).next();
             long vertexId =Long.parseLong(next.id().toString());
             List<MediaData> mediaDatas = this.getJanusGraph().getMediaDatas(vertexId);
             List<Note> notes = this.getJanusGraph().getNotes(vertexId);
@@ -456,14 +457,14 @@ public class KyGraphApp extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-            if (supportsSchema) {
+            /*if (supportsSchema) {
                 createSchema();
-            }
+            }*/
             // build the graph structure
             //createElements();
-            createElementsMediaDataAndNote();
+            //createElementsMediaDataAndNote();
             //appendOtherDsr();
-            //appendOtherMediaData();
+            appendOtherMediaData();
             // read to see they were made
             //hideVertex();
             //readElements();
