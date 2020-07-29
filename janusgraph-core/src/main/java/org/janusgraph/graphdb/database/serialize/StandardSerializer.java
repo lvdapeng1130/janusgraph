@@ -57,10 +57,7 @@ import org.janusgraph.kydsj.serialize.attribute.NoteSerializer;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -150,6 +147,7 @@ public class StandardSerializer implements AttributeHandler, Serializer {
         registerClassInternal(71, ArrayNode.class, new JsonSerializer<>(ArrayNode.class));
         registerClassInternal(72, MediaData.class, new MediaDataSerializer());
         registerClassInternal(73, Note.class, new NoteSerializer());
+        registerClassInternal(74, HashSet.class, new SerializableSerializer());
     }
 
     @Override

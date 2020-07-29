@@ -59,10 +59,10 @@ public class BaseKey extends BaseRelationType implements PropertyKey {
 
     //顶点的附件内置数据
     public static final BaseKey VertexAttachment =
-        new BaseKey("VertexAttachment", MediaData.class, 37, Index.NONE, Cardinality.LIST);
+        new BaseKey("VertexAttachment", MediaData.class, 22, Index.NONE, Cardinality.LIST);
     //顶点的注释内置数据
     public static final BaseKey VertexNote =
-        new BaseKey("VertexNote", Note.class, 38, Index.NONE, Cardinality.LIST);
+        new BaseKey("VertexNote", Note.class, 23, Index.NONE, Cardinality.LIST);
 
 
 

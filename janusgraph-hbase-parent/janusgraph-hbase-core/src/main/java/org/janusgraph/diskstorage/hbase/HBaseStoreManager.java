@@ -39,6 +39,7 @@ import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.janusgraph.diskstorage.util.time.TimestampProviders;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
+import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.hadoop.HBaseHadoopStoreManager;
 import org.janusgraph.util.system.IOUtils;
 import org.janusgraph.util.system.NetworkUtil;
@@ -445,12 +446,19 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         HBaseKeyColumnValueStore store = openStores.get(longName);
 
         if (store == null) {
-            final String cfName = getCfNameForStoreName(longName);
-
-            HBaseKeyColumnValueStore newStore = new HBaseKeyColumnValueStore(this, cnx, tableName, cfName, longName);
-
+            String hbaseTableName=tableName;
+            String cfName;
+            if(longName.equals(BaseKey.VertexAttachment.name())){
+                cfName=ATTACHMENT_FAMILY_NAME;
+                hbaseTableName=this.getAttachmentTableName(tableName);
+            }else if(longName.equals(BaseKey.VertexNote.name())){
+                cfName=NOTE_FAMILY_NAME;
+                hbaseTableName=this.getAttachmentTableName(tableName);
+            }else {
+                cfName = getCfNameForStoreName(longName);
+            }
+            HBaseKeyColumnValueStore newStore = new HBaseKeyColumnValueStore(this, cnx, hbaseTableName, cfName, longName);
             store = openStores.putIfAbsent(longName, newStore); // nothing bad happens if we loose to other thread
-
             if (store == null) {
                 if (!skipSchemaCheck) {
                     int cfTTLInSeconds = -1;
@@ -459,7 +467,6 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
                     }
                     ensureColumnFamilyExists(tableName, cfName, cfTTLInSeconds);
                 }
-
                 store = newStore;
             }
         }
@@ -788,7 +795,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
     }
     /**
      * 创建附件表，保存顶点对应的一些附件。
-     * @param vertexTableName
+     * @param attachmentTableName
      * @param ttlInSeconds
      * @param adm
      * @return

@@ -50,4 +50,12 @@ public class LongEncodingTest {
         }
     }
 
+    @Test
+    public void testLong(){
+        long l=1L<<62;
+        String encode = LongEncoding.encode(l);
+        long decode = LongEncoding.decode(encode);
+        System.out.println(l+","+encode+","+decode);
+    }
+
 }

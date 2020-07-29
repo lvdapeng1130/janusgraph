@@ -8,6 +8,8 @@ import org.janusgraph.core.*;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.graphdb.types.system.BaseKey;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,6 +66,7 @@ public class KyGraphApp extends JanusGraphApp {
         management.makePropertyKey("age").dataType(Integer.class).make();
         management.makePropertyKey("school_name").dataType(String.class).make();
         management.makePropertyKey("hospital_name").dataType(String.class).make();
+        management.makePropertyKey("text").dataType(String.class).cardinality(Cardinality.SINGLE).make();
         management.makePropertyKey("time").dataType(Integer.class).make();
         management.makePropertyKey("reason").dataType(String.class).make();
         management.makePropertyKey("place").dataType(Geoshape.class).make();
@@ -99,6 +102,7 @@ public class KyGraphApp extends JanusGraphApp {
             management.buildIndex("person", Vertex.class)
                 .addKey(management.getPropertyKey("age"))
                 .addKey(management.getPropertyKey("time"))
+                .addKey(management.getPropertyKey("text"))
                 .addKey(management.getPropertyKey("place"))
                 .addKey(management.getPropertyKey("name"))
                 .indexOnly(management.getVertexLabel("person"))
@@ -148,7 +152,21 @@ public class KyGraphApp extends JanusGraphApp {
                     "geo",Geoshape.point(22.22,113.1122),
                     "role","测试role"
                 ) .next();*/
+            MediaData mediaData=new MediaData();
+            mediaData.setAclId("xxxx");
+            mediaData.setFilename("文件名");
+            mediaData.setMediaTitle("附件标题");
+            mediaData.setMediaData(new byte[10]);
+            Note note=new Note();
+            note.setId("我是注释的id");
+            note.setNoteTitle("我是注释的标题");
+            note.setNoteData("我是注释的内容");
             //添加两个person类型的数据
+            final Vertex mediaAndNote=g.addV("person")
+                .property("name", "测试附件和注释")
+                .property(BaseKey.VertexAttachment.name(),mediaData)
+                .property(BaseKey.VertexNote,note)
+                .next();
             final Vertex zhangsan = g.addV("person")
                 .property("name", "张三",
                     "startDate",new Date(),
@@ -162,6 +180,7 @@ public class KyGraphApp extends JanusGraphApp {
                 .property("name", "张国权")
                 .property("name", "小张")
                 .property("name", "小小张")
+                .property("text","我是正文内容")
                 .property("age", 30)
                 .property("time", 199011)
                 .property("place", Geoshape.point(38.1f, 23.7f)).next();
@@ -337,7 +356,7 @@ public class KyGraphApp extends JanusGraphApp {
             }
 
             // build the graph structure
-            /*createElements();*/
+            createElements();
             //appendOtherDsr();
             // read to see they were made
             //hideVertex();

@@ -155,6 +155,8 @@ public class Backend implements LockerProvider, AutoCloseable {
 
     private KCVSCache edgeStore;
     private KCVSCache indexStore;
+    private KCVSCache attachmentStore;
+    private KCVSCache noteStore;
     private KCVSCache txLogStore;
     private IDAuthority idAuthority;
     private KCVSConfiguration systemConfig;
@@ -279,7 +281,10 @@ public class Backend implements LockerProvider, AutoCloseable {
 
             KeyColumnValueStore edgeStoreRaw = storeManagerLocking.openDatabase(EDGESTORE_NAME);
             KeyColumnValueStore indexStoreRaw = storeManagerLocking.openDatabase(INDEXSTORE_NAME);
-
+            KeyColumnValueStore attachmentStoreRaw = storeManagerLocking.openDatabase(ATTACHMENT_FAMILY_NAME);
+            KeyColumnValueStore noteStoreRaw = storeManagerLocking.openDatabase(NOTE_FAMILY_NAME);
+            attachmentStore = new NoKCVSCache(attachmentStoreRaw);
+            noteStore = new NoKCVSCache(noteStoreRaw);
             //Configure caches
             if (cacheEnabled) {
                 long expirationTime = configuration.get(DB_CACHE_TIME);
@@ -539,7 +544,7 @@ public class Backend implements LockerProvider, AutoCloseable {
         }
 
         return new BackendTransaction(cacheTx, configuration, storeFeatures,
-                edgeStore, indexStore, txLogStore,
+                edgeStore, indexStore,attachmentStore,noteStore, txLogStore,
                 maxReadTime, indexTx, threadPool);
     }
 
@@ -556,6 +561,8 @@ public class Backend implements LockerProvider, AutoCloseable {
             if (idAuthority != null) idAuthority.close();
             if (systemConfig != null) systemConfig.close();
             if (userConfig != null) userConfig.close();
+            if(attachmentStore !=null) attachmentStore.close();
+            if(noteStore !=null) noteStore.close();
             storeManager.close();
             if(threadPool != null) {
             	threadPool.shutdown();
@@ -589,6 +596,9 @@ public class Backend implements LockerProvider, AutoCloseable {
             userConfig.close();
             storeManager.clearStorage();
             storeManager.close();
+
+            attachmentStore.close();
+            noteStore.close();
             //Indexes
             for (IndexProvider index : indexes.values()) {
                 index.clearStorage();

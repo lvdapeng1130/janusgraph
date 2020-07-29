@@ -17,6 +17,7 @@ package org.janusgraph.graphdb.serializer;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.janusgraph.core.attribute.*;
 import org.janusgraph.diskstorage.ReadBuffer;
@@ -25,6 +26,8 @@ import org.janusgraph.graphdb.database.idhandling.VariableLong;
 import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.database.serialize.attribute.*;
 import org.janusgraph.graphdb.serializer.attributes.*;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
 import org.janusgraph.testutil.RandomGenerator;
 import org.junit.jupiter.api.Test;
 import org.locationtech.spatial4j.context.SpatialContext;
@@ -66,6 +69,49 @@ public class SerializerTest extends SerializerTestCommon {
         System.out.println(i);
         i=serialize.readObjectNotNull(b,String.class);
         System.out.println(i);
+    }
+
+    @Test
+    public void testWriteAndReadMediaData(){
+        MediaData mediaData=new MediaData();
+        mediaData.setKey("微服务好尬弄");
+        mediaData.setDsr(Sets.newHashSet("多少人","dxx"));
+        mediaData.setMimeType("mmmmmmeewewew ");
+        mediaData.setStatus("D");
+        mediaData.setMediaType("md");
+        mediaData.setLinkType("xxx");
+        mediaData.setAclId("ac");
+        mediaData.setFilename("xxfsd");
+        mediaData.setMediaData("我是内容".getBytes());
+        mediaData.setMediaTitle("我是标题....");
+        final DataOutput out = serialize.getDataOutput(10);
+        out.writeObjectNotNull(mediaData.getKey());
+        final int valuePosition=out.getPosition();
+        out.writeObjectNotNull(mediaData);
+        ReadBuffer b = out.getStaticBuffer().asReadBuffer();
+        String key=serialize.readObjectNotNull(b,String.class);
+        System.out.println(key);
+        MediaData mediaData1=serialize.readObjectNotNull(b,MediaData.class);
+        System.out.println(mediaData1.getKey()+","+mediaData1.getMediaTitle());
+    }
+
+    @Test
+    public void testWriteAndNote(){
+        Note note=new Note();
+        note.setId("我是id");
+        note.setNoteData("我是内容");
+        note.setLinkType("我是类型");
+        note.setDsr(Sets.newHashSet("我是一个dsr"));
+        note.setNoteTitle("我是标题");
+        final DataOutput out = serialize.getDataOutput(10);
+        out.writeObjectNotNull(note.getId());
+        final int valuePosition=out.getPosition();
+        out.writeObjectNotNull(note);
+        ReadBuffer b = out.getStaticBuffer().asReadBuffer();
+        String key=serialize.readObjectNotNull(b,String.class);
+        System.out.println(key);
+        Note note1=serialize.readObjectNotNull(b,Note.class);
+        System.out.println(note1.getId()+","+note1.getNoteTitle());
     }
 
     @Test

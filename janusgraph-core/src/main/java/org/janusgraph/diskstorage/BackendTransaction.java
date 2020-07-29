@@ -14,6 +14,23 @@
 
 package org.janusgraph.diskstorage;
 
+import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
+import org.apache.tinkerpop.gremlin.process.traversal.util.TraversalInterruptedException;
+import org.janusgraph.core.JanusGraphException;
+import org.janusgraph.diskstorage.indexing.IndexQuery;
+import org.janusgraph.diskstorage.indexing.IndexTransaction;
+import org.janusgraph.diskstorage.indexing.RawQuery;
+import org.janusgraph.diskstorage.keycolumnvalue.*;
+import org.janusgraph.diskstorage.keycolumnvalue.cache.CacheTransaction;
+import org.janusgraph.diskstorage.keycolumnvalue.cache.KCVSCache;
+import org.janusgraph.diskstorage.log.kcvs.ExternalCachePersistor;
+import org.janusgraph.diskstorage.util.BackendOperation;
+import org.janusgraph.diskstorage.util.BufferUtil;
+import org.janusgraph.graphdb.database.serialize.DataOutput;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -23,30 +40,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import org.janusgraph.diskstorage.keycolumnvalue.cache.KCVSCache;
-import org.janusgraph.diskstorage.log.kcvs.ExternalCachePersistor;
-import org.apache.commons.lang.StringUtils;
-import org.apache.tinkerpop.gremlin.process.traversal.util.TraversalInterruptedException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Preconditions;
-import org.janusgraph.core.JanusGraphException;
-
-import org.janusgraph.diskstorage.indexing.IndexQuery;
-import org.janusgraph.diskstorage.indexing.IndexTransaction;
-import org.janusgraph.diskstorage.indexing.RawQuery;
-import org.janusgraph.diskstorage.keycolumnvalue.KeyIterator;
-import org.janusgraph.diskstorage.keycolumnvalue.KeyRangeQuery;
-import org.janusgraph.diskstorage.keycolumnvalue.KeySliceQuery;
-import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
-import org.janusgraph.diskstorage.keycolumnvalue.StoreFeatures;
-import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
-import org.janusgraph.diskstorage.keycolumnvalue.cache.CacheTransaction;
-import org.janusgraph.diskstorage.util.BackendOperation;
-import org.janusgraph.diskstorage.util.BufferUtil;
-import org.janusgraph.graphdb.database.serialize.DataOutput;
 
 /**
  * Bundles all storage/index transactions and provides a proxy for some of their
@@ -73,6 +66,8 @@ public class BackendTransaction implements LoggableTransaction {
 
     private final KCVSCache edgeStore;
     private final KCVSCache indexStore;
+    private final KCVSCache attachmentStore;
+    private final KCVSCache noteStore;
     private final KCVSCache txLogStore;
 
     private final Duration maxReadTime;
@@ -86,6 +81,7 @@ public class BackendTransaction implements LoggableTransaction {
 
     public BackendTransaction(CacheTransaction storeTx, BaseTransactionConfig txConfig,
                               StoreFeatures features, KCVSCache edgeStore, KCVSCache indexStore,
+                              KCVSCache attachmentStore, KCVSCache noteStore,
                               KCVSCache txLogStore, Duration maxReadTime,
                               Map<String, IndexTransaction> indexTx, Executor threadPool) {
         this.storeTx = storeTx;
@@ -93,6 +89,8 @@ public class BackendTransaction implements LoggableTransaction {
         this.storeFeatures = features;
         this.edgeStore = edgeStore;
         this.indexStore = indexStore;
+        this.attachmentStore=attachmentStore;
+        this.noteStore=noteStore;
         this.txLogStore = txLogStore;
         this.maxReadTime = maxReadTime;
         this.indexTx = indexTx;
@@ -213,6 +211,28 @@ public class BackendTransaction implements LoggableTransaction {
     }
 
     /**
+     * 为顶点添加附件
+     * @param key
+     * @param additions
+     * @param deletions
+     * @throws BackendException
+     */
+    public void mutateAttachment(StaticBuffer key, List<Entry> additions, List<Entry> deletions) throws BackendException {
+        attachmentStore.mutateEntries(key, additions, deletions, storeTx);
+    }
+
+    /**
+     * 为顶点添加注释信息
+     * @param key
+     * @param additions
+     * @param deletions
+     * @throws BackendException
+     */
+    public void mutateNote(StaticBuffer key, List<Entry> additions, List<Entry> deletions) throws BackendException {
+        noteStore.mutateEntries(key, additions, deletions, storeTx);
+    }
+
+    /**
      * Acquires a lock for the key-column pair on the edge store which ensures that nobody else can take a lock on that
      * respective entry for the duration of this lock (but somebody could potentially still overwrite
      * the key-value entry without taking a lock).
@@ -258,6 +278,26 @@ public class BackendTransaction implements LoggableTransaction {
     public void acquireIndexLock(StaticBuffer key, Entry entry) throws BackendException {
         acquiredLock = true;
         indexStore.acquireLock(key, entry.getColumnAs(StaticBuffer.STATIC_FACTORY), entry.getValueAs(StaticBuffer.STATIC_FACTORY), storeTx);
+    }
+
+    public void acquireAttachmentLock(StaticBuffer key, StaticBuffer column) throws BackendException {
+        acquiredLock = true;
+        attachmentStore.acquireLock(key, column, null, storeTx);
+    }
+
+    public void acquireAttachmentLock(StaticBuffer key, Entry entry) throws BackendException {
+        acquiredLock = true;
+        attachmentStore.acquireLock(key, entry.getColumnAs(StaticBuffer.STATIC_FACTORY), entry.getValueAs(StaticBuffer.STATIC_FACTORY), storeTx);
+    }
+
+    public void acquireNoteLock(StaticBuffer key, StaticBuffer column) throws BackendException {
+        acquiredLock = true;
+        noteStore.acquireLock(key, column, null, storeTx);
+    }
+
+    public void acquireNoteLock(StaticBuffer key, Entry entry) throws BackendException {
+        acquiredLock = true;
+        noteStore.acquireLock(key, entry.getColumnAs(StaticBuffer.STATIC_FACTORY), entry.getValueAs(StaticBuffer.STATIC_FACTORY), storeTx);
     }
 
     /* ###################################################
