@@ -7,6 +7,7 @@ import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.*;
 import org.janusgraph.core.attribute.Geoshape;
+import org.janusgraph.core.attribute.Text;
 import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.kydsj.serialize.MediaData;
@@ -341,6 +342,32 @@ public class KyGraphApp extends JanusGraphApp {
         System.out.println(maps);
     }
 
+    public void readElements1() {
+        try {
+            if (g == null) {
+                return;
+            }
+            LOGGER.info("reading elements");
+            // look up vertex by name can use a composite index in JanusGraph
+            //final List<Map<Object, Object>> v = g.V().hasLabel("person","teacher").has("name","张三").has("age", P.eq(66)).valueMap(true).next(2);
+            Vertex next = g.V().hasLabel("person").has("name", Text.textContains("测试附件和注释")).next();
+            long vertexId =Long.parseLong(next.id().toString());
+            List<MediaData> mediaDatas = this.getJanusGraph().getMediaDatas(vertexId);
+            // numerical range query can use a mixed index in JanusGraph
+            LOGGER.info(next.toString());
+
+
+        } finally {
+            // the default behavior automatically starts a transaction for
+            // any graph interaction, so it is best to finish the transaction
+            // even for read-only graph query operations
+            if (supportsTransactions) {
+                g.tx().rollback();
+            }
+        }
+    }
+
+
     /**
      * Run the entire application:
      * 1. Open and initialize the graph
@@ -356,15 +383,16 @@ public class KyGraphApp extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-            if (supportsSchema) {
+           /* if (supportsSchema) {
                 createSchema();
-            }
+            }*/
             // build the graph structure
-            createElements();
+            //createElements();
             //appendOtherDsr();
             // read to see they were made
             //hideVertex();
             //readElements();
+            readElements1();
             //indexQuery();
 
             /*for (int i = 0; i < 3; i++) {

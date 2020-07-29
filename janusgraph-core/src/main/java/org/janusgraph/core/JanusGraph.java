@@ -14,10 +14,14 @@
 
 package org.janusgraph.core;
 
-import org.janusgraph.core.schema.JanusGraphManagement;
-import org.janusgraph.graphdb.configuration.JanusGraphConstants;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.util.Gremlin;
+import org.janusgraph.core.schema.JanusGraphManagement;
+import org.janusgraph.graphdb.configuration.JanusGraphConstants;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
+
+import java.util.List;
 
 /**
  * JanusGraph graph database implementation of the Blueprint's interface.
@@ -124,6 +128,10 @@ public interface JanusGraph extends Transaction {
      */
     @Override
     void close() throws JanusGraphException;
+
+    List<MediaData> getMediaDatas(long vertexId);
+
+    List<Note> getNotes(long vertexId);
 
     /**
      * The version of this JanusGraph graph database

@@ -463,6 +463,34 @@ public class BackendTransaction implements LoggableTransaction {
         });
     }
 
+    public EntryList attachmentQuery(final KeySliceQuery query) {
+        return executeRead(new Callable<EntryList>() {
+            @Override
+            public EntryList call() throws Exception {
+                return cacheEnabled?attachmentStore.getSlice(query, storeTx):
+                    attachmentStore.getSliceNoCache(query, storeTx);
+            }
+            @Override
+            public String toString() {
+                return "AttachmentQuery";
+            }
+        });
+    }
+
+    public EntryList noteQuery(final KeySliceQuery query) {
+        return executeRead(new Callable<EntryList>() {
+            @Override
+            public EntryList call() throws Exception {
+                return cacheEnabled?noteStore.getSlice(query, storeTx):
+                    noteStore.getSliceNoCache(query, storeTx);
+            }
+            @Override
+            public String toString() {
+                return "NoteQuery";
+            }
+        });
+    }
+
     public Stream<RawQuery.Result<String>> rawQuery(final String index, final RawQuery query) {
         final IndexTransaction indexTx = getIndexTransaction(index);
         return executeRead(new Callable<Stream<RawQuery.Result<String>>>() {

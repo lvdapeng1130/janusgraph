@@ -38,6 +38,7 @@ import org.janusgraph.diskstorage.log.Log;
 import org.janusgraph.diskstorage.log.Message;
 import org.janusgraph.diskstorage.log.ReadMarker;
 import org.janusgraph.diskstorage.log.kcvs.KCVSLog;
+import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.RecordIterator;
 import org.janusgraph.diskstorage.util.StaticArrayEntry;
 import org.janusgraph.diskstorage.util.time.TimestampProvider;
@@ -899,5 +900,56 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         }
     }
 
+    /***********************************mediaData和note**************************/
+    @Override
+    public List<MediaData> getMediaDatas(long vertexId){
+        Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
+        StandardJanusGraphTx consistentTx = null;
+        try {
+            consistentTx = StandardJanusGraph.this.newTransaction(new StandardTransactionBuilder(getConfiguration(),
+                StandardJanusGraph.this, customTxOptions).groupName(GraphDatabaseConfiguration.METRICS_SCHEMA_PREFIX_DEFAULT));
+            consistentTx.getTxHandle().disableCache();
+            StaticBuffer attachmentTableRowkey = this.getAttachmentTableRowkey(vertexId);
+            KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
+            EntryList entries = consistentTx.getTxHandle().attachmentQuery(keySliceQuery);
+            Iterator<Entry> iterator = entries.iterator();
+            List<MediaData> mediaDataList=new ArrayList<>();
+            while (iterator.hasNext()){
+                Entry entry = iterator.next();
+                ReadBuffer buffer = entry.asReadBuffer();
+                String col = this.serializer.readObjectNotNull(buffer, String.class);
+                MediaData mediaData = this.serializer.readObjectNotNull(buffer, MediaData.class);
+                mediaDataList.add(mediaData);
+            }
+            return mediaDataList;
+        } finally {
+            TXUtils.rollbackQuietly(consistentTx);
+        }
+    }
+    @Override
+    public List<Note> getNotes(long vertexId){
+        Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
+        StandardJanusGraphTx consistentTx = null;
+        try {
+            consistentTx = StandardJanusGraph.this.newTransaction(new StandardTransactionBuilder(getConfiguration(),
+                StandardJanusGraph.this, customTxOptions).groupName(GraphDatabaseConfiguration.METRICS_SCHEMA_PREFIX_DEFAULT));
+            consistentTx.getTxHandle().disableCache();
+            StaticBuffer attachmentTableRowkey = this.getAttachmentTableRowkey(vertexId);
+            KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
+            EntryList entries = consistentTx.getTxHandle().noteQuery(keySliceQuery);
+            Iterator<Entry> iterator = entries.iterator();
+            List<Note> noteList=new ArrayList<>();
+            while (iterator.hasNext()){
+                Entry entry = iterator.next();
+                ReadBuffer buffer = entry.asReadBuffer();
+                String col = this.serializer.readObjectNotNull(buffer, String.class);
+                Note note = this.serializer.readObjectNotNull(buffer, Note.class);
+                noteList.add(note);
+            }
+            return noteList;
+        } finally {
+            TXUtils.rollbackQuietly(consistentTx);
+        }
+    }
 
 }
