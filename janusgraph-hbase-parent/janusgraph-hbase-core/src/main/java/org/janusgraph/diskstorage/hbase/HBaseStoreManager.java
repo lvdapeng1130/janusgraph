@@ -863,11 +863,11 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         String noteFamily=NOTE_FAMILY_NAME;
         String noteFamilyLock=NOTE_FAMILY_NAME+"_lock_";
         HColumnDescriptor attachmentColumnDescriptor = new HColumnDescriptor(attachmentFamily);
-        attachmentColumnDescriptor.setMobEnabled(true);
+        //attachmentColumnDescriptor.setMobEnabled(true);
         setCFOptions(attachmentColumnDescriptor, ttlInSeconds);
         compat.addColumnFamilyToTableDescriptor(desc, attachmentColumnDescriptor);
         HColumnDescriptor noteColumnDescriptor = new HColumnDescriptor(noteFamily);
-        noteColumnDescriptor.setMobEnabled(true);
+        //noteColumnDescriptor.setMobEnabled(true);
         setCFOptions(noteColumnDescriptor, ttlInSeconds);
         compat.addColumnFamilyToTableDescriptor(desc, noteColumnDescriptor);
         HColumnDescriptor attachmentLockColumnDescriptor = new HColumnDescriptor(attachmentFamilyLock);

@@ -8,9 +8,12 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.Cardinality;
+import org.janusgraph.core.JanusGraphTransaction;
 import org.janusgraph.core.RelationType;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.attribute.Text;
+import org.janusgraph.core.schema.ConsistencyModifier;
+import org.janusgraph.core.schema.JanusGraphIndex;
 import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.slf4j.Logger;
@@ -79,8 +82,12 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
      */
     @Override
     protected void createCompositeIndexes(final JanusGraphManagement management) {
-        management.buildIndex("qqqun_num_composite_index", Vertex.class).addKey(management.getPropertyKey("qqqun_num")).buildCompositeIndex();
-        management.buildIndex("qq_num_composite_index", Vertex.class).addKey(management.getPropertyKey("qq_num")).buildCompositeIndex();
+        JanusGraphIndex janusGraphIndex = management.buildIndex("qqqun_num_composite_index", Vertex.class).addKey(management.getPropertyKey("qqqun_num")).unique().buildCompositeIndex();
+        JanusGraphIndex janusGraphIndex1 = management.buildIndex("qq_num_composite_index", Vertex.class)
+            .addKey(management.getPropertyKey("qq_num")).unique().buildCompositeIndex();
+        management.setConsistency(janusGraphIndex, ConsistencyModifier.LOCK);
+        management.setConsistency(janusGraphIndex1, ConsistencyModifier.LOCK);
+
     }
 
     /**
@@ -91,7 +98,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
     @Override
     protected void createMixedIndexes(final JanusGraphManagement management) {
         if (useMixedIndex) {
-            management.buildIndex("object_qq", Vertex.class)
+            JanusGraphIndex janusGraphIndex = management.buildIndex("object_qq", Vertex.class)
                 .addKey(management.getPropertyKey("name"))
                 .addKey(management.getPropertyKey("grade"))
                 .addKey(management.getPropertyKey("qq_num"))
@@ -121,7 +128,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2,
                 new ThreadFactoryBuilder().setDaemon(true).setNameFormat("import-data-%d").build());//定义线程数
             List<Future<Integer>> futures= Lists.newArrayList();
-            for(int t=0;t<10;t++) {
+            for(int t=0;t<1;t++) {
                 Future<Integer> submit = pool.submit(() -> {
                     //JanusGraphTransaction janusGraphTransaction = this.getJanusGraph().newTransaction();
                     StandardJanusGraphTx threadedTx = (StandardJanusGraphTx)this.getJanusGraph().tx().createThreadedTx();
@@ -199,7 +206,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                         Optional<Vertex> qqqunVertext = threadedTx.traversal().V().hasLabel("object_qqqun").has("qqqun_num", P.eq(qqData.getQqqun_num())).tryNext();
                         Vertex qqqun=null;
                         if(qqqunVertext.isPresent()){
-                            threadedTx.traversal().V(qqqunVertext.get()).property("name", qqData.getQqqun_title(),
+                            qqqun=threadedTx.traversal().V(qqqunVertext.get()).property("name", qqData.getQqqun_title(),
                                 "startDate", new Date(),
                                 "endDate", new Date(),
                                 "dsr", "程序导入",
@@ -242,7 +249,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                                     "dsr", "程序导入",
                                     "geo", Geoshape.point(22.22, 113.1122)).next();
                         }
-                        threadedTx.traversal().V(qq).as("a").V(qqqun).addE("link_simple").to("a").next();
+                        threadedTx.traversal().V(qq.id()).as("a").V(qqqun.id()).addE("link_simple").to("a").next();
                         if (i % 1000 == 0) {
                             if (supportsTransactions) {
                                 threadedTx.commit();

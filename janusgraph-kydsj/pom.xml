@@ -47,7 +47,7 @@
             <version>${project.version}</version>
             <optional>true</optional>
         </dependency>
-       <dependency>
+       <!--<dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-shaded-client</artifactId>
             <version>${hbase2.version}</version>
@@ -58,9 +58,9 @@
             <artifactId>hbase-shaded-mapreduce</artifactId>
             <version>${hbase2.version}</version>
             <optional>true</optional>
-        </dependency>
+        </dependency>-->
 
-       <!-- <dependency>
+        <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-shaded-client</artifactId>
             <version>${hbase1.version}</version>
@@ -71,7 +71,7 @@
             <artifactId>hbase-shaded-server</artifactId>
             <version>${hbase1.version}</version>
             <optional>true</optional>
-        </dependency>-->
+        </dependency>
 
         <!-- These are all runtime dependencies -->
         <dependency>
