@@ -52,20 +52,23 @@
         </license>
     </licenses>
     <scm>
-        <connection>scm:git:git@github.com:JanusGraph/janusgraph.git</connection>
-        <developerConnection>scm:git:git@github.com:JanusGraph/janusgraph.git</developerConnection>
-        <url>git@github.com:JanusGraph/janusgraph.git</url>
+        <connection>scm:git:git@github.com:lvdapeng/janusgraph.git</connection>
+        <developerConnection>scm:git:git@github.com:lvdapeng/janusgraph.git</developerConnection>
+        <url>git@github.com:lvdapeng/janusgraph.git</url>
         <tag>HEAD</tag>
     </scm>
     <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
         <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <id>NifiRelease</id>
+            <name>nifiRelease</name>
+            <url>http://192.168.0.6:8081/nexus/content/repositories/NifiRelease/</url>
         </repository>
+        <snapshotRepository>
+            <id>NifiSnapshots</id>
+            <name>nifiSnapshots</name>
+            <url>http://192.168.0.6:8081/nexus/content/repositories/NifiSnapshots/</url>
+            <uniqueVersion>true</uniqueVersion>
+        </snapshotRepository>
     </distributionManagement>
     <properties>
         <titan.compatible-versions>1.0.0,1.1.0-SNAPSHOT</titan.compatible-versions>
@@ -150,6 +153,16 @@
     </modules>
     <repositories>
         <repository>
+            <id>NifiRelease</id>
+            <name>nifiRelease</name>
+            <url>http://192.168.0.6:8081/nexus/content/repositories/NifiRelease/</url>
+        </repository>
+        <repository>
+            <id>NifiSnapshots</id>
+            <name>nifiSnapshots</name>
+            <url>http://192.168.0.6:8081/nexus/content/repositories/NifiSnapshots/</url>
+        </repository>
+        <repository>
             <id>apache-snapshots</id>
             <name>repository.apache.org snapshots</name>
             <url>https://repository.apache.org/content/repositories/snapshots</url>
@@ -179,6 +192,18 @@
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
+        </repository>
+        <repository>
+            <id>tbds</id>
+            <url>https://tbdsrepo.cloud.tencent.com/repository/tbds/</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </releases>
         </repository>
     </repositories>
     <build>
@@ -254,6 +279,17 @@
 
                     <!-- applies to both release:prepare and :perform -->
                     <arguments>-DskipTests=true</arguments>
+                    <checkModificationExcludes>
+                        <checkModificationExclude>.project</checkModificationExclude>
+                        <checkModificationExclude>.settings</checkModificationExclude>
+                        <checkModificationExclude>.classpath</checkModificationExclude>
+                        <checkModificationExclude>.iml</checkModificationExclude>
+                        <checkModificationExclude>release.properties</checkModificationExclude>
+                        <checkModificationExclude>pom.xml.backup</checkModificationExclude>
+                        <checkModificationExclude>pom.xml.releaseBackup</checkModificationExclude>
+                        <checkModificationExclude>.svn</checkModificationExclude>
+                        <checkModificationExclude>.flattened-pom.xml</checkModificationExclude>
+                    </checkModificationExcludes>
                 </configuration>
             </plugin>
             <plugin>
