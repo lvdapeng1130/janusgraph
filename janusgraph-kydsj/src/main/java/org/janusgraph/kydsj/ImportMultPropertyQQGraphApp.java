@@ -1,5 +1,9 @@
 package org.janusgraph.kydsj;
 
+import com.github.rholder.retry.Retryer;
+import com.github.rholder.retry.RetryerBuilder;
+import com.github.rholder.retry.StopStrategies;
+import com.github.rholder.retry.WaitStrategies;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.Builder;
@@ -8,7 +12,6 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.Cardinality;
-import org.janusgraph.core.JanusGraphTransaction;
 import org.janusgraph.core.RelationType;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.attribute.Text;
@@ -19,13 +22,11 @@ import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author: ldp
@@ -128,13 +129,14 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2,
                 new ThreadFactoryBuilder().setDaemon(true).setNameFormat("import-data-%d").build());//定义线程数
             List<Future<Integer>> futures= Lists.newArrayList();
-            for(int t=0;t<1;t++) {
+            for(int t=0;t<10;t++) {
                 Future<Integer> submit = pool.submit(() -> {
                     //JanusGraphTransaction janusGraphTransaction = this.getJanusGraph().newTransaction();
-                    StandardJanusGraphTx threadedTx = (StandardJanusGraphTx)this.getJanusGraph().tx().createThreadedTx();
+                    //StandardJanusGraphTx threadedTx = (StandardJanusGraphTx)this.getJanusGraph().tx().createThreadedTx();
                     int threadTotal = 1000000;
+                    List<QQData> qqDataList=new ArrayList<>();
                     for (int i = 0; i < threadTotal; i++) {
-                        QQData qqData = QQData.builder()
+                        QQData data = QQData.builder()
                             .qq_age(new Random().nextInt(100))
                             .qq_num(new Random().nextInt(100)+"")
                             .qq_dengji(new Random().nextInt(100))
@@ -145,121 +147,15 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                             .qqqun_title(RandomStringUtils.randomAlphanumeric(30))
                             .text(RandomStringUtils.randomAlphanumeric(50))
                             .build();
-                        Optional<Vertex> vertex = threadedTx.traversal().V()
-                            .hasLabel("object_qq")
-                            .has("qq_num", qqData.getQq_num()).tryNext();
-                        Vertex qq=null;
-                        if(vertex.isPresent()){
-                            qq=threadedTx.traversal().V(vertex.get()).property("name", qqData.getQq_title(),
-                                "startDate",new Date(),
-                                "endDate",new Date(),
-                                "dsr","程序导入",
-                                "geo",Geoshape.point(22.22,113.1122))
-                                .property("grade", qqData.getQq_dengji(),
-                                    "startDate",new Date(),
-                                    "endDate",new Date(),
-                                    "dsr","程序导入",
-                                    "geo",Geoshape.point(22.22,113.1122))
-                                .property("qq_num", qqData.getQq_num(),
-                                    "startDate",new Date(),
-                                    "endDate",new Date(),
-                                    "dsr","程序导入",
-                                    "geo",Geoshape.point(22.22,113.1122))
-                                .property("time", qqData.getQq_date(),
-                                    "startDate",new Date(),
-                                    "endDate",new Date(),
-                                    "dsr","程序导入",
-                                    "geo",Geoshape.point(22.22,113.1122))
-                                .property("age", qqData.getQq_age(),
-                                    "startDate",new Date(),
-                                    "endDate",new Date(),
-                                    "dsr","程序导入",
-                                    "geo",Geoshape.point(22.22,113.1122)).next();
-                        }else{
-                            qq=threadedTx.traversal().addV("object_qq").property("name", qqData.getQq_title(),
-                                "startDate",new Date(),
-                                "endDate",new Date(),
-                                "dsr","程序导入",
-                                "geo",Geoshape.point(22.22,113.1122))
-                                .property("grade", qqData.getQq_dengji(),
-                                    "startDate",new Date(),
-                                    "endDate",new Date(),
-                                    "dsr","程序导入",
-                                    "geo",Geoshape.point(22.22,113.1122))
-                                .property("qq_num", qqData.getQq_num(),
-                                    "startDate",new Date(),
-                                    "endDate",new Date(),
-                                    "dsr","程序导入",
-                                    "geo",Geoshape.point(22.22,113.1122))
-                                .property("time", qqData.getQq_date(),
-                                    "startDate",new Date(),
-                                    "endDate",new Date(),
-                                    "dsr","程序导入",
-                                    "geo",Geoshape.point(22.22,113.1122))
-                                .property("age", qqData.getQq_age(),
-                                    "startDate",new Date(),
-                                    "endDate",new Date(),
-                                    "dsr","程序导入",
-                                    "geo",Geoshape.point(22.22,113.1122))
-                                .next();
-                        }
-                        Optional<Vertex> qqqunVertext = threadedTx.traversal().V().hasLabel("object_qqqun").has("qqqun_num", P.eq(qqData.getQqqun_num())).tryNext();
-                        Vertex qqqun=null;
-                        if(qqqunVertext.isPresent()){
-                            qqqun=threadedTx.traversal().V(qqqunVertext.get()).property("name", qqData.getQqqun_title(),
-                                "startDate", new Date(),
-                                "endDate", new Date(),
-                                "dsr", "程序导入",
-                                "geo", Geoshape.point(22.22, 113.1122))
-                                .property("time", qqData.getQqqun_date(),
-                                    "startDate", new Date(),
-                                    "endDate", new Date(),
-                                    "dsr", "程序导入",
-                                    "geo", Geoshape.point(22.22, 113.1122))
-                                .property("qqqun_num", qqData.getQqqun_num(),
-                                    "startDate", new Date(),
-                                    "endDate", new Date(),
-                                    "dsr", "程序导入",
-                                    "geo", Geoshape.point(22.22, 113.1122))
-                                .property("text", qqData.getText(),
-                                    "startDate", new Date(),
-                                    "endDate", new Date(),
-                                    "dsr", "程序导入",
-                                    "geo", Geoshape.point(22.22, 113.1122)).next();
-                        }else {
-                            qqqun = threadedTx.traversal().addV("object_qqqun")
-                                .property("name", qqData.getQqqun_title(),
-                                    "startDate", new Date(),
-                                    "endDate", new Date(),
-                                    "dsr", "程序导入",
-                                    "geo", Geoshape.point(22.22, 113.1122))
-                                .property("time", qqData.getQqqun_date(),
-                                    "startDate", new Date(),
-                                    "endDate", new Date(),
-                                    "dsr", "程序导入",
-                                    "geo", Geoshape.point(22.22, 113.1122))
-                                .property("qqqun_num", qqData.getQqqun_num(),
-                                    "startDate", new Date(),
-                                    "endDate", new Date(),
-                                    "dsr", "程序导入",
-                                    "geo", Geoshape.point(22.22, 113.1122))
-                                .property("text", qqData.getText(),
-                                    "startDate", new Date(),
-                                    "endDate", new Date(),
-                                    "dsr", "程序导入",
-                                    "geo", Geoshape.point(22.22, 113.1122)).next();
-                        }
-                        threadedTx.traversal().V(qq.id()).as("a").V(qqqun.id()).addE("link_simple").to("a").next();
-                        if (i % 1000 == 0) {
-                            if (supportsTransactions) {
-                                threadedTx.commit();
-                                threadedTx = (StandardJanusGraphTx)this.getJanusGraph().tx().createThreadedTx();
-                                LOGGER.info(String.format("当前线程%s,已经处理了->%s条", Thread.currentThread().getName(), i));
-                            }
+                        qqDataList.add(data);
+                        if(qqDataList.size()==1000){
+                            this.runWrite(qqDataList);
                         }
                     }
                     if (supportsTransactions) {
-                        threadedTx.commit();
+                        if(qqDataList.size()>0){
+                            this.runWrite(qqDataList);
+                        }
                         LOGGER.info(String.format("当前线程%s,一共处理了->%s条", Thread.currentThread().getName(), threadTotal));
                     }
                     return threadTotal;
@@ -285,6 +181,129 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                 LOGGER.error(e.getMessage(), e);
             }
         }
+    }
+
+    private void runWrite(List<QQData> qqDataList) throws java.util.concurrent.ExecutionException, com.github.rholder.retry.RetryException {
+        Retryer<Integer> retryer = RetryerBuilder.<Integer>newBuilder()
+            .retryIfException()
+            .withStopStrategy(StopStrategies.stopAfterAttempt(30))
+            .withWaitStrategy(WaitStrategies.fixedWait(300, TimeUnit.MILLISECONDS))
+            .build();
+        retryer.call(() -> {
+            StandardJanusGraphTx threadedTx = (StandardJanusGraphTx)this.getJanusGraph().tx().createThreadedTx();
+            for(QQData qqData:qqDataList){
+                Optional<Vertex> vertex = threadedTx.traversal().V()
+                    .hasLabel("object_qq")
+                    .has("qq_num", qqData.getQq_num()).tryNext();
+                Vertex qq=null;
+                if(vertex.isPresent()){
+                    qq=threadedTx.traversal().V(vertex.get()).property("name", qqData.getQq_title(),
+                        "startDate",new Date(),
+                        "endDate",new Date(),
+                        "dsr","程序导入",
+                        "geo", Geoshape.point(22.22,113.1122))
+                        .property("grade", qqData.getQq_dengji(),
+                            "startDate",new Date(),
+                            "endDate",new Date(),
+                            "dsr","程序导入",
+                            "geo",Geoshape.point(22.22,113.1122))
+                        .property("qq_num", qqData.getQq_num(),
+                            "startDate",new Date(),
+                            "endDate",new Date(),
+                            "dsr","程序导入",
+                            "geo",Geoshape.point(22.22,113.1122))
+                        .property("time", qqData.getQq_date(),
+                            "startDate",new Date(),
+                            "endDate",new Date(),
+                            "dsr","程序导入",
+                            "geo",Geoshape.point(22.22,113.1122))
+                        .property("age", qqData.getQq_age(),
+                            "startDate",new Date(),
+                            "endDate",new Date(),
+                            "dsr","程序导入",
+                            "geo",Geoshape.point(22.22,113.1122)).next();
+                }else{
+                    qq=threadedTx.traversal().addV("object_qq").property("name", qqData.getQq_title(),
+                        "startDate",new Date(),
+                        "endDate",new Date(),
+                        "dsr","程序导入",
+                        "geo",Geoshape.point(22.22,113.1122))
+                        .property("grade", qqData.getQq_dengji(),
+                            "startDate",new Date(),
+                            "endDate",new Date(),
+                            "dsr","程序导入",
+                            "geo",Geoshape.point(22.22,113.1122))
+                        .property("qq_num", qqData.getQq_num(),
+                            "startDate",new Date(),
+                            "endDate",new Date(),
+                            "dsr","程序导入",
+                            "geo",Geoshape.point(22.22,113.1122))
+                        .property("time", qqData.getQq_date(),
+                            "startDate",new Date(),
+                            "endDate",new Date(),
+                            "dsr","程序导入",
+                            "geo",Geoshape.point(22.22,113.1122))
+                        .property("age", qqData.getQq_age(),
+                            "startDate",new Date(),
+                            "endDate",new Date(),
+                            "dsr","程序导入",
+                            "geo",Geoshape.point(22.22,113.1122))
+                        .next();
+                }
+                Optional<Vertex> qqqunVertext = threadedTx.traversal().V().hasLabel("object_qqqun").has("qqqun_num", P.eq(qqData.getQqqun_num())).tryNext();
+                Vertex qqqun=null;
+                if(qqqunVertext.isPresent()){
+                    qqqun=threadedTx.traversal().V(qqqunVertext.get()).property("name", qqData.getQqqun_title(),
+                        "startDate", new Date(),
+                        "endDate", new Date(),
+                        "dsr", "程序导入",
+                        "geo", Geoshape.point(22.22, 113.1122))
+                        .property("time", qqData.getQqqun_date(),
+                            "startDate", new Date(),
+                            "endDate", new Date(),
+                            "dsr", "程序导入",
+                            "geo", Geoshape.point(22.22, 113.1122))
+                        .property("qqqun_num", qqData.getQqqun_num(),
+                            "startDate", new Date(),
+                            "endDate", new Date(),
+                            "dsr", "程序导入",
+                            "geo", Geoshape.point(22.22, 113.1122))
+                        .property("text", qqData.getText(),
+                            "startDate", new Date(),
+                            "endDate", new Date(),
+                            "dsr", "程序导入",
+                            "geo", Geoshape.point(22.22, 113.1122)).next();
+                }else {
+                    qqqun = threadedTx.traversal().addV("object_qqqun")
+                        .property("name", qqData.getQqqun_title(),
+                            "startDate", new Date(),
+                            "endDate", new Date(),
+                            "dsr", "程序导入",
+                            "geo", Geoshape.point(22.22, 113.1122))
+                        .property("time", qqData.getQqqun_date(),
+                            "startDate", new Date(),
+                            "endDate", new Date(),
+                            "dsr", "程序导入",
+                            "geo", Geoshape.point(22.22, 113.1122))
+                        .property("qqqun_num", qqData.getQqqun_num(),
+                            "startDate", new Date(),
+                            "endDate", new Date(),
+                            "dsr", "程序导入",
+                            "geo", Geoshape.point(22.22, 113.1122))
+                        .property("text", qqData.getText(),
+                            "startDate", new Date(),
+                            "endDate", new Date(),
+                            "dsr", "程序导入",
+                            "geo", Geoshape.point(22.22, 113.1122)).next();
+                }
+                threadedTx.traversal().V(qq.id()).as("a").V(qqqun.id()).addE("link_simple").to("a").next();
+            }
+            if (supportsTransactions) {
+                threadedTx.commit();
+                LOGGER.info(String.format("当前线程%s,已经处理了->%s条", Thread.currentThread().getName(), qqDataList.size()));
+            }
+            return qqDataList.size();
+        });
     }
 
     @Override
