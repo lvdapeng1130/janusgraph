@@ -199,6 +199,8 @@
                                 <requireUpperBoundDeps>
                                     <excludes>
                                         <exclude>com.google.guava:guava</exclude>
+                                        <exclude>io.netty:netty-transport-native-unix-common</exclude>
+                                        <exclude>junit:junit</exclude>
                                     </excludes>
                                 </requireUpperBoundDeps>
                                 <DependencyConvergence />
@@ -303,8 +305,47 @@
                         <exclude>**/src/test/resources/org/janusgraph/hadoop/formats/edgelist/rdf/**</exclude>
                     </excludes>
                 </configuration>
-            </plugin>        
-
+            </plugin>
+            <!-- 一键更新子模块版本号 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+                <configuration>
+                    <generateBackupPoms>false</generateBackupPoms>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <configuration>
+                    <!--插件默认只会处理packaging属性为非pom的，如果要处理packaging为pom的，可将本属性值设置为true。-->
+                    <updatePomFile>true</updatePomFile>
+                    <!--推荐开源项目使用，会展开ciManagement、contributors、
+                    distributionManagement、inceptionYear、issueManagement、
+                    mailingLists、organization、prerequisites-->
+                    <flattenMode>oss</flattenMode>
+                    <!--由OS或者JDK的不同而触发的profile，可能根据环境的不同而产生不同的依赖，但是由属性等触发的profile，
+                    就不确定了，如果属性设置为true，profile中的依赖会直接写入生成的pom中，如果设置为false，
+                    所有的profile信息都会保留,默认是false。-->
+                    <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>

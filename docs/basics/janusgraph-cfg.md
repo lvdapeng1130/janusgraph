@@ -426,14 +426,16 @@ HBase storage options
 
 | Name | Description | Datatype | Default Value | Mutability |
 | ---- | ---- | ---- | ---- | ---- |
+| storage.hbase.attachment-table-name | 存储顶点附件的附件表名称 | String | attachment | MASKABLE |
 | storage.hbase.compat-class | The package and class name of the HBaseCompat implementation. HBaseCompat masks version-specific HBase API differences. When this option is unset, JanusGraph calls HBase's VersionInfo.getVersion() and loads the matching compat class at runtime.  Setting this option forces JanusGraph to instead reflectively load and instantiate the specified class. | String | (no default value) | MASKABLE |
 | storage.hbase.compression-algorithm | An HBase Compression.Algorithm enum string which will be applied to newly created column families. The compression algorithm must be installed and available on the HBase cluster.  JanusGraph cannot install and configure new compression algorithms on the HBase cluster by itself. | String | GZ | MASKABLE |
+| storage.hbase.create-attachmen-table | 是否为顶点创建附件表 | Boolean | true | FIXED |
 | storage.hbase.region-count | The number of initial regions set when creating JanusGraph's HBase table | Integer | (no default value) | MASKABLE |
 | storage.hbase.regions-per-server | The number of regions per regionserver to set when creating JanusGraph's HBase table | Integer | (no default value) | MASKABLE |
 | storage.hbase.short-cf-names | Whether to shorten the names of JanusGraph's column families to one-character mnemonics to conserve storage space | Boolean | true | FIXED |
 | storage.hbase.skip-schema-check | Assume that JanusGraph's HBase table and column families already exist. When this is true, JanusGraph will not check for the existence of its table/CFs, nor will it attempt to create them under any circumstances.  This is useful when running JanusGraph without HBase admin privileges. | Boolean | false | MASKABLE |
 | storage.hbase.snapshot-name | The name of an existing HBase snapshot to be used by HBaseSnapshotInputFormat | String | janusgraph-snapshot | LOCAL |
-| storage.hbase.snapshot-restore-dir | The temporary directory to be used by HBaseSnapshotInputFormat to restore a snapshot. This directory should be on the same File System as the HBase root dir. | String | C:\Users\ADMINI~1\AppData\Local\Temp\ | LOCAL |
+| storage.hbase.snapshot-restore-dir | The temporary directory to be used by HBaseSnapshotInputFormat to restore a snapshot. This directory should be on the same File System as the HBase root dir. | String | C:\Users\ldp\AppData\Local\Temp\ | LOCAL |
 | storage.hbase.table | The name of the table JanusGraph will use.  When storage.hbase.skip-schema-check is false, JanusGraph will automatically create this table if it does not already exist. If this configuration option is not provided but graph.graphname is, the table will be set to that value. | String | janusgraph | LOCAL |
 
 ### storage.lock
