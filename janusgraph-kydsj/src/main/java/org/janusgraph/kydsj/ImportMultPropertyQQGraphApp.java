@@ -10,15 +10,15 @@ import lombok.Builder;
 import lombok.Data;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.RelationType;
 import org.janusgraph.core.attribute.Geoshape;
-import org.janusgraph.core.attribute.Text;
-import org.janusgraph.core.schema.ConsistencyModifier;
 import org.janusgraph.core.schema.JanusGraphIndex;
 import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
+import org.janusgraph.util.encoding.LongEncoding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,11 +83,12 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
      */
     @Override
     protected void createCompositeIndexes(final JanusGraphManagement management) {
-        JanusGraphIndex janusGraphIndex = management.buildIndex("qqqun_num_composite_index", Vertex.class).addKey(management.getPropertyKey("qqqun_num")).unique().buildCompositeIndex();
+        JanusGraphIndex janusGraphIndex = management.buildIndex("qqqun_num_composite_index", Vertex.class)
+            .addKey(management.getPropertyKey("qqqun_num")).buildCompositeIndex();
         JanusGraphIndex janusGraphIndex1 = management.buildIndex("qq_num_composite_index", Vertex.class)
-            .addKey(management.getPropertyKey("qq_num")).unique().buildCompositeIndex();
-        management.setConsistency(janusGraphIndex, ConsistencyModifier.LOCK);
-        management.setConsistency(janusGraphIndex1, ConsistencyModifier.LOCK);
+            .addKey(management.getPropertyKey("qq_num")).buildCompositeIndex();
+        //management.setConsistency(janusGraphIndex, ConsistencyModifier.LOCK);
+        //management.setConsistency(janusGraphIndex1, ConsistencyModifier.LOCK);
 
     }
 
@@ -136,25 +137,28 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                     int threadTotal = 1000000;
                     List<QQData> qqDataList=new ArrayList<>();
                     for (int i = 0; i < threadTotal; i++) {
+                        int qqqun_num = new Random().nextInt(3);
                         QQData data = QQData.builder()
                             .qq_age(new Random().nextInt(100))
-                            .qq_num(new Random().nextInt(100)+"")
+                            .qq_num(RandomStringUtils.randomAlphanumeric(11))
                             .qq_dengji(new Random().nextInt(100))
                             .qq_date(new Date())
                             .qq_title(RandomStringUtils.randomAlphanumeric(30))
                             .qqqun_date(new Date())
-                            .qqqun_num(new Random().nextInt(100)+"")
-                            .qqqun_title(RandomStringUtils.randomAlphanumeric(30))
-                            .text(RandomStringUtils.randomAlphanumeric(50))
+                            .qqqun_num(qqqun_num+"")
+                            .qqqun_title("我是qq群"+qqqun_num)
+                            .text("我是qq群的说明"+qqqun_num)
                             .build();
                         qqDataList.add(data);
                         if(qqDataList.size()==1000){
                             this.runWrite(qqDataList);
+                            qqDataList=new ArrayList<>();
                         }
                     }
                     if (supportsTransactions) {
                         if(qqDataList.size()>0){
                             this.runWrite(qqDataList);
+                            qqDataList=new ArrayList<>();
                         }
                         LOGGER.info(String.format("当前线程%s,一共处理了->%s条", Thread.currentThread().getName(), threadTotal));
                     }
@@ -190,7 +194,9 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             .withWaitStrategy(WaitStrategies.fixedWait(300, TimeUnit.MILLISECONDS))
             .build();
         retryer.call(() -> {
-            StandardJanusGraphTx threadedTx = (StandardJanusGraphTx)this.getJanusGraph().tx().createThreadedTx();
+            StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction().consistencyChecks(true)
+                .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start();
+            //StandardJanusGraphTx threadedTx = (StandardJanusGraphTx)this.getJanusGraph().tx().createThreadedTx();
             for(QQData qqData:qqDataList){
                 Optional<Vertex> vertex = threadedTx.traversal().V()
                     .hasLabel("object_qq")
@@ -339,11 +345,27 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             LOGGER.info("reading elements");
             // look up vertex by name can use a composite index in JanusGraph
             //final List<Map<Object, Object>> v = g.V().hasLabel("person","teacher").has("name","张三").has("age", P.eq(66)).valueMap(true).next(2);
-            Vertex next = g.V().hasLabel("object_qqqun").has(
-                "name", Text.textContains("Xr5AF6Fi0LelDjcIDkffOCmVrkGJ3R"))
-                .out("link_simple").next();
+            /*List<Object> objects = g.V().hasLabel("object_qqqun")
+                .has("qqqun_num", P.eq("1")).both().groupCount("age").by("age")
+                .groupCount("grade").by("grade").groupCount("label").by(T.label)
+                .cap("label","age", "grade").toList();
+            Vertex crc = g.V(LongEncoding.decode("9k0")).next();*/
+           /* g.withComputer().V().hasLabel("object_qqqun")
+                .has("qqqun_num", P.eq("1")).limit(10).connectedComponent()
+                .with(ConnectedComponent.propertyName,"component")
+                .project("age","component").
+                by("age").
+                by("component").toList();*/
+            List<Vertex> vertices = g.V().hasLabel("object_qqqun").has("qqqun_num", P.eq("1")).toList();
+            List<Vertex> vertices1 = g.V().hasLabel("object_qqqun")
+                .has("qqqun_num", P.eq("1")).both().toList();
+            GraphTraversal<Vertex, Vertex> both = g.V().hasLabel("object_qqqun")
+                .has("qqqun_num", P.eq("1")).both().both();
+            List<Vertex> next = both.next(1);
+            List<Vertex> next1 = both.next(1);
+
+            Vertex crc = g.V(LongEncoding.decode("9k0")).next();
             // numerical range query can use a mixed index in JanusGraph
-            LOGGER.info(next.toString());
 
 
         } finally {
@@ -371,16 +393,16 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-            if (supportsSchema) {
+            /*if (supportsSchema) {
                 createSchema();
-            }
+            }*/
             // build the graph structure
-            createElements();
+            //createElements();
             //createElementsMediaDataAndNote();
             //appendOtherDsr();
             // read to see they were made
             //hideVertex();
-            //readElements();
+            readElements();
             //indexQuery();
 
             /*for (int i = 0; i < 3; i++) {
