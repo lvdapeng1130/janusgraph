@@ -393,10 +393,10 @@ public class KyGraphApp extends JanusGraphApp {
         if (supportsTransactions) {
             g.tx().commit();
         }
-        List<Map<Object, Object>> maps = g.V().hasLabel("teacher")
+       /* List<Map<Object, Object>> maps = g.V().hasLabel("teacher")
             .has("name", "张三")
             .has("age", P.eq(66)).has("time", 197011).elementMap().toList();
-        System.out.println(maps);
+        System.out.println(maps);*/
     }
 
     public void readMediaDataAndNotes() {
@@ -471,7 +471,7 @@ public class KyGraphApp extends JanusGraphApp {
             readMediaDataAndNotes();
             //indexQuery();
 
-            /*for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 3; i++) {
                 try {
                     Thread.sleep((long) (Math.random() * 500) + 500);
                 } catch (InterruptedException e) {
@@ -486,7 +486,7 @@ public class KyGraphApp extends JanusGraphApp {
             // delete some graph elements
             deleteElements();
             // read to see the changes were made
-            readElements();*/
+            readElements();
 
             // close the graph
             closeGraph();

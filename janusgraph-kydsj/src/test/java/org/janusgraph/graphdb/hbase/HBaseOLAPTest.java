@@ -25,12 +25,12 @@ public class HBaseOLAPTest extends OLAPTest {
 
     @BeforeAll
     public static void startHBase() throws IOException {
-        HBaseStorageSetup.startHBase();
+        //HBaseStorageSetup.startHBase();
     }
 
     @Override
     public WriteConfiguration getConfiguration() {
-        return HBaseStorageSetup.getHBaseGraphConfiguration();
+        return HBaseStorageSetup.getHBaseConfiguration("jbs").getConfiguration();
     }
 
 }

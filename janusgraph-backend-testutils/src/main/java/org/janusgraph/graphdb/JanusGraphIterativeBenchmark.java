@@ -63,7 +63,7 @@ public abstract class JanusGraphIterativeBenchmark extends JanusGraphBaseTest {
         KeyColumnValueStore store = manager.openDatabase(Backend.EDGESTORE_NAME);
         SliceQuery query = new SliceQuery(BufferUtil.zeroBuffer(8),BufferUtil.oneBuffer(8));
         query.setLimit(2);
-        Stopwatch watch = Stopwatch.createStarted();
+        Stopwatch watch = new Stopwatch().start();
         StoreTransaction txh = manager.beginTransaction(StandardBaseTransactionConfig.of(TimestampProviders.MILLI));
         KeyIterator iterator = store.getKeys(query,txh);
         int numV = 0;
@@ -75,7 +75,7 @@ public abstract class JanusGraphIterativeBenchmark extends JanusGraphBaseTest {
         }
         iterator.close();
         txh.commit();
-        System.out.println("Time taken: " + watch.elapsed(TimeUnit.MILLISECONDS));
+        System.out.println("Time taken: " + watch.elapsedTime(TimeUnit.MILLISECONDS));
         System.out.println("Num Vertices: " + numV);
         store.close();
         manager.close();

@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -103,10 +102,11 @@ public class HBaseStorageSetup {
         config.set(SimpleBulkPlacementStrategy.CONCURRENT_PARTITIONS, 1);
         config.set(GraphDatabaseConfiguration.DROP_ON_CLEAR, false);
         config.set(HBaseStoreManager.SHORT_CF_NAMES,false);
-        config.set(HBaseStoreManager.REGION_COUNT,10);
+       // config.set(HBaseStoreManager.REGION_COUNT,10);
         config.set(GraphDatabaseConfiguration.STORAGE_HOSTS,new String[]{"192.168.1.47,192.168.1.48,192.168.1.49"});
         config.set(GraphDatabaseConfiguration.STORAGE_PORT,2181);
-        config.set(GraphDatabaseConfiguration.IDAUTHORITY_WAIT, Duration.ofMillis(300000000L));
+        //config.set(GraphDatabaseConfiguration.ALLOW_SETTING_VERTEX_ID,true);
+        //config.set(GraphDatabaseConfiguration.IDAUTHORITY_WAIT, Duration.ofMillis(300000000L));
         return config;
     }
 

@@ -14,29 +14,20 @@
 
 package org.janusgraph.graphdb.database.idassigner;
 
-import java.time.Duration;
-import java.util.ArrayDeque;
-import java.util.Queue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.diskstorage.BackendException;
-import org.janusgraph.diskstorage.IDBlock;
-
 import org.janusgraph.diskstorage.IDAuthority;
-
+import org.janusgraph.diskstorage.IDBlock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.Queue;
+import java.util.concurrent.*;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -133,7 +124,7 @@ public class StandardIDPool implements IDPool {
     }
 
     private synchronized void waitForIDBlockGetter() throws InterruptedException {
-        Stopwatch sw = Stopwatch.createStarted();
+        Stopwatch sw = new Stopwatch().start();
         if (null != idBlockFuture) {
             try {
                 nextBlock = idBlockFuture.get(renewTimeout.toMillis(), TimeUnit.MILLISECONDS);
@@ -266,7 +257,7 @@ public class StandardIDPool implements IDPool {
             this.partition = partition;
             this.idNamespace = idNamespace;
             this.renewTimeout = renewTimeout;
-            this.alive = Stopwatch.createStarted();
+            this.alive = new Stopwatch().start();
         }
 
         private void stopRequested()
@@ -276,7 +267,7 @@ public class StandardIDPool implements IDPool {
 
         @Override
         public IDBlock call() {
-            Stopwatch running = Stopwatch.createStarted();
+            Stopwatch running = new Stopwatch().start();
 
             try {
                 if (stopRequested) {

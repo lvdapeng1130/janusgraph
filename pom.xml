@@ -82,9 +82,15 @@
         <slf4j.version>1.7.30</slf4j.version>
         <httpcomponents.httpclient.version>4.5.10</httpcomponents.httpclient.version>
         <httpcomponents.httpcore.version>4.4.12</httpcomponents.httpcore.version>
-        <hadoop2.version>2.7.7</hadoop2.version>
+        <!--<hadoop2.version>2.7.7</hadoop2.version>
         <hbase1.version>1.4.10</hbase1.version>
         <hbase2.version>2.1.5</hbase2.version>
+        <hbase.server.version>1.4.10</hbase.server.version>-->
+        <!-- <zookeeper.version>3.5.7</zookeeper.version>-->
+        <zookeeper.version>3.4.5-cdh6.2.0</zookeeper.version>
+        <hadoop2.version>3.0.0-cdh6.2.0</hadoop2.version>
+        <hbase1.version>1.4.10</hbase1.version>
+        <hbase2.version>2.1.0-cdh6.2.0</hbase2.version>
         <hbase.server.version>1.4.10</hbase.server.version>
         <bigtable.version>1.14.0</bigtable.version>
         <scylladb.version>1.7.1</scylladb.version>
@@ -101,7 +107,6 @@
         <antlr.version>3.5.2</antlr.version>
         <asm3.version>3.1</asm3.version>
         <asm4.version>4.0</asm4.version>
-        <zookeeper.version>3.5.7</zookeeper.version>
         <!-- align with org.apache.tinkerpop:tinkerpop -->
         <netty4.version>4.1.49.Final</netty4.version>
         <jna.version>4.0.0</jna.version>
@@ -204,6 +209,10 @@
                 <enabled>true</enabled>
                 <updatePolicy>always</updatePolicy>
             </releases>
+        </repository>
+        <repository>
+            <id>cloudera</id>
+            <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
         </repository>
     </repositories>
     <build>
@@ -976,7 +985,7 @@
                 -->
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>18.0</version>
+                <version>11.0.2</version>
             </dependency>
             <dependency>
                 <groupId>commons-lang</groupId>
