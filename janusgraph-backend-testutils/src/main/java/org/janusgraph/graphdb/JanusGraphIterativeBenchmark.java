@@ -15,7 +15,6 @@
 package org.janusgraph.graphdb;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterators;
 import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.JanusGraphEdge;
@@ -29,6 +28,7 @@ import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.RecordIterator;
 import org.janusgraph.diskstorage.util.StandardBaseTransactionConfig;
 import org.janusgraph.diskstorage.util.time.TimestampProviders;
+import org.janusgraph.graphdb.database.idassigner.Stopwatch;
 import org.janusgraph.graphdb.types.StandardEdgeLabelMaker;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 
@@ -63,7 +63,7 @@ public abstract class JanusGraphIterativeBenchmark extends JanusGraphBaseTest {
         KeyColumnValueStore store = manager.openDatabase(Backend.EDGESTORE_NAME);
         SliceQuery query = new SliceQuery(BufferUtil.zeroBuffer(8),BufferUtil.oneBuffer(8));
         query.setLimit(2);
-        Stopwatch watch = new Stopwatch().start();
+        Stopwatch watch = Stopwatch.createStarted();
         StoreTransaction txh = manager.beginTransaction(StandardBaseTransactionConfig.of(TimestampProviders.MILLI));
         KeyIterator iterator = store.getKeys(query,txh);
         int numV = 0;
@@ -75,7 +75,7 @@ public abstract class JanusGraphIterativeBenchmark extends JanusGraphBaseTest {
         }
         iterator.close();
         txh.commit();
-        System.out.println("Time taken: " + watch.elapsedTime(TimeUnit.MILLISECONDS));
+        System.out.println("Time taken: " + watch.elapsed(TimeUnit.MILLISECONDS));
         System.out.println("Num Vertices: " + numV);
         store.close();
         manager.close();

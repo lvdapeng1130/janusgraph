@@ -15,7 +15,6 @@
 package org.janusgraph.graphdb.database.idassigner;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.diskstorage.BackendException;
@@ -124,7 +123,7 @@ public class StandardIDPool implements IDPool {
     }
 
     private synchronized void waitForIDBlockGetter() throws InterruptedException {
-        Stopwatch sw = new Stopwatch().start();
+        Stopwatch sw = Stopwatch.createStarted();
         if (null != idBlockFuture) {
             try {
                 nextBlock = idBlockFuture.get(renewTimeout.toMillis(), TimeUnit.MILLISECONDS);
@@ -257,7 +256,7 @@ public class StandardIDPool implements IDPool {
             this.partition = partition;
             this.idNamespace = idNamespace;
             this.renewTimeout = renewTimeout;
-            this.alive = new Stopwatch().start();
+            this.alive = Stopwatch.createStarted();
         }
 
         private void stopRequested()
@@ -267,7 +266,7 @@ public class StandardIDPool implements IDPool {
 
         @Override
         public IDBlock call() {
-            Stopwatch running = new Stopwatch().start();
+            Stopwatch running = Stopwatch.createStarted();
 
             try {
                 if (stopRequested) {
