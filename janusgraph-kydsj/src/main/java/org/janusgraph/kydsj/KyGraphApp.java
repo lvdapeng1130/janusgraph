@@ -457,21 +457,21 @@ public class KyGraphApp extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-            /*if (supportsSchema) {
+            if (supportsSchema) {
                 createSchema();
-            }*/
+            }
             // build the graph structure
             //createElements();
             //createElementsMediaDataAndNote();
             //appendOtherDsr();
-            appendOtherMediaData();
+            //appendOtherMediaData();
             // read to see they were made
             //hideVertex();
             //readElements();
-            readMediaDataAndNotes();
+            //readMediaDataAndNotes();
             //indexQuery();
 
-            for (int i = 0; i < 3; i++) {
+           /* for (int i = 0; i < 3; i++) {
                 try {
                     Thread.sleep((long) (Math.random() * 500) + 500);
                 } catch (InterruptedException e) {
@@ -486,7 +486,7 @@ public class KyGraphApp extends JanusGraphApp {
             // delete some graph elements
             deleteElements();
             // read to see the changes were made
-            readElements();
+            readElements();*/
 
             // close the graph
             closeGraph();
