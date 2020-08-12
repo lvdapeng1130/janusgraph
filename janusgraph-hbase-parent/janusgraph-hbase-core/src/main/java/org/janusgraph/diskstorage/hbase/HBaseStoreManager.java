@@ -801,6 +801,14 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         setCFOptions(columnDescriptor, ttlInSeconds);
 
         compat.addColumnFamilyToTableDescriptor(desc, columnDescriptor);
+        for(Map.Entry<String,String> entry:shortCfNameMap.entrySet()){
+            String familyName=shortCfNames?entry.getValue():entry.getKey();
+            if(!cfName.equals(familyName)&&!entry.getKey().equals(ATTACHMENT_FAMILY_NAME)&&!entry.getKey().equals(NOTE_FAMILY_NAME)){
+                HColumnDescriptor family = new HColumnDescriptor(familyName);
+                setCFOptions(family, ttlInSeconds);
+                compat.addColumnFamilyToTableDescriptor(desc, family);
+            }
+        }
 
         int count; // total regions to create
         String src;
