@@ -544,11 +544,14 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
      */
     @Override
     public void clearStorage() throws BackendException {
+        String hbaseTableName=this.getAttachmentTableName(tableName);
         try (AdminMask adm = getAdminInterface()) {
             if (this.storageConfig.get(DROP_ON_CLEAR)) {
                 adm.dropTable(tableName);
+                adm.dropTable(hbaseTableName);
             } else {
                 adm.clearTable(tableName, times.getTime(times.getTime()));
+                adm.clearTable(hbaseTableName, times.getTime(times.getTime()));
             }
         } catch (IOException e)
         {
