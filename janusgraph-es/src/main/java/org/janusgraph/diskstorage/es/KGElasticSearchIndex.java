@@ -350,18 +350,22 @@ public class KGElasticSearchIndex implements IndexProvider {
         Objects.requireNonNull(index);
 
         // Create index if it does not useExternalMappings and if it does not already exist
-        if (!useExternalMappings && !client.indexExists(index)) {
-            client.createIndex(index, indexSetting);
-            client.updateIndexSettings(index, MAX_RESULT_WINDOW);
-            try {
-                log.debug("Sleeping {} ms after {} index creation returned from actionGet()", createSleep, index);
-                Thread.sleep(createSleep);
-            } catch (final InterruptedException e) {
-                throw new JanusGraphException("Interrupted while waiting for index to settle in", e);
+        if (!useExternalMappings) {
+            if(!client.indexExists(index)) {
+                client.createIndex(index, indexSetting);
+                client.updateIndexSettings(index, MAX_RESULT_WINDOW);
+                client.addAlias(indexName, index);
+                /*try {
+                    log.debug("Sleeping {} ms after {} index creation returned from actionGet()", createSleep, index);
+                    Thread.sleep(createSleep);
+                } catch (final InterruptedException e) {
+                    throw new JanusGraphException("Interrupted while waiting for index to settle in", e);
+                }*/
             }
+        }else{
+            Preconditions.checkState(client.indexExists(index), "Could not create index: %s",index);
+            client.addAlias(indexName, index);
         }
-        Preconditions.checkState(client.indexExists(index), "Could not create index: %s",index);
-        client.addAlias(indexName, index);
     }
 
 
