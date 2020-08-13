@@ -578,12 +578,17 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
                 this.ensureAttachmentTableExists(tableName, 0);
             }
             Map<KeyRange, ServerName> normed = normalizeKeyBounds(cnx.getRegionLocations(tableName));
-
+            Map<String,Boolean> isLocal=new HashMap<>(normed.size());
             for (Map.Entry<KeyRange, ServerName> e : normed.entrySet()) {
-                if (NetworkUtil.isLocalConnection(e.getValue().getHostname())) {
+                String hostname = e.getValue().getHostname();
+                if(!isLocal.containsKey(hostname)){
+                    boolean localConnection = NetworkUtil.isLocalConnection(e.getValue().getHostname());
+                    isLocal.put(hostname,localConnection);
+                }
+                if(isLocal.get(hostname)){
                     result.add(e.getKey());
                     logger.debug("Found local key/row partition {} on host {}", e.getKey(), e.getValue());
-                } else {
+                }else{
                     logger.debug("Discarding remote {}", e.getValue());
                 }
             }
