@@ -888,22 +888,13 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         setCFOptions(noteLockColumnDescriptor, ttlInSeconds);
         compat.addColumnFamilyToTableDescriptor(desc, noteLockColumnDescriptor);
 
-        int count; // total regions to create
         String src;
+        int regionsAttachPerServer=1;
+        int count= regionsAttachPerServer * adm.getEstimatedRegionServerCount();
 
-        if (MIN_REGION_COUNT <= (count = regionCount)) {
-            src = "region count configuration";
-        } else if (0 < regionsPerServer &&
-                   MIN_REGION_COUNT <= (count = regionsPerServer * adm.getEstimatedRegionServerCount())) {
-            src = "ClusterStatus server count";
-        } else {
-            count = -1;
-            src = "default";
-        }
-
-        if (MIN_REGION_COUNT < count) {
+        if (count>1) {
             adm.createTable(desc, getStartKey(count), getEndKey(count), count);
-            logger.debug("Created table {} with region count {} from {}", attachmentTableName, count, src);
+            logger.debug("Created table {} with region count {}", attachmentTableName, count);
         } else {
             adm.createTable(desc);
             logger.debug("Created table {} with default start key, end key, and region count", attachmentTableName);
