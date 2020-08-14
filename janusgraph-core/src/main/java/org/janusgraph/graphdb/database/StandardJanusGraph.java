@@ -19,9 +19,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
+import org.apache.curator.RetryPolicy;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.tinkerpop.gremlin.process.traversal.TraversalStrategies;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Graph;
+import org.apache.zookeeper.CreateMode;
 import org.janusgraph.core.*;
 import org.janusgraph.core.schema.ConsistencyModifier;
 import org.janusgraph.core.schema.JanusGraphManagement;
@@ -91,8 +96,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.REGISTRATION_TIME;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.REPLACE_INSTANCE_IF_EXISTS;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
 
 public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
@@ -148,6 +152,9 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
     private final String name;
 
+    private final RetryPolicy retryPolicy;
+    private final CuratorFramework curatorClient;
+
     public StandardJanusGraph(GraphDatabaseConfiguration configuration) {
 
         this.config = configuration;
@@ -194,6 +201,32 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         shutdownHook = new ShutdownThread(this);
         Runtime.getRuntime().addShutdownHook(shutdownHook);
         log.debug("Installed shutdown hook {}", shutdownHook, new Throwable("Hook creation trace"));
+        //连接zookeeper
+        String zookeeperURI = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_URI);
+        String zookeeperNamespace = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_NAMESPACE);
+        retryPolicy = new ExponentialBackoffRetry(1000, 3);
+        curatorClient = CuratorFrameworkFactory.builder()
+            .connectString(zookeeperURI)
+            .sessionTimeoutMs(5000)
+            .connectionTimeoutMs(5000)
+            .namespace(zookeeperNamespace)
+            .retryPolicy(retryPolicy)
+            .build();
+        curatorClient.start();
+        this.createEphemeralNode(uniqueInstanceId);
+    }
+
+    private void createEphemeralNode(String uniqueInstanceId){
+        if(curatorClient!=null){
+            try {
+                curatorClient.create()
+                    .creatingParentContainersIfNeeded()
+                    .withMode(CreateMode.EPHEMERAL)
+                    .forPath("/"+uniqueInstanceId);
+            } catch (Exception exception) {
+                exception.printStackTrace();
+            }
+        }
     }
 
     public String getGraphName() {
@@ -232,6 +265,10 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                 uniqueId = config.getUniqueGraphId();
                 ModifiableConfiguration globalConfig = getGlobalSystemConfig(backend);
                 globalConfig.remove(REGISTRATION_TIME, uniqueId);
+                //关闭zookeeper连接
+                if(curatorClient!=null) {
+                    curatorClient.close();
+                }
             } catch (Exception e) {
                 log.warn("Unable to remove graph instance uniqueid {}", uniqueId, e);
             }

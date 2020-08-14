@@ -134,6 +134,7 @@
         <cassandra-driver.version>3.9.0</cassandra-driver.version>
         <testcontainers.version>1.13.0</testcontainers.version>
         <easymock.version>3.4</easymock.version>
+        <curator.version>2.12.0</curator.version>
     </properties>
     <modules>
         <module>janusgraph-driver</module>
@@ -1214,6 +1215,28 @@
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
                 <version>${easymock.version}</version>
+            </dependency>
+
+            <!--curator version-->
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-framework</artifactId>
+                <version>${curator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-recipes</artifactId>
+                <version>${curator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-test</artifactId>
+                <version>${curator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-client</artifactId>
+                <version>${curator.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
