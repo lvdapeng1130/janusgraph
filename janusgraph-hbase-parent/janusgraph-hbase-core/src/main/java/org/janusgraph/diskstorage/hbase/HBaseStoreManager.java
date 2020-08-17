@@ -897,7 +897,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         int regionsAttachPerServer=1;
         int count= regionsAttachPerServer * adm.getEstimatedRegionServerCount();
 
-        if (count>1) {
+        if (count>MIN_REGION_COUNT) {
             adm.createTable(desc, getStartKey(count), getEndKey(count), count);
             logger.debug("Created table {} with region count {}", attachmentTableName, count);
         } else {

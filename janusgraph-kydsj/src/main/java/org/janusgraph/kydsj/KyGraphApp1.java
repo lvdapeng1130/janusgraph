@@ -25,9 +25,9 @@ import java.util.stream.Stream;
  * @time: 2020/7/20 13:42
  * @jira:
  */
-public class KyGraphApp extends JanusGraphApp {
-    private static final Logger LOGGER = LoggerFactory.getLogger(KyGraphApp.class);
-    public KyGraphApp(String fileName) {
+public class KyGraphApp1 extends JanusGraphApp {
+    private static final Logger LOGGER = LoggerFactory.getLogger(KyGraphApp1.class);
+    public KyGraphApp1(String fileName) {
         super(fileName);
     }
 
@@ -455,14 +455,13 @@ public class KyGraphApp extends JanusGraphApp {
         try {
             // open and initialize the graph
             openGraph();
-            System.out.println("222");
-            closeGraph();
-            //Thread.sleep(1000*1000*3000);
+            this.getJanusGraph().watchAndCloseInstances();
+            Thread.sleep(1000*1000*3000);
             // define the schema before loading data
            /* if (supportsSchema) {
                 createSchema();
             }*/
-            //this.getJanusGraph().watchRemoveZookeeperNode();
+
             // build the graph structure
             //createElements();
             //createElementsMediaDataAndNote();
@@ -492,7 +491,7 @@ public class KyGraphApp extends JanusGraphApp {
             readElements();*/
 
             // close the graph
-            //closeGraph();
+            closeGraph();
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
         }
@@ -502,7 +501,7 @@ public class KyGraphApp extends JanusGraphApp {
     public static void main(String[] args) throws Exception {
         final String fileName = (args != null && args.length > 0) ? args[0] : null;
         final boolean drop = (args != null && args.length > 1) && "drop".equalsIgnoreCase(args[1]);
-        final KyGraphApp app = new KyGraphApp(fileName);
+        final KyGraphApp1 app = new KyGraphApp1(fileName);
         if (drop) {
             app.openGraph();
             app.dropGraph();

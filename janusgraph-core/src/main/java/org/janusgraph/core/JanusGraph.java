@@ -134,6 +134,12 @@ public interface JanusGraph extends Transaction {
     List<Note> getNotes(long vertexId);
 
     /**
+     * 监听zookeeper，关闭无效节点
+     * @throws Exception
+     */
+    void watchAndCloseInstances() throws Exception;
+
+    /**
      * The version of this JanusGraph graph database
      *
      * @return
