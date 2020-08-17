@@ -202,8 +202,8 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         managementLogger = new ManagementLogger(this, managementLog, schemaCache, this.times);
         managementLog.registerReader(ReadMarker.fromNow(), managementLogger);
 
-        /*shutdownHook = new ShutdownThread(this);
-        Runtime.getRuntime().addShutdownHook(shutdownHook);*/
+        shutdownHook = new ShutdownThread(this);
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
         log.debug("Installed shutdown hook {}", shutdownHook, new Throwable("Hook creation trace"));
         //连接zookeeper
         String zookeeperURI = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_URI);
