@@ -19,6 +19,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -152,8 +153,8 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
     private final String name;
 
-    private final RetryPolicy retryPolicy;
-    private final CuratorFramework curatorClient;
+    private RetryPolicy retryPolicy;
+    private CuratorFramework curatorClient;
 
     public StandardJanusGraph(GraphDatabaseConfiguration configuration) {
 
@@ -204,16 +205,18 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         //连接zookeeper
         String zookeeperURI = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_URI);
         String zookeeperNamespace = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_NAMESPACE);
-        retryPolicy = new ExponentialBackoffRetry(1000, 3);
-        curatorClient = CuratorFrameworkFactory.builder()
-            .connectString(zookeeperURI)
-            .sessionTimeoutMs(5000)
-            .connectionTimeoutMs(5000)
-            .namespace(zookeeperNamespace)
-            .retryPolicy(retryPolicy)
-            .build();
-        curatorClient.start();
-        this.createEphemeralNode(uniqueInstanceId);
+        if(StringUtils.isNotBlank(zookeeperURI)&&StringUtils.isNotBlank(zookeeperNamespace)) {
+            retryPolicy = new ExponentialBackoffRetry(1000, 3);
+            curatorClient = CuratorFrameworkFactory.builder()
+                .connectString(zookeeperURI)
+                .sessionTimeoutMs(5000)
+                .connectionTimeoutMs(5000)
+                .namespace(zookeeperNamespace)
+                .retryPolicy(retryPolicy)
+                .build();
+            curatorClient.start();
+            this.createEphemeralNode(uniqueInstanceId);
+        }
     }
 
     private void createEphemeralNode(String uniqueInstanceId){

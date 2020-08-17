@@ -173,10 +173,10 @@ public class GraphDatabaseConfiguration {
 
     public static final ConfigOption<String> JANUSGRAPH_ZOOKEEPER_URI = new ConfigOption<>(GRAPH_NS,"zookeeper-uri",
         "zookeeper的地址",
-        ConfigOption.Type.MASKABLE, String.class).hide();
+        ConfigOption.Type.GLOBAL_OFFLINE, String.class).hide();
     public static final ConfigOption<String> JANUSGRAPH_ZOOKEEPER_NAMESPACE = new ConfigOption<>(GRAPH_NS,"zookeeper-namespace",
         "实现不同的Zookeeper业务之间的隔离，需要为每个业务分配一个独立的命名空间",
-        ConfigOption.Type.MASKABLE, String.class).hide();
+        ConfigOption.Type.GLOBAL_OFFLINE, String.class).hide();
 
     // ################ INSTANCE REGISTRATION (system) #######################
     // ##############################################################
