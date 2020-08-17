@@ -456,12 +456,11 @@ public class KyGraphApp extends JanusGraphApp {
             // open and initialize the graph
             openGraph();
             System.out.println("222");
-            closeGraph();
             //Thread.sleep(1000*1000*3000);
             // define the schema before loading data
-           /* if (supportsSchema) {
+            if (supportsSchema) {
                 createSchema();
-            }*/
+            }
             //this.getJanusGraph().watchRemoveZookeeperNode();
             // build the graph structure
             //createElements();
@@ -492,7 +491,7 @@ public class KyGraphApp extends JanusGraphApp {
             readElements();*/
 
             // close the graph
-            //closeGraph();
+            closeGraph();
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
         }

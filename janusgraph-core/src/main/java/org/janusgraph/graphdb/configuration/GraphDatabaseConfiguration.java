@@ -176,6 +176,10 @@ public class GraphDatabaseConfiguration {
         ConfigOption.Type.GLOBAL_OFFLINE, String.class).hide();
     public static final ConfigOption<String> JANUSGRAPH_ZOOKEEPER_NAMESPACE = new ConfigOption<>(GRAPH_NS,"zookeeper-namespace",
         "实现不同的Zookeeper业务之间的隔离，需要为每个业务分配一个独立的命名空间",
+        ConfigOption.Type.GLOBAL_OFFLINE, String.class,"trs-graph").hide();
+
+    public static final ConfigOption<String> GRAPH_NODE = new ConfigOption<>(GRAPH_NS,"zookeeper-graph-node",
+        "每一个graph在zookeeper中的目录名称",
         ConfigOption.Type.GLOBAL_OFFLINE, String.class).hide();
 
     // ################ INSTANCE REGISTRATION (system) #######################

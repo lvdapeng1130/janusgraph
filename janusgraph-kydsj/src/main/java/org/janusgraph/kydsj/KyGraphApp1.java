@@ -455,7 +455,6 @@ public class KyGraphApp1 extends JanusGraphApp {
         try {
             // open and initialize the graph
             openGraph();
-            this.getJanusGraph().watchAndCloseInstances();
             Thread.sleep(1000*1000*3000);
             // define the schema before loading data
            /* if (supportsSchema) {

@@ -23,7 +23,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.recipes.cache.*;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.tinkerpop.gremlin.process.traversal.TraversalStrategies;
 import org.apache.tinkerpop.gremlin.structure.Direction;
@@ -54,6 +53,7 @@ import org.janusgraph.graphdb.database.cache.SchemaCache;
 import org.janusgraph.graphdb.database.idassigner.VertexIDAssigner;
 import org.janusgraph.graphdb.database.idhandling.IDHandler;
 import org.janusgraph.graphdb.database.idhandling.VariableLong;
+import org.janusgraph.graphdb.database.leader.LeaderSelectorAdapter;
 import org.janusgraph.graphdb.database.log.LogTxStatus;
 import org.janusgraph.graphdb.database.log.TransactionLogHeader;
 import org.janusgraph.graphdb.database.management.ManagementLogger;
@@ -97,7 +97,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
 
@@ -157,7 +156,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
     private RetryPolicy retryPolicy;
     private CuratorFramework curatorClient;
-    private PathChildrenCache childrenChanage;
+    private LeaderSelectorAdapter leaderSelectorAdapter;
 
     public StandardJanusGraph(GraphDatabaseConfiguration configuration) {
 
@@ -205,88 +204,44 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         shutdownHook = new ShutdownThread(this);
         Runtime.getRuntime().addShutdownHook(shutdownHook);
         log.debug("Installed shutdown hook {}", shutdownHook, new Throwable("Hook creation trace"));
+        //初始化zookeeper
+        this.initZookeeper(configuration,uniqueInstanceId);
+    }
+
+    private void initZookeeper(GraphDatabaseConfiguration configuration,String uniqueInstanceId){
         //连接zookeeper
         String zookeeperURI = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_URI);
         String zookeeperNamespace = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_NAMESPACE);
-        if(StringUtils.isNotBlank(zookeeperURI)&&StringUtils.isNotBlank(zookeeperNamespace)) {
+        String graph_node = configuration.getConfiguration().get(GRAPH_NODE);
+        if(StringUtils.isNotBlank(zookeeperURI)&&StringUtils.isNotBlank(zookeeperNamespace)&&StringUtils.isNotBlank(graph_node)) {
+            String rootPath=zookeeperNamespace+"/"+graph_node;
             retryPolicy = new ExponentialBackoffRetry(1000, 3);
             curatorClient = CuratorFrameworkFactory.builder()
                 .connectString(zookeeperURI)
                 .sessionTimeoutMs(5000)
                 .connectionTimeoutMs(5000)
-                .namespace(zookeeperNamespace)
+                .namespace(rootPath)
                 .retryPolicy(retryPolicy)
                 .build();
             curatorClient.start();
             this.createEphemeralNode(uniqueInstanceId);
-        }
-    }
-
-    @Override
-    public void watchAndCloseInstances() throws Exception {
-        if(this.curatorClient!=null){
-            if(childrenChanage!=null){
-                childrenChanage.close();
+            this.leaderSelectorAdapter = new LeaderSelectorAdapter(curatorClient, "Client #" + uniqueInstanceId,this);
+            try {
+                leaderSelectorAdapter.start();
+            } catch (Exception exception) {
             }
-            String zookeeperNamespace =  this.getConfiguration().getConfiguration().get(JANUSGRAPH_ZOOKEEPER_NAMESPACE);
-            childrenChanage = new PathChildrenCache(this.curatorClient, "/", true);
-            childrenChanage.start();
-            childrenChanage.getListenable().addListener(
-                new PathChildrenCacheListener() {
-                    @Override
-                    public void childEvent(CuratorFramework client, PathChildrenCacheEvent event)
-                        throws Exception {
-                        switch (event.getType()) {
-                            case CHILD_REMOVED:
-                                this.disposeInstances(client,event);
-                                break;
-                            case CHILD_ADDED:
-                                this.disposeInstances(client,event);
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    private void disposeInstances(CuratorFramework client, PathChildrenCacheEvent event){
-                        if(event.getData()!=null&&event.getData().getData()!=null) {
-                            ManagementSystem janusGraphManagement=null;
-                            try {
-                                Set<String> zookeeperInstances = client.getChildren().forPath("/").stream().collect(Collectors.toSet());
-                                janusGraphManagement = (ManagementSystem)StandardJanusGraph.this.openManagement();
-                                boolean chanageClose=false;
-                                Set<String> openInstances = janusGraphManagement.getOpenInstancesInternal();
-                                for(String openInstance:openInstances){
-                                    if(!zookeeperInstances.contains(openInstance)) {
-                                        janusGraphManagement.forceCloseInstance(openInstance);
-                                        chanageClose=true;
-                                    }
-                                }
-                                if(chanageClose) {
-                                    janusGraphManagement.commit();
-                                }else{
-                                    janusGraphManagement.rollback();
-                                }
-                            } catch (Exception exception) {
-                                if(janusGraphManagement!=null&&janusGraphManagement.isOpen()){
-                                    janusGraphManagement.rollback();
-                                }
-                            }
-                        }
-                    }
-                }
-            );
         }
     }
 
     private void createEphemeralNode(String uniqueInstanceId){
         if(curatorClient!=null){
             try {
+                String instancePath="/"+LeaderSelectorAdapter.INSTANCENODE+"/"+uniqueInstanceId;
                 curatorClient.create()
                     .creatingParentContainersIfNeeded()
                     .withMode(CreateMode.EPHEMERAL)
-                    .forPath("/"+uniqueInstanceId,uniqueInstanceId.getBytes());
+                    .forPath(instancePath,uniqueInstanceId.getBytes());
             } catch (Exception exception) {
-
             }
         }
     }
@@ -328,6 +283,9 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                 ModifiableConfiguration globalConfig = getGlobalSystemConfig(backend);
                 globalConfig.remove(REGISTRATION_TIME, uniqueId);
                 //关闭zookeeper连接
+                if(leaderSelectorAdapter !=null){
+                    leaderSelectorAdapter.close();
+                }
                 if(curatorClient!=null) {
                     curatorClient.close();
                 }
