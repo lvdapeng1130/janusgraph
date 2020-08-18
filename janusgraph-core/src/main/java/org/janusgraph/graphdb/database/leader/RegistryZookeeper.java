@@ -50,7 +50,7 @@ public class RegistryZookeeper implements Closeable {
                 .build();
             curatorClient.start();
             this.createEphemeralNode(uniqueInstanceId);
-            this.leaderSelectorAdapter = new LeaderSelectorAdapter(curatorClient, "Client #" + uniqueInstanceId,this.janusGraph);
+            this.leaderSelectorAdapter = new LeaderSelectorAdapter(curatorClient, String.format("graph %s,Client #%s",graph_node, uniqueInstanceId),this.janusGraph);
             try {
                 leaderSelectorAdapter.start();
             } catch (Exception exception) {

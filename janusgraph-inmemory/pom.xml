@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.janusgraph</groupId>
         <artifactId>janusgraph</artifactId>
-        <version>KGYY_R3.01_2020072802-hbase2</version>
+        <version>KGYY_R3.01_2020072801-hbase2-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>janusgraph-inmemory</artifactId>
