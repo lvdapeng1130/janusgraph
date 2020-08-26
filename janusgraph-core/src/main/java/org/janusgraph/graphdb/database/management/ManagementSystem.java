@@ -700,6 +700,11 @@ public class ManagementSystem implements JanusGraphManagement {
         if (!indexVertex.isNew()) {
             updatedTypes.add(indexVertex);
         }
+        if (!key.isNew()){
+            if(key instanceof JanusGraphSchemaVertex) {
+                updatedTypes.add((JanusGraphSchemaVertex)key);
+            }
+        }
     }
 
     private JanusGraphIndex createCompositeIndex(String indexName, ElementCategory elementCategory, boolean unique, JanusGraphSchemaType constraint, PropertyKey... keys) {
@@ -822,6 +827,10 @@ public class ManagementSystem implements JanusGraphManagement {
             JanusGraphIndex index = createMixedIndex(indexName, elementCategory, constraint, backingIndex);
             for (Map.Entry<PropertyKey, Parameter[]> entry : keys.entrySet()) {
                 addKGIndexKey(index, entry.getKey(), entry.getValue());
+            }
+            //集群节点中同步schema消息
+            if(updatedTypes!=null&&updatedTypes.size()>0) {
+                setUpdateTrigger(new GraphCacheEvictionCompleteTrigger(graph.getGraphName()));
             }
             return index;
         }
