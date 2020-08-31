@@ -7,7 +7,7 @@
 > data. Cassandra’s support for replicating across multiple datacenters
 > is best-in-class, providing lower latency for your users and the peace
 > of mind of knowing that you can survive regional outages. The largest
-> known Cassandra cluster has over 300 TB of data in over 400 machines.
+> known Cassandra cluster has over 75,000 nodes storing over 10 PB of data.
 >
 > —  [Apache Cassandra Homepage](http://cassandra.apache.org/)
 
@@ -71,7 +71,7 @@ section of the specific release on the [Releases
 page](https://github.com/JanusGraph/janusgraph/releases). The [Cassandra
 Docker Hub page](https://hub.docker.com/_/cassandra/) can be referenced
 for the available versions and useful commands. A description of the ports can be found
-[here](https://docs.datastax.com/en/cassandra/latest/cassandra/configuration/secureFireWall.html).
+[here](https://docs.datastax.com/en/cassandra-oss/3.x/cassandra/configuration/secureFireWall.html).
 Port 9160 is used for the Thrift client API. Port 9042 is for CQL native
 clients. Ports 7000, 7001 and 7099 are for inter-node communication.
 Version 3.11 of Cassandra was the latest compatible version for
@@ -175,10 +175,9 @@ CQL specific configuration options:
     in. Allows multiple JanusGraph graphs to co-exist in the same
     Cassandra cluster.
 
-For more information on Cassandra consistency levels and acceptable
-values, please refer to the [Cassandra Thrift
-API](http://wiki.apache.org/cassandra/API10). In general, higher levels
-are more consistent and robust but have higher latency.
+More information on Cassandra consistency levels and acceptable
+values can be found [here](https://docs.datastax.com/en/cassandra-oss/3.x/cassandra/dml/dmlDataConsistencyTOC.html).
+In general, higher levels are more consistent and robust but have higher latency.
 
 ## Global Graph Operations
 
