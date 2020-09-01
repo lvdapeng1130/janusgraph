@@ -393,16 +393,16 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-            /*if (supportsSchema) {
+            if (supportsSchema) {
                 createSchema();
-            }*/
+            }
             // build the graph structure
-            //createElements();
+            createElements();
             //createElementsMediaDataAndNote();
             //appendOtherDsr();
             // read to see they were made
             //hideVertex();
-            readElements();
+            //readElements();
             //indexQuery();
 
             /*for (int i = 0; i < 3; i++) {
