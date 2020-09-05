@@ -177,14 +177,20 @@ public class GraphDatabaseConfiguration {
 
     public static final ConfigOption<String> JANUSGRAPH_ZOOKEEPER_URI = new ConfigOption<>(GRAPH_NS,"zookeeper-uri",
         "zookeeper的地址",
-        ConfigOption.Type.GLOBAL_OFFLINE, String.class).hide();
+        ConfigOption.Type.GLOBAL_OFFLINE, String.class);
     public static final ConfigOption<String> JANUSGRAPH_ZOOKEEPER_NAMESPACE = new ConfigOption<>(GRAPH_NS,"zookeeper-namespace",
         "实现不同的Zookeeper业务之间的隔离，需要为每个业务分配一个独立的命名空间",
-        ConfigOption.Type.GLOBAL_OFFLINE, String.class,"trs-graph").hide();
+        ConfigOption.Type.GLOBAL_OFFLINE, String.class,"trs-graph");
 
     public static final ConfigOption<String> GRAPH_NODE = new ConfigOption<>(GRAPH_NS,"zookeeper-graph-node",
         "每一个graph在zookeeper中的目录名称",
-        ConfigOption.Type.GLOBAL_OFFLINE, String.class).hide();
+        ConfigOption.Type.GLOBAL_OFFLINE, String.class);
+    public static final ConfigOption<Integer> ZOOKEEPER_SESSIONTIMEOUTMS = new ConfigOption<>(GRAPH_NS,"zookeeper-sessionTimeoutMs",
+        "zookeeper的sessionTimeoutMs时间",
+        ConfigOption.Type.MASKABLE, Integer.class,5000);
+    public static final ConfigOption<Integer> ZOOKEEPER_CONNECTIONTIMEOUTMS = new ConfigOption<>(GRAPH_NS,"zookeeper-connectionTimeoutMs",
+        "zookeeper的connectionTimeoutMs时间",
+        ConfigOption.Type.MASKABLE, Integer.class,5000);
 
     // ################ INSTANCE REGISTRATION (system) #######################
     // ##############################################################

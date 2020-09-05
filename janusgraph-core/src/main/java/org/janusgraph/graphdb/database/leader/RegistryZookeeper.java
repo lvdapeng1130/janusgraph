@@ -37,14 +37,16 @@ public class RegistryZookeeper implements Closeable {
         //连接zookeeper
         String zookeeperURI = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_URI);
         String zookeeperNamespace = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_NAMESPACE);
+        int sessionTimeoutMs = configuration.getConfiguration().get(ZOOKEEPER_SESSIONTIMEOUTMS);
+        int connectionTimeoutMs = configuration.getConfiguration().get(ZOOKEEPER_CONNECTIONTIMEOUTMS);
         String graph_node = configuration.getConfiguration().get(GRAPH_NODE);
         if(StringUtils.isNotBlank(zookeeperURI)&&StringUtils.isNotBlank(zookeeperNamespace)&&StringUtils.isNotBlank(graph_node)) {
             String rootPath=zookeeperNamespace+"/"+graph_node;
             retryPolicy = new ExponentialBackoffRetry(1000, 3);
             curatorClient = CuratorFrameworkFactory.builder()
                 .connectString(zookeeperURI)
-                .sessionTimeoutMs(5000)
-                .connectionTimeoutMs(5000)
+                .sessionTimeoutMs(sessionTimeoutMs)
+                .connectionTimeoutMs(connectionTimeoutMs)
                 .namespace(rootPath)
                 .retryPolicy(retryPolicy)
                 .build();
