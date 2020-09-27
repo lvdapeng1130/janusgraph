@@ -1,0 +1,1 @@
+org.apache.janusgraph.spark.structure.io.gryo.kryoshim.unshaded.UnshadedKryoShimService # Supports Spark

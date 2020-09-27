@@ -14,10 +14,7 @@
 
 package org.janusgraph.graphdb.tinkerpop;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.function.Consumer;
-
+import com.google.common.base.Preconditions;
 import org.apache.commons.configuration.Configuration;
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;
 import org.apache.tinkerpop.gremlin.structure.Edge;
@@ -29,16 +26,7 @@ import org.apache.tinkerpop.gremlin.structure.io.graphson.GraphSONVersion;
 import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoVersion;
 import org.apache.tinkerpop.gremlin.structure.util.AbstractThreadLocalTransaction;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
-import org.janusgraph.core.EdgeLabel;
-import org.janusgraph.core.JanusGraph;
-import org.janusgraph.core.JanusGraphIndexQuery;
-import org.janusgraph.core.JanusGraphMultiVertexQuery;
-import org.janusgraph.core.JanusGraphQuery;
-import org.janusgraph.core.JanusGraphTransaction;
-import org.janusgraph.core.JanusGraphVertex;
-import org.janusgraph.core.PropertyKey;
-import org.janusgraph.core.RelationType;
-import org.janusgraph.core.VertexLabel;
+import org.janusgraph.core.*;
 import org.janusgraph.core.schema.EdgeLabelMaker;
 import org.janusgraph.core.schema.PropertyKeyMaker;
 import org.janusgraph.core.schema.VertexLabelMaker;
@@ -48,7 +36,9 @@ import org.janusgraph.graphdb.olap.computer.FulgoraGraphComputer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.function.Consumer;
 
 /**
  * Blueprints specific implementation for {@link JanusGraph}.
@@ -153,10 +143,17 @@ public abstract class JanusGraphBlueprintsGraph implements JanusGraph {
 
     @Override
     public <C extends GraphComputer> C compute(Class<C> graphComputerClass) throws IllegalArgumentException {
-        if (!graphComputerClass.equals(FulgoraGraphComputer.class)) {
-            throw Graph.Exceptions.graphDoesNotSupportProvidedGraphComputer(graphComputerClass);
-        } else {
-            return (C)compute();
+        try {
+            StandardJanusGraph graph = (StandardJanusGraph)this;
+            if (FulgoraGraphComputer.class.isAssignableFrom(graphComputerClass)) {
+                return (C)compute();
+            } else if(GraphComputer.class.isAssignableFrom(graphComputerClass)){
+                return graphComputerClass.getConstructor(JanusGraph.class,org.janusgraph.diskstorage.configuration.Configuration.class).newInstance(graph,graph.getConfiguration().getConfiguration());
+            }else{
+                throw Graph.Exceptions.graphDoesNotSupportProvidedGraphComputer(graphComputerClass);
+            }
+        } catch (final Exception e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
         }
     }
 

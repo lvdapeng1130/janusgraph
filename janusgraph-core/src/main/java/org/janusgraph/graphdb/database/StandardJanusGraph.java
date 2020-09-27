@@ -60,10 +60,7 @@ import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.internal.InternalVertexLabel;
 import org.janusgraph.graphdb.query.QueryUtil;
-import org.janusgraph.graphdb.query.index.ApproximateIndexSelectionStrategy;
-import org.janusgraph.graphdb.query.index.BruteForceIndexSelectionStrategy;
 import org.janusgraph.graphdb.query.index.IndexSelectionStrategy;
-import org.janusgraph.graphdb.query.index.ThresholdBasedIndexSelectionStrategy;
 import org.janusgraph.graphdb.relations.EdgeDirection;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphBlueprintsGraph;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphFeatures;
@@ -151,6 +148,8 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
     private final RegistryZookeeper registryZookeeper;
 
+    private final String uniqueInstanceId;
+
     public StandardJanusGraph(GraphDatabaseConfiguration configuration) {
 
         this.config = configuration;
@@ -177,7 +176,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         openTransactions = Collections.newSetFromMap(new ConcurrentHashMap<StandardJanusGraphTx, Boolean>(100, 0.75f, 1));
 
         //Register instance and ensure uniqueness
-        String uniqueInstanceId = configuration.getUniqueGraphId();
+        uniqueInstanceId = configuration.getUniqueGraphId();
         ModifiableConfiguration globalConfig = getGlobalSystemConfig(backend);
         final boolean instanceExists = globalConfig.has(REGISTRATION_TIME, uniqueInstanceId);
         final boolean replaceExistingInstance = configuration.getConfiguration().get(REPLACE_INSTANCE_IF_EXISTS);
@@ -198,6 +197,10 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         //注册zookeeper
         this.registryZookeeper=new RegistryZookeeper(configuration,uniqueInstanceId,this);
         this.registryZookeeper.registry();
+    }
+
+    public String getUniqueInstanceId(){
+        return this.uniqueInstanceId;
     }
 
     public String getGraphName() {

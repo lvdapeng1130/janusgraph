@@ -15,9 +15,11 @@ import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.Cardinality;
+import org.janusgraph.core.RelationType;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.schema.JanusGraphIndex;
 import org.janusgraph.core.schema.JanusGraphManagement;
+import org.janusgraph.core.schema.Mapping;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.util.encoding.LongEncoding;
 import org.slf4j.Logger;
@@ -54,7 +56,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
      */
     @Override
     protected void createEdgeLabels(final JanusGraphManagement management) {
-        management.makeEdgeLabel("link_simple1").make();
+        management.makeEdgeLabel("link_simple").make();
     }
 
     /**
@@ -69,6 +71,17 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
         management.makePropertyKey("text").dataType(String.class).cardinality(Cardinality.SINGLE).make();
         management.makePropertyKey("time").dataType(Date.class).make();
         management.makePropertyKey("age1").dataType(Integer.class).make();
+        management.makePropertyKey("linktid").dataType(String.class).cardinality(Cardinality.SINGLE).make();
+        management.makePropertyKey("tid").dataType(String.class).cardinality(Cardinality.SINGLE).make();
+        management.makePropertyKey("merge_to").dataType(Long.class).cardinality(Cardinality.SINGLE).make();
+
+        management.makePropertyKey("startDate").dataType(Date.class).cardinality(Cardinality.SINGLE).make();
+        management.makePropertyKey("endDate").dataType(Date.class).cardinality(Cardinality.SINGLE).make();
+        management.makePropertyKey("geo").dataType(Geoshape.class).cardinality(Cardinality.SINGLE).make();
+        management.makePropertyKey("dsr").dataType(String.class).cardinality(Cardinality.SET).make();
+        management.makePropertyKey("role").dataType(String.class).cardinality(Cardinality.SINGLE).make();
+        management.makePropertyKey("status").dataType(Integer.class).cardinality(Cardinality.SINGLE).make();
+        management.makePropertyKey("attachment").dataType(String.class).cardinality(Cardinality.SINGLE).make();
 
       /*  //属性内置属性定义
         management.makePropertyKey("startDate").dataType(Date.class).make();
@@ -88,6 +101,9 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             .addKey(management.getPropertyKey("qqqun_num")).buildCompositeIndex();
         JanusGraphIndex janusGraphIndex1 = management.buildIndex("qq_num_composite_index", Vertex.class)
             .addKey(management.getPropertyKey("qq_num")).buildCompositeIndex();
+        //关系索引
+        JanusGraphIndex edgeIndex = management.buildIndex("eget_link_tid", Edge.class)
+            .addKey(management.getPropertyKey("linktid")).buildCompositeIndex();
         //management.setConsistency(janusGraphIndex, ConsistencyModifier.LOCK);
         //management.setConsistency(janusGraphIndex1, ConsistencyModifier.LOCK);
 
@@ -101,6 +117,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
     @Override
     protected void createMixedIndexes(final JanusGraphManagement management) {
         if (useMixedIndex) {
+            //对象的混合索引
             JanusGraphIndex janusGraphIndex = management.buildIndex("object_qq", Vertex.class)
                 .addKey(management.getPropertyKey("name"))
                 .addKey(management.getPropertyKey("grade"))
@@ -116,9 +133,13 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                 .addKey(management.getPropertyKey("text"))
                 .indexOnly(management.getVertexLabel("object_qqqun"))
                 .buildMixedIndex(mixedIndexConfigName);
-            /*
-            management.buildIndex("eReasonPlace", Edge.class).addKey(management.getPropertyKey("reason"))
-                .addKey(management.getPropertyKey("place")).buildMixedIndex(mixedIndexConfigName);*/
+
+            management.buildIndex("name_index", Vertex.class)
+                .addKey(management.getPropertyKey("name"), Mapping.TEXTSTRING.asParameter())
+                .buildMixedIndex(mixedIndexConfigName);
+            //关系的混合索引
+            management.buildIndex("eReasonPlace", Edge.class).addKey(management.getPropertyKey("linktid"))
+                .buildMixedIndex(mixedIndexConfigName);
         }
     }
 
@@ -128,17 +149,16 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
     public void createElements() {
         try {
             LOGGER.info("多线程程序写入大量qq和qq群信息");
-            ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2,
+            ExecutorService pool = Executors.newFixedThreadPool(10,
                 new ThreadFactoryBuilder().setDaemon(true).setNameFormat("import-data-%d").build());//定义线程数
             List<Future<Integer>> futures= Lists.newArrayList();
             for(int t=0;t<10;t++) {
                 Future<Integer> submit = pool.submit(() -> {
-                    //JanusGraphTransaction janusGraphTransaction = this.getJanusGraph().newTransaction();
-                    //StandardJanusGraphTx threadedTx = (StandardJanusGraphTx)this.getJanusGraph().tx().createThreadedTx();
-                    int threadTotal = 1000000;
+                    //int threadTotal = 1000000;
+                    int threadTotal = 10000;
                     List<QQData> qqDataList=new ArrayList<>();
                     for (int i = 0; i < threadTotal; i++) {
-                        int qqqun_num = new Random().nextInt(3);
+                        int qqqun_num = new Random().nextInt(6);
                         QQData data = QQData.builder()
                             .qq_age(new Random().nextInt(100))
                             .qq_num(RandomStringUtils.randomAlphanumeric(11))
@@ -146,9 +166,9 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                             .qq_date(new Date())
                             .qq_title(RandomStringUtils.randomAlphanumeric(30))
                             .qqqun_date(new Date())
-                            //.qqqun_num(qqqun_num+"")
-                            .qqqun_num(RandomStringUtils.randomAlphanumeric(11))
-                            .qqqun_title("我是qq群"+qqqun_num)
+                            .qqqun_num(qqqun_num+"")
+                            //.qqqun_num(RandomStringUtils.randomAlphanumeric(11))
+                            .qqqun_title(String.format("插入的qq群号是%s的QQ群",qqqun_num))
                             .text("我是qq群的说明"+qqqun_num)
                             .build();
                         qqDataList.add(data);
@@ -197,7 +217,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             .build();
         retryer.call(() -> {
             Stopwatch started = Stopwatch.createStarted();
-            try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction().consistencyChecks(true)
+            try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction().consistencyChecks(false)
                 .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
                 //StandardJanusGraphTx threadedTx = (StandardJanusGraphTx)this.getJanusGraph().tx().createThreadedTx();
                 for (QQData qqData : qqDataList) {
@@ -262,7 +282,8 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                     Optional<Vertex> qqqunVertext = threadedTx.traversal().V().hasLabel("object_qqqun").has("qqqun_num", P.eq(qqData.getQqqun_num())).tryNext();
                     Vertex qqqun = null;
                     if (qqqunVertext.isPresent()) {
-                        qqqun = threadedTx.traversal().V(qqqunVertext.get()).property("name", qqData.getQqqun_title(),
+                        qqqun = threadedTx.traversal().V(qqqunVertext.get())
+                            .property("name", String.format("当前对象id=%s,%s",qqqunVertext.get().id(),qqData.getQqqun_title()),
                             "startDate", new Date(),
                             "endDate", new Date(),
                             "dsr", "程序导入",
@@ -306,9 +327,9 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                                 "geo", Geoshape.point(22.22, 113.1122)).next();
                     }
                     String uuid = UUID.randomUUID().toString();
-                    Optional<Edge> edge = threadedTx.traversal().E().hasLabel("link_simple1").has("linktid", uuid).limit(1).tryNext();
+                    Optional<Edge> edge = threadedTx.traversal().E().hasLabel("link_simple").has("linktid", uuid).limit(1).tryNext();
                     if (!edge.isPresent()) {
-                        threadedTx.traversal().V(qq.id()).as("a").V(qqqun.id()).addE("link_simple1").property("linktid", uuid).to("a").next();
+                        threadedTx.traversal().V(qq.id()).as("a").V(qqqun.id()).addE("link_simple").property("linktid", uuid).to("a").next();
                     }
                 }
                 if (supportsTransactions) {
@@ -325,11 +346,10 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
     public void createSchema() {
         final JanusGraphManagement management = getJanusGraph().openManagement();
         try {
-            // ;
-            /*if (management.getRelationTypes(RelationType.class).iterator().hasNext()) {
+            if (management.getRelationTypes(RelationType.class).iterator().hasNext()) {
                 management.rollback();
                 return;
-            }*/
+            }
             LOGGER.info("creating schema");
             createProperties(management);
             createVertexLabels(management);
@@ -343,6 +363,13 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
         }
     }
 
+    private void printSchema(){
+        final JanusGraphManagement management = getJanusGraph().openManagement();
+        String printSchemaStr = management.printSchema();
+        LOGGER.info(printSchemaStr);
+        management.rollback();
+    }
+
     /**
      * Runs some traversal queries to get data from the graph.
      */
@@ -352,19 +379,6 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                 return;
             }
             LOGGER.info("reading elements");
-            // look up vertex by name can use a composite index in JanusGraph
-            //final List<Map<Object, Object>> v = g.V().hasLabel("person","teacher").has("name","张三").has("age", P.eq(66)).valueMap(true).next(2);
-            /*List<Object> objects = g.V().hasLabel("object_qqqun")
-                .has("qqqun_num", P.eq("1")).both().groupCount("age").by("age")
-                .groupCount("grade").by("grade").groupCount("label").by(T.label)
-                .cap("label","age", "grade").toList();
-            Vertex crc = g.V(LongEncoding.decode("9k0")).next();*/
-           /* g.withComputer().V().hasLabel("object_qqqun")
-                .has("qqqun_num", P.eq("1")).limit(10).connectedComponent()
-                .with(ConnectedComponent.propertyName,"component")
-                .project("age","component").
-                by("age").
-                by("component").toList();*/
             List<Vertex> vertices = g.V().hasLabel("object_qqqun").has("qqqun_num", P.eq("1")).toList();
             List<Vertex> vertices1 = g.V().hasLabel("object_qqqun")
                 .has("qqqun_num", P.eq("1")).both().toList();
@@ -374,9 +388,6 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             List<Vertex> next1 = both.next(1);
 
             Vertex crc = g.V(LongEncoding.decode("9k0")).next();
-            // numerical range query can use a mixed index in JanusGraph
-
-
         } finally {
             // the default behavior automatically starts a transaction for
             // any graph interaction, so it is best to finish the transaction
@@ -402,9 +413,10 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-            /*if (supportsSchema) {
+            if (supportsSchema) {
                 createSchema();
-            }*/
+            }
+            printSchema();
             // build the graph structure
             createElements();
             //createElementsMediaDataAndNote();
@@ -465,7 +477,6 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
         private String text;
         private Date qqqun_date;
         private String qqqun_num;
-
     }
 
 }

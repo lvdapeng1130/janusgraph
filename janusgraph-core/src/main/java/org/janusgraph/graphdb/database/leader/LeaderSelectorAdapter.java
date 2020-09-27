@@ -107,8 +107,11 @@ public class LeaderSelectorAdapter extends LeaderSelectorListenerAdapter impleme
                     janusGraphManagement.rollback();
                 }
             } catch (Exception exception) {
-                if (janusGraphManagement != null && janusGraphManagement.isOpen()) {
-                    janusGraphManagement.rollback();
+                try {
+                    if (janusGraphManagement != null && janusGraphManagement.isOpen()) {
+                        janusGraphManagement.rollback();
+                    }
+                } catch (Exception e) {
                 }
             }
         }

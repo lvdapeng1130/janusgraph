@@ -20,7 +20,7 @@ import org.apache.tinkerpop.gremlin.process.computer.Computer;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
-import org.apache.tinkerpop.gremlin.spark.process.computer.SparkGraphComputer;
+import org.apache.janusgraph.spark.computer.SparkJanusGraphComputer;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
@@ -80,7 +80,7 @@ public class HBaseSnapshotInputFormatIT extends AbstractInputFormatIT {
         HBaseStorageSetup.createSnapshot(snapshotName, table);
 
         Graph g = getGraph();
-        GraphTraversalSource t = g.traversal().withComputer(SparkGraphComputer.class);
+        GraphTraversalSource t = g.traversal().withComputer(SparkJanusGraphComputer.class);
         assertEquals(12L, (long) t.V().count().next());
     }
 
@@ -113,7 +113,7 @@ public class HBaseSnapshotInputFormatIT extends AbstractInputFormatIT {
         HBaseStorageSetup.createSnapshot(snapshotName, table);
 
         Graph g = getGraph();
-        GraphTraversalSource t = g.traversal().withComputer(SparkGraphComputer.class);
+        GraphTraversalSource t = g.traversal().withComputer(SparkJanusGraphComputer.class);
         assertEquals(numV, (long) t.V().count().next());
         propertiesOnVertex = t.V().valueMap().next();
         final Set<?> observedValuesOnP = Collections.unmodifiableSet(new HashSet<>((List) propertiesOnVertex.values().iterator().next()));
@@ -147,7 +147,7 @@ public class HBaseSnapshotInputFormatIT extends AbstractInputFormatIT {
 
         // Read the new edge using the inputformat
         Graph g = getGraph();
-        GraphTraversalSource t = g.traversal().withComputer(SparkGraphComputer.class);
+        GraphTraversalSource t = g.traversal().withComputer(SparkJanusGraphComputer.class);
         Iterator<Object> edgeIdIter = t.V().has("name", "sky").bothE().id();
         assertNotNull(edgeIdIter);
         assertTrue(edgeIdIter.hasNext());
@@ -165,7 +165,7 @@ public class HBaseSnapshotInputFormatIT extends AbstractInputFormatIT {
 
         // Read geoshape using the inputformat
         Graph g = getGraph();
-        GraphTraversalSource t = g.traversal().withComputer(SparkGraphComputer.class);
+        GraphTraversalSource t = g.traversal().withComputer(SparkJanusGraphComputer.class);
         Iterator<Object> geoIter = t.E().values("place");
         assertNotNull(geoIter);
         assertTrue(geoIter.hasNext());
@@ -184,7 +184,7 @@ public class HBaseSnapshotInputFormatIT extends AbstractInputFormatIT {
 
         // Read graph filtering out "battled" edges.
         Graph g = getGraph();
-        Computer computer = Computer.compute(SparkGraphComputer.class)
+        Computer computer = Computer.compute(SparkJanusGraphComputer.class)
             .edges(__.bothE().hasLabel(P.neq("battled")));
         GraphTraversalSource t = g.traversal().withComputer(computer);
         assertEquals(14L, (long) t.E().count().next());
@@ -201,7 +201,7 @@ public class HBaseSnapshotInputFormatIT extends AbstractInputFormatIT {
 
         // Read graph using the inputformat.
         Graph g = getGraph();
-        GraphTraversalSource t = g.traversal().withComputer(SparkGraphComputer.class);
+        GraphTraversalSource t = g.traversal().withComputer(SparkJanusGraphComputer.class);
         assertEquals(1L, (long) t.V().count().next());
     }
 
@@ -217,7 +217,7 @@ public class HBaseSnapshotInputFormatIT extends AbstractInputFormatIT {
 
         // Read graph using the inputformat.
         Graph g = getGraph();
-        GraphTraversalSource t = g.traversal().withComputer(SparkGraphComputer.class);
+        GraphTraversalSource t = g.traversal().withComputer(SparkJanusGraphComputer.class);
         assertEquals(0L, (long) t.V().count().next());
     }
 

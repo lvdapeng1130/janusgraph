@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.janusgraph</groupId>
         <artifactId>janusgraph</artifactId>
-        <version>KGYY_R3.01_2020072801-hbase2-SNAPSHOT</version>
+        <version>KGYY_R3.01_2020072802-hbase2</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -192,6 +192,11 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>11.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-spark</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
     <build>
