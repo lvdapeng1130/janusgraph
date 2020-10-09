@@ -142,7 +142,7 @@ public final class SparkExecutor {
                 tuple -> IteratorUtils.concat(
                         IteratorUtils.of(new Tuple2<>(tuple._1(), tuple._2().getView())),      // emit the view payload
                         IteratorUtils.map(tuple._2().getOutgoingMessages().iterator(), message -> new Tuple2<>(message._1(), new MessagePayload<>(message._2()))));
-        final MessageCombiner<M> messageCombiner = VertexProgram.<VertexProgram<M>>createVertexProgram(JanusGraphFactory.open(vertexProgramConfiguration), vertexProgramConfiguration).getMessageCombiner().orElse(null);
+        final MessageCombiner<M> messageCombiner = VertexProgram.<VertexProgram<M>>createVertexProgram(JanusGraphFactory.open(graphComputerConfiguration), vertexProgramConfiguration).getMessageCombiner().orElse(null);
         final Function2<Payload, Payload, Payload> reducerFunction = (a, b) -> {      // reduce the view and outgoing messages into a single payload object representing the new view and incoming messages for a vertex
             if (a instanceof ViewIncomingPayload) {
                 ((ViewIncomingPayload<M>) a).mergePayload(b, messageCombiner);
