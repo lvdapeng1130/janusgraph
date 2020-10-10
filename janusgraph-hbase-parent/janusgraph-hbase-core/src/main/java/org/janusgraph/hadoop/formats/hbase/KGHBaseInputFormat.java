@@ -14,9 +14,9 @@
 
 package org.janusgraph.hadoop.formats.hbase;
 
-import org.janusgraph.hadoop.formats.util.HadoopInputFormat;
+import org.janusgraph.hadoop.formats.util.KGHadoopInputFormat;
 
-public class KGHBaseInputFormat extends HadoopInputFormat {
+public class KGHBaseInputFormat extends KGHadoopInputFormat {
     public KGHBaseInputFormat() {
         super(new KGHBaseBinaryInputFormat());
     }

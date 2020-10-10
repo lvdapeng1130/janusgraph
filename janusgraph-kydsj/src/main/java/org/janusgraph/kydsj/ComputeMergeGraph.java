@@ -1,12 +1,12 @@
 package org.janusgraph.kydsj;
 
-import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.janusgraph.spark.computer.SparkJanusGraphComputer;
 import org.apache.janusgraph.spark.mapreduce.CombineObjectByConditionMapper;
 import org.apache.janusgraph.spark.mapreduce.CombineObjectMakerMapper;
 import org.apache.spark.launcher.SparkLauncher;
 import org.apache.spark.serializer.KryoSerializer;
 import org.apache.tinkerpop.gremlin.hadoop.Constants;
+import org.apache.tinkerpop.gremlin.hadoop.structure.io.gryo.GryoOutputFormat;
 import org.apache.tinkerpop.gremlin.process.computer.ComputerResult;
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;
 import org.janusgraph.core.JanusGraphFactory;
@@ -28,7 +28,7 @@ public class ComputeMergeGraph {
         //这个配置非常重要，这个指定一个HDFS路径，路径中存放jar包为JanusGraph安装目录解压后的依赖目录 janusgraph/lib
         //将目录中的jar包上传到hdfs上，任务运行时需要的依赖
         //System.setProperty("HADOOP_GREMLIN_LIBS", "hdfs://192.168.1.47:8020/user/hadoop/janusgraph/spark-yarn/");
-        f1();
+        f2();
     }
 
     private static void f1() throws Exception {
@@ -87,14 +87,12 @@ public class ComputeMergeGraph {
             .configure(SparkLauncher.DRIVER_MEMORY, "1g")
             .configure(SparkLauncher.DRIVER_EXTRA_JAVA_OPTIONS, "-Xss20m")
             .configure(SparkLauncher.EXECUTOR_EXTRA_JAVA_OPTIONS, "-Xss20m")
-
             .configure(Constants.GREMLIN_HADOOP_GRAPH_READER, KGHBaseInputFormat.class.getName())
-            .configure(Constants.GREMLIN_HADOOP_GRAPH_WRITER, NullOutputFormat.class.getName())
+            .configure(Constants.GREMLIN_HADOOP_GRAPH_WRITER, GryoOutputFormat.class.getName())
             .configure(Constants.GREMLIN_HADOOP_JARS_IN_DISTRIBUTED_CACHE, true)
             .configure(Constants.GREMLIN_HADOOP_INPUT_LOCATION, "none")
-            //.configure(Constants.GREMLIN_HADOOP_OUTPUT_LOCATION, "output")
+            .configure(Constants.GREMLIN_HADOOP_OUTPUT_LOCATION, "output")
             .configure(Constants.GREMLIN_SPARK_PERSIST_CONTEXT, true)
-
             .mapReduce(new CombineObjectMakerMapper())
             .mapReduce(new CombineObjectByConditionMapper())
             .submit().get();
