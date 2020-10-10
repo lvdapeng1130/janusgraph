@@ -2,6 +2,7 @@ package org.apache.janusgraph.spark.mapreduce;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.janusgraph.spark.computer.SparkConstants;
 import org.apache.tinkerpop.gremlin.process.computer.util.StaticMapReduce;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
@@ -24,10 +25,6 @@ import java.util.stream.Collectors;
 public abstract class AbstractCombineObjectMapper extends StaticMapReduce<String,Long,String,Long, Map<String,Long>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractCombineObjectMapper.class);
     public static final String MAKER_PROPERTY_NAME="merge_to";
-    //合并对象类型
-    public static final String COMBINE_CONDITION_OBJECT_TYPE = "janusgraph.combine.condition.object.type";
-    public static final String COMBINE_CONDITION_PROPERTY_TYPE="janusgraph.combine.condition.property.type";
-    public static final String COMBINE_CONDITION_THINKOVER_OBJECT_TYPE="janusgraph.combine.condition.thinkOver.object.type";
     protected Graph graph;
     protected Configuration configuration;
     private Set<String> combineObjectTypes;
@@ -38,12 +35,12 @@ public abstract class AbstractCombineObjectMapper extends StaticMapReduce<String
     public void loadState(Graph graph, Configuration configuration) {
         this.graph=graph;
         this.configuration=configuration;
-        this.thinkOverObjectType=this.configuration.getBoolean(COMBINE_CONDITION_THINKOVER_OBJECT_TYPE,true);
-        String combineObjectType=this.configuration.getString(COMBINE_CONDITION_OBJECT_TYPE,null);
+        this.thinkOverObjectType=this.configuration.getBoolean(SparkConstants.COMBINE_CONDITION_THINKOVER_OBJECT_TYPE,true);
+        String combineObjectType=this.configuration.getString(SparkConstants.COMBINE_CONDITION_OBJECT_TYPE,null);
         if(StringUtils.isNotBlank(combineObjectType)){
             this.combineObjectTypes=Arrays.stream(combineObjectType.split(",")).filter(key-> StringUtils.isNotBlank(key)).map(key->key.trim()).collect(Collectors.toSet());
         }
-        this.combinePropertyTypeKeys= Arrays.stream(this.configuration.getString(COMBINE_CONDITION_PROPERTY_TYPE,"tid")
+        this.combinePropertyTypeKeys= Arrays.stream(this.configuration.getString(SparkConstants.COMBINE_CONDITION_PROPERTY_TYPE,"tid")
             .split(",")).filter(key-> StringUtils.isNotBlank(key)).map(key->key.trim()).collect(Collectors.toList());
     }
 

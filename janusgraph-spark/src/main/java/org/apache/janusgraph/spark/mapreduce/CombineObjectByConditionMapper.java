@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.janusgraph.spark.computer.SparkConstants;
 import org.apache.tinkerpop.gremlin.process.computer.KeyValue;
 import org.apache.tinkerpop.gremlin.structure.*;
 import org.slf4j.Logger;
@@ -20,25 +21,20 @@ import java.util.stream.Collectors;
 public class CombineObjectByConditionMapper extends AbstractCombineObjectMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CombineObjectByConditionMapper.class);
-    //设置对象时合并属性时排除的属性类型，定义被合并对象的属性不被合并到合并对象上。
-    public static final String COMBINE_ELIMINATE_PROPERTY_TYPE="janusgraph.combine.eliminate.property.type";
-    //设置对象时合并关系时排除的关系类型，定义被合并对象的关系类型不被合并到合并对象上。
-    public static final String COMBINE_ELIMINATE_LINK_TYPE="janusgraph.combine.eliminate.link.type";
     public static final String COMBINE_OBJECT_BY_CONDITION = "CombineObjectByCondition";
-
     private Set<String> eliminatePropertyTypes;
     private Set<String> eliminateLinkTypes;
 
     @Override
     public void loadState(Graph graph, Configuration configuration) {
         super.loadState(graph,configuration);
-        String eliminatePropertyTypeString=this.configuration.getString(COMBINE_ELIMINATE_PROPERTY_TYPE,null);
+        String eliminatePropertyTypeString=this.configuration.getString(SparkConstants.COMBINE_ELIMINATE_PROPERTY_TYPE,null);
         if(StringUtils.isNotBlank(eliminatePropertyTypeString)){
             this.eliminatePropertyTypes=Arrays.stream(eliminatePropertyTypeString.split(",")).filter(key-> StringUtils.isNotBlank(key)).map(key->key.trim()).collect(Collectors.toSet());
         }else{
             this.eliminatePropertyTypes=Sets.newHashSet();
         }
-        String eliminateLinkTypeString=this.configuration.getString(COMBINE_ELIMINATE_LINK_TYPE,null);
+        String eliminateLinkTypeString=this.configuration.getString(SparkConstants.COMBINE_ELIMINATE_LINK_TYPE,null);
         if(StringUtils.isNotBlank(eliminateLinkTypeString)){
             this.eliminateLinkTypes=Arrays.stream(eliminateLinkTypeString.split(",")).filter(key-> StringUtils.isNotBlank(key)).map(key->key.trim()).collect(Collectors.toSet());
         }else{

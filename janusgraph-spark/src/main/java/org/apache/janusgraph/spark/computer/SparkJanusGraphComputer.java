@@ -135,6 +135,37 @@ public final class SparkJanusGraphComputer extends AbstractJanusGraphComputer {
     }
 
     /**
+     * 设置要参与处理的对象类型
+     */
+    public SparkJanusGraphComputer combineConditionObjectType(final String objectTypes){
+        return configure(SparkConstants.COMBINE_CONDITION_OBJECT_TYPE, objectTypes);
+    }
+    /**
+     * 按照指定属性的值相同进行合并
+     */
+    public SparkJanusGraphComputer combineConditionPropertyType(final String propertyTypes){
+        return configure(SparkConstants.COMBINE_CONDITION_PROPERTY_TYPE, propertyTypes);
+    }
+    /**
+     * 在生成mapreduce的key时是否考虑对象类型
+     */
+    public SparkJanusGraphComputer combineConditionThinkOverObjectType(final boolean thinkOverObjectType){
+        return configure(SparkConstants.COMBINE_CONDITION_THINKOVER_OBJECT_TYPE, thinkOverObjectType);
+    }
+    /**
+     * 设置对象时合并属性时排除的属性类型，定义被合并对象的属性不被合并到合并对象上
+     */
+    public SparkJanusGraphComputer combineEliminatePropertyType(final String eliminatePropertyType){
+        return configure(SparkConstants.COMBINE_ELIMINATE_PROPERTY_TYPE, eliminatePropertyType);
+    }
+    /**
+     * 设置对象时合并关系时排除的关系类型，定义被合并对象的关系类型不被合并到合并对象上
+     */
+    public SparkJanusGraphComputer combineEliminateLinkType(final String eliminateLinkType){
+        return configure(SparkConstants.COMBINE_ELIMINATE_LINK_TYPE, eliminateLinkType);
+    }
+
+    /**
      * Determines if the Spark context should be left open preventing Spark from garbage collecting unreferenced RDDs.
      */
     public SparkJanusGraphComputer persistContext(final boolean persist) {
@@ -435,8 +466,9 @@ public final class SparkJanusGraphComputer extends AbstractJanusGraphComputer {
                         // reduce
                         final JavaPairRDD reduceRDD = mapReduce.doStage(MapReduce.Stage.REDUCE) ? SparkExecutor.executeReduce(combineRDD, mapReduce, newApacheConfiguration) : combineRDD;
                         // write the map reduce output back to disk and computer result memory
-                        if (null != outputRDD)
+                        if (null != outputRDD) {
                             mapReduce.addResultToMemory(finalMemory, outputRDD.writeMemoryRDD(graphComputerConfiguration, mapReduce.getMemoryKey(), reduceRDD));
+                        }
                     }
                     // if the mapReduceRDD is not simply the computed graph, unpersist the mapReduceRDD
                     if (computedGraphCreated && !outputToSpark) {

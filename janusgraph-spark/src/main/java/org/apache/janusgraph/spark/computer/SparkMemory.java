@@ -32,11 +32,7 @@ import org.apache.tinkerpop.gremlin.process.traversal.Operator;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 
 import java.io.Serializable;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -52,7 +48,7 @@ public final class SparkMemory implements Memory.Admin, Serializable {
     private Broadcast<Map<String, Object>> broadcast;
     private boolean inExecute = false;
 
-    public SparkMemory(final VertexProgram<?> vertexProgram, final Set<MapReduce> mapReducers, final JavaSparkContext sparkContext) {
+    public SparkMemory(final VertexProgram<?> vertexProgram, final List<MapReduce> mapReducers, final JavaSparkContext sparkContext) {
         if (null != vertexProgram) {
             for (final MemoryComputeKey key : vertexProgram.getMemoryComputeKeys()) {
                 this.memoryComputeKeys.put(key.getKey(), key);

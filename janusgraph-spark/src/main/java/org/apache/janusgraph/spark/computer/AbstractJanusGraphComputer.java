@@ -27,9 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,7 +39,7 @@ public abstract class AbstractJanusGraphComputer implements GraphComputer {
     protected final Logger logger;
     protected final JanusGraph janusGraph;
     protected boolean executed = false;
-    protected final Set<MapReduce> mapReducers = new HashSet<>();
+    protected final List<MapReduce> mapReducers = new ArrayList<>();
     protected VertexProgram<Object> vertexProgram;
     protected int workers = 1;
 
