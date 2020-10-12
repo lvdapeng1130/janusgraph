@@ -83,6 +83,12 @@
             <artifactId>janusgraph-lucene</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-spark</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
 
         <!-- Override Jackson versions in our transitive dependencies.
              Without these dependencies, janusgraph-all users can end up with
