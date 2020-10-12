@@ -149,6 +149,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
     public void createElements() {
         try {
             LOGGER.info("多线程程序写入大量qq和qq群信息");
+            Stopwatch started = Stopwatch.createStarted();
             ExecutorService pool = Executors.newFixedThreadPool(10,
                 new ThreadFactoryBuilder().setDaemon(true).setNameFormat("import-data-%d").build());//定义线程数
             List<Future<Integer>> futures= Lists.newArrayList();
@@ -192,7 +193,8 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             for(Future<Integer> future:futures){
                 total+=future.get();
             }
-            LOGGER.info(String.format("所有线程,一共处理了->%s条", total));
+            started.stop();
+            LOGGER.info(String.format("所有线程,一共处理了->%s条,用时%s", total,started.elapsed(TimeUnit.MILLISECONDS)));
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
             if (supportsTransactions) {
