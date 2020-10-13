@@ -8,6 +8,7 @@ import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
+import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +32,8 @@ public abstract class AbstractCombineObjectMapper extends StaticMapReduce<String
     private List<String> combinePropertyTypeKeys;
     //参与分组的key是否加上对象类型
     private boolean thinkOverObjectType=true;
+    protected StandardJanusGraphTx threadedTx;
+    protected int batch=0;
     @Override
     public void loadState(Graph graph, Configuration configuration) {
         this.graph=graph;
@@ -51,12 +54,32 @@ public abstract class AbstractCombineObjectMapper extends StaticMapReduce<String
 
     @Override
     public void workerEnd(Stage stage) {
+
+        if(this.threadedTx!=null&&this.threadedTx.isOpen()){
+            this.threadedTx.commit();
+            this.threadedTx.close();
+        }
         if(graph instanceof StandardJanusGraph) {
             StandardJanusGraph janusGraph = (StandardJanusGraph) graph;
             if(janusGraph.isOpen()) {
                 janusGraph.close();
                 LOGGER.info(String.format("%s的workerEnd当前uuid->%s,state->%s关闭Graph实例", this.getMemoryKey(),janusGraph.getUniqueInstanceId(), stage.name()));
             }
+        }
+    }
+
+    protected void submit(StandardJanusGraph janusGraph){
+        if(batch>=1000) {
+            long begin = System.currentTimeMillis();
+            this.threadedTx.commit();
+            long end = System.currentTimeMillis();
+            LOGGER.info(String.format("%s的submit当前uuid->%s,提交事务用时%s", this.getMemoryKey(),janusGraph.getUniqueInstanceId(),(end-begin)));
+            if (this.threadedTx.isOpen()) {
+                this.threadedTx.close();
+            }
+            batch=0;
+        }else{
+            batch++;
         }
     }
 
