@@ -46,7 +46,7 @@ public class CombineObjectByConditionMapper extends AbstractCombineObjectMapper 
     @Override
     public void storeState(final Configuration configuration) {
         super.storeState(configuration);
-        configuration.setProperty(COMBINE_OBJECT_BY_CONDITION, this.COMBINE_OBJECT_BY_CONDITION);
+        configuration.setProperty(COMBINE_OBJECT_BY_CONDITION, COMBINE_OBJECT_BY_CONDITION);
     }
     @Override
     public void combine(String key, Iterator<Long> values, ReduceEmitter<String, Long> emitter) {
@@ -57,10 +57,10 @@ public class CombineObjectByConditionMapper extends AbstractCombineObjectMapper 
                     Iterator<Vertex> vertices = graph.vertices(vids.toArray());
                     ArrayList<Vertex> vertexArrayList = Lists.newArrayList(vertices);
                     Long toMergeId=this.mergeVertex(vertexArrayList);
-                    graph.tx().commit();
                     if(toMergeId!=null) {
                         emitter.emit(key, toMergeId);
                     }
+                    graph.tx().commit();
                 } else {
                     Long vid = vids.get(0);
                     emitter.emit(key, vid);
@@ -112,16 +112,35 @@ public class CombineObjectByConditionMapper extends AbstractCombineObjectMapper 
     }
 
     private Long mergeVertex(List<Vertex> vertices){
-        if(vertices!=null&&vertices.size()>1){
-            Vertex toVertex = vertices.get(0);
-            for(int i=1;i<vertices.size();i++){
-                Vertex fromVertex = vertices.get(i);
-                this.merageVertexProperties(fromVertex,toVertex);
-                this.disposeEdges(toVertex, fromVertex);
-                //删除被合并对象
-                fromVertex.remove();
+        if(vertices!=null){
+            Vertex toVertex = this.findToVertex(vertices);
+            if(toVertex!=null) {
+                if (vertices.size() > 1) {
+                    for (int i = 0; i < vertices.size(); i++) {
+                        Vertex fromVertex = vertices.get(i);
+                        //遍历当前不是被合并对象
+                        if(toVertex!=fromVertex) {
+                            this.merageVertexProperties(fromVertex, toVertex);
+                            this.disposeEdges(toVertex, fromVertex);
+                            //删除被合并对象
+                            fromVertex.remove();
+                        }
+                    }
+                }
+                return (Long) toVertex.id();
             }
-            return (Long)toVertex.id();
+        }
+        return null;
+    }
+
+    private Vertex findToVertex(List<Vertex> vertices){
+        if(vertices!=null){
+            for(Vertex vertex:vertices){
+                VertexProperty<Object> mergeProperty = vertex.property(MAKER_PROPERTY_NAME);
+                if(mergeProperty.isPresent()){
+                    return vertex;
+                }
+            }
         }
         return null;
     }

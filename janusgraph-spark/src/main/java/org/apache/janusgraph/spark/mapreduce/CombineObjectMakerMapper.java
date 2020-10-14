@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.configuration.Configuration;
 import org.apache.tinkerpop.gremlin.process.computer.KeyValue;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,10 +36,10 @@ public class CombineObjectMakerMapper extends AbstractCombineObjectMapper {
                     Iterator<Vertex> vertices = graph.vertices(vids.toArray());
                     ArrayList<Vertex> vertexArrayList = Lists.newArrayList(vertices);
                     Long toMergeId=this.makerVertex(vertexArrayList);
-                    graph.tx().commit();
                     if(toMergeId!=null) {
                         emitter.emit(key, toMergeId);
                     }
+                    graph.tx().commit();
                 } else {
                     Long vid = vids.get(0);
                     emitter.emit(key, vid);
@@ -55,10 +56,10 @@ public class CombineObjectMakerMapper extends AbstractCombineObjectMapper {
                 Iterator<Vertex> vertices = graph.vertices(vids.toArray());
                 ArrayList<Vertex> vertexArrayList = Lists.newArrayList(vertices);
                 Long toVertexId = this.makerVertex(vertexArrayList);
-                graph.tx().commit();
                 if(toVertexId!=null) {
                     emitter.emit(key, toVertexId);
                 }
+                graph.tx().commit();
             }
         }
     }
@@ -72,6 +73,10 @@ public class CombineObjectMakerMapper extends AbstractCombineObjectMapper {
         if(vertices!=null&&vertices.size()>1){
             Vertex toVertex = vertices.get(0);
             Long toVertexId=(Long)toVertex.id();
+            VertexProperty<Object> mergeProperty = toVertex.property(MAKER_PROPERTY_NAME);
+            if(mergeProperty.isPresent()){
+                mergeProperty.remove();
+            }
             for(int i=1;i<vertices.size();i++){
                 Vertex fromVertex = vertices.get(i);
                 fromVertex.property(MAKER_PROPERTY_NAME,toVertexId);
