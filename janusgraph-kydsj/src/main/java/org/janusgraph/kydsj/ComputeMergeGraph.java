@@ -1,5 +1,6 @@
 package org.janusgraph.kydsj;
 
+import com.google.common.base.Stopwatch;
 import org.apache.janusgraph.spark.computer.SparkJanusGraphComputer;
 import org.apache.janusgraph.spark.mapreduce.CombineObjectByConditionMapper;
 import org.apache.janusgraph.spark.mapreduce.CombineObjectMakerMapper;
@@ -9,12 +10,15 @@ import org.apache.tinkerpop.gremlin.hadoop.Constants;
 import org.apache.tinkerpop.gremlin.hadoop.structure.io.gryo.GryoOutputFormat;
 import org.apache.tinkerpop.gremlin.process.computer.ComputerResult;
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.hadoop.formats.hbase.HBaseInputFormat;
 import org.janusgraph.hadoop.serialize.JanusGraphKryoRegistrator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.TimeUnit;
 
 public class ComputeMergeGraph {
 
@@ -64,8 +68,10 @@ public class ComputeMergeGraph {
     }
 
     private static void f2() throws Exception {
+        Stopwatch started = Stopwatch.createStarted();
+        Stopwatch started1 = Stopwatch.createStarted();
         StandardJanusGraph graph = (StandardJanusGraph)JanusGraphFactory.open(PROPERTY_FILE_PATH_2);
-        LOGGER.info(String.format("driver当前uuid->%s",graph.getUniqueInstanceId()));
+        LOGGER.info(String.format("driver当前uuid->%s,打开一次图库用时%s",graph.getUniqueInstanceId(),started1.elapsed(TimeUnit.MILLISECONDS)));
         SparkJanusGraphComputer sparkJanusGraphComputer = graph.compute(SparkJanusGraphComputer.class);
         ComputerResult computerResult =sparkJanusGraphComputer
             .master("local[*]")
@@ -80,7 +86,7 @@ public class ComputeMergeGraph {
             .configure(Constants.GREMLIN_HADOOP_JARS_IN_DISTRIBUTED_CACHE, true)
             .configure(Constants.GREMLIN_HADOOP_INPUT_LOCATION, "none")
             .configure(Constants.GREMLIN_HADOOP_OUTPUT_LOCATION, "output")
-            .configure(Constants.GREMLIN_SPARK_PERSIST_CONTEXT, true)
+            .configure(Constants.GREMLIN_SPARK_PERSIST_CONTEXT, false)
             
             //---------------------设置合并条件-------------------
             //设置要参与处理的对象类型
@@ -93,19 +99,15 @@ public class ComputeMergeGraph {
             .combineEliminatePropertyType("tid")
             //在处理被合并对象关系类型时忽略的关系类型，设置了此值的关系类型将不会拷贝到合并对象上
             //.combineEliminateLinkType("")
+            .vertices(__.hasLabel("object_qqqun"))
 
             .mapReduce(new CombineObjectMakerMapper())
             .mapReduce(new CombineObjectByConditionMapper())
             .submit().get();
-
-        //GraphTraversalSource g = graph.traversal().withComputer(SparkGraphComputer.class);
-       /* long count = g.V().count().next();
-        LOGGER.info(count + "-----g.V().count()-------------------------------");
-        long count_E = g.E().count().next();
-        LOGGER.info(count_E + "-----g.E().count()-------------------------------");*/
         computerResult.graph().close();
         graph.close();
-        System.out.println(2222);
+        started.stop();
+        System.out.println("用时"+started.elapsed(TimeUnit.MILLISECONDS));
     }
 
 }

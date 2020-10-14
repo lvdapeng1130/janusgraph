@@ -1,5 +1,6 @@
 package org.apache.janusgraph.spark.mapreduce;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration.Configuration;
 import org.janusgraph.core.JanusGraph;
 import org.janusgraph.core.JanusGraphFactory;
@@ -12,6 +13,7 @@ import java.util.Map;
  * @time: 2020/10/14 9:42
  * @jira:
  */
+@Slf4j
 public class JanusgraphConnectionUtils {
     private volatile static JanusgraphConnectionUtils singleTon;
     private Map<String, JanusGraph> janusGraphMap;
@@ -29,13 +31,16 @@ public class JanusgraphConnectionUtils {
         return  singleTon;
     }
 
-    public JanusGraph janusGraphConnection(final Configuration graphComputerConfiguration){
+    public synchronized JanusGraph janusGraphConnection(final Configuration graphComputerConfiguration){
         String graphName = graphComputerConfiguration.getString("storage.hbase.table");
         if(!janusGraphMap.containsKey(graphName)){
             JanusGraph janusGraph = JanusGraphFactory.open(graphComputerConfiguration);
+            log.info(String.format("thread %s,create janusgraph connection %s.....",Thread.currentThread().getName(),graphName));
             janusGraphMap.put(graphName,janusGraph);
         }
-        return janusGraphMap.get(graphName);
+        JanusGraph janusGraph= janusGraphMap.get(graphName);
+        log.info(String.format("thread %s,get janusgraph connection %s",Thread.currentThread().getName(),janusGraph.getUniqueInstanceId()));
+        return janusGraph;
     }
 
 }

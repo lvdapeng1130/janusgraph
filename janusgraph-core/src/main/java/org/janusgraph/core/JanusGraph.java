@@ -133,6 +133,8 @@ public interface JanusGraph extends Transaction {
 
     List<Note> getNotes(long vertexId);
 
+    String getUniqueInstanceId();
+
     /**
      * The version of this JanusGraph graph database
      *

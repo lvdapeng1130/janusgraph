@@ -553,6 +553,6 @@ public final class SparkJanusGraphComputer extends AbstractJanusGraphComputer {
     public static void main(final String[] args) throws Exception {
         /*final Configurations configs = new Configurations();
         final org.apache.commons.configuration.Configuration configuration = configs.properties(args[0]);
-        new SparkGraphComputer(JanusGraphFactory.open(configuration)).program(VertexProgram.createVertexProgram(JanusGraphFactory.open(configuration), configuration)).submit().get();*/
+        new SparkGraphComputer(JanusgraphConnectionUtils.createInstance().janusGraphConnection(configuration)).program(VertexProgram.createVertexProgram(JanusgraphConnectionUtils.createInstance().janusGraphConnection(configuration), configuration)).submit().get();*/
     }
 }

@@ -7,7 +7,8 @@ import org.apache.tinkerpop.gremlin.process.computer.util.StaticMapReduce;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
-import org.janusgraph.graphdb.database.StandardJanusGraph;
+import org.janusgraph.core.JanusGraph;
+import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,12 +26,17 @@ import java.util.stream.Collectors;
 public abstract class AbstractCombineObjectMapper extends StaticMapReduce<String,Long,String,Long, Map<String,Long>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractCombineObjectMapper.class);
     public static final String MAKER_PROPERTY_NAME="merge_to";
+    //多少个Vertex提交一次事物
+    public static final int CRITICAL_POINT=1000;
     protected Graph graph;
     protected Configuration configuration;
     private Set<String> combineObjectTypes;
     private List<String> combinePropertyTypeKeys;
     //参与分组的key是否加上对象类型
     private boolean thinkOverObjectType=true;
+    //记录一次事物累计了多少个Vertex，当达到'CRITICAL_POINT'的值后提交图库事物
+    protected int transactionalSize=0;
+    protected StandardJanusGraphTx threadedTx;
     @Override
     public void loadState(Graph graph, Configuration configuration) {
         this.graph=graph;
@@ -51,12 +57,30 @@ public abstract class AbstractCombineObjectMapper extends StaticMapReduce<String
 
     @Override
     public void workerEnd(Stage stage) {
-        if(graph instanceof StandardJanusGraph) {
+        if(this.threadedTx!=null&&this.threadedTx.isOpen()){
+            this.threadedTx.commit();
+            this.threadedTx.close();
+        }
+       /* if(graph instanceof StandardJanusGraph) {
             StandardJanusGraph janusGraph = (StandardJanusGraph) graph;
             if(janusGraph.isOpen()) {
                 janusGraph.close();
                 LOGGER.info(String.format("%s的workerEnd当前uuid->%s,state->%s关闭Graph实例", this.getMemoryKey(),janusGraph.getUniqueInstanceId(), stage.name()));
             }
+        }*/
+    }
+
+    protected void submit(JanusGraph janusGraph,int increase){
+        transactionalSize = transactionalSize +increase;
+        if(transactionalSize >=CRITICAL_POINT) {
+            long begin = System.currentTimeMillis();
+            this.threadedTx.commit();
+            long end = System.currentTimeMillis();
+            LOGGER.info(String.format("%s->submit graph uuid->%s, transaction use time %s,vertex size %s", this.getMemoryKey(),janusGraph.getUniqueInstanceId(),(end-begin),transactionalSize));
+            if (this.threadedTx.isOpen()) {
+                this.threadedTx.close();
+            }
+            transactionalSize =0;
         }
     }
 

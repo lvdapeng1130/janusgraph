@@ -18,6 +18,7 @@
  */
 package org.apache.janusgraph.spark.computer;
 
+import org.apache.janusgraph.spark.mapreduce.JanusgraphConnectionUtils;
 import org.apache.spark.api.java.Optional;
 import org.apache.commons.configuration.Configuration;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -96,7 +97,8 @@ public final class SparkExecutor {
                     if (!partitionIterator.hasNext())
                         return Collections.emptyIterator();
 
-                    final VertexProgram<M> workerVertexProgram = VertexProgram.createVertexProgram(JanusGraphFactory.open((org.apache.commons.configuration.Configuration)graphComputerConfiguration), (org.apache.commons.configuration.Configuration)vertexProgramConfiguration); // each partition(Spark)/worker(TP3) has a local copy of the vertex program (a worker's task)
+                    final VertexProgram<M> workerVertexProgram = VertexProgram.createVertexProgram(JanusgraphConnectionUtils.createInstance()
+                        .janusGraphConnection((org.apache.commons.configuration.Configuration)graphComputerConfiguration), (org.apache.commons.configuration.Configuration)vertexProgramConfiguration); // each partition(Spark)/worker(TP3) has a local copy of the vertex program (a worker's task)
                     final String[] vertexComputeKeysArray = VertexProgramHelper.vertexComputeKeysAsArray(workerVertexProgram.getVertexComputeKeys()); // the compute keys as an array
                     final SparkMessenger<M> messenger = new SparkMessenger<>();
 
@@ -142,7 +144,7 @@ public final class SparkExecutor {
                 tuple -> IteratorUtils.concat(
                         IteratorUtils.of(new Tuple2<>(tuple._1(), tuple._2().getView())),      // emit the view payload
                         IteratorUtils.map(tuple._2().getOutgoingMessages().iterator(), message -> new Tuple2<>(message._1(), new MessagePayload<>(message._2()))));
-        final MessageCombiner<M> messageCombiner = VertexProgram.<VertexProgram<M>>createVertexProgram(JanusGraphFactory.open(graphComputerConfiguration), vertexProgramConfiguration).getMessageCombiner().orElse(null);
+        final MessageCombiner<M> messageCombiner = VertexProgram.<VertexProgram<M>>createVertexProgram(JanusgraphConnectionUtils.createInstance().janusGraphConnection(graphComputerConfiguration), vertexProgramConfiguration).getMessageCombiner().orElse(null);
         final Function2<Payload, Payload, Payload> reducerFunction = (a, b) -> {      // reduce the view and outgoing messages into a single payload object representing the new view and incoming messages for a vertex
             if (a instanceof ViewIncomingPayload) {
                 ((ViewIncomingPayload<M>) a).mergePayload(b, messageCombiner);
@@ -213,7 +215,7 @@ public final class SparkExecutor {
             final Configuration graphComputerConfiguration) {
         JavaPairRDD<K, V> mapRDD = graphRDD.mapPartitionsToPair(partitionIterator -> {
             KryoShimServiceLoader.applyConfiguration(graphComputerConfiguration);
-            return new MapIterator<>(MapReduce.<MapReduce<K, V, ?, ?, ?>>createMapReduce(JanusGraphFactory.open(graphComputerConfiguration), graphComputerConfiguration), partitionIterator);
+            return new MapIterator<>(MapReduce.<MapReduce<K, V, ?, ?, ?>>createMapReduce(JanusgraphConnectionUtils.createInstance().janusGraphConnection(graphComputerConfiguration), graphComputerConfiguration), partitionIterator);
         });
         if (mapReduce.getMapKeySort().isPresent())
             mapRDD = mapRDD.sortByKey(mapReduce.getMapKeySort().get(), true, 1);
@@ -224,7 +226,7 @@ public final class SparkExecutor {
                                                                     final Configuration graphComputerConfiguration) {
         return mapRDD.mapPartitionsToPair(partitionIterator -> {
             KryoShimServiceLoader.applyConfiguration(graphComputerConfiguration);
-            return new CombineIterator<>(MapReduce.<MapReduce<K, V, OK, OV, ?>>createMapReduce(JanusGraphFactory.open(graphComputerConfiguration), graphComputerConfiguration), partitionIterator);
+            return new CombineIterator<>(MapReduce.<MapReduce<K, V, OK, OV, ?>>createMapReduce(JanusgraphConnectionUtils.createInstance().janusGraphConnection(graphComputerConfiguration), graphComputerConfiguration), partitionIterator);
         });
     }
 
@@ -233,7 +235,7 @@ public final class SparkExecutor {
             final Configuration graphComputerConfiguration) {
         JavaPairRDD<OK, OV> reduceRDD = mapOrCombineRDD.groupByKey().mapPartitionsToPair(partitionIterator -> {
             KryoShimServiceLoader.applyConfiguration(graphComputerConfiguration);
-            return new ReduceIterator<>(MapReduce.<MapReduce<K, V, OK, OV, ?>>createMapReduce(JanusGraphFactory.open(graphComputerConfiguration), graphComputerConfiguration), partitionIterator);
+            return new ReduceIterator<>(MapReduce.<MapReduce<K, V, OK, OV, ?>>createMapReduce(JanusgraphConnectionUtils.createInstance().janusGraphConnection(graphComputerConfiguration), graphComputerConfiguration), partitionIterator);
         });
         if (mapReduce.getReduceKeySort().isPresent())
             reduceRDD = reduceRDD.sortByKey(mapReduce.getReduceKeySort().get(), true, 1);

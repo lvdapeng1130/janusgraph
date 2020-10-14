@@ -7,6 +7,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.janusgraph.spark.computer.SparkConstants;
 import org.apache.tinkerpop.gremlin.process.computer.KeyValue;
 import org.apache.tinkerpop.gremlin.structure.*;
+import org.janusgraph.graphdb.database.StandardJanusGraph;
+import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,13 +56,19 @@ public class CombineObjectByConditionMapper extends AbstractCombineObjectMapper 
             ArrayList<Long> vids = Lists.newArrayList(values);
             if(vids.size()>0) {
                 if (vids.size() > 1) {
-                    Iterator<Vertex> vertices = graph.vertices(vids.toArray());
-                    ArrayList<Vertex> vertexArrayList = Lists.newArrayList(vertices);
-                    Long toMergeId=this.mergeVertex(vertexArrayList);
-                    if(toMergeId!=null) {
-                        emitter.emit(key, toMergeId);
+                    if(graph instanceof StandardJanusGraph) {
+                        StandardJanusGraph janusGraph = (StandardJanusGraph) graph;
+                        if(this.threadedTx==null||this.threadedTx.isClosed()) {
+                            this.threadedTx = (StandardJanusGraphTx) janusGraph.buildTransaction().consistencyChecks(false)
+                                .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start();
+                        }
+                        List<Vertex> vertexList = this.threadedTx.traversal().V(vids.toArray()).toList();
+                        Long toMergeId=this.mergeVertex(vertexList);
+                        if(toMergeId!=null) {
+                            emitter.emit(key, toMergeId);
+                        }
+                        this.submit(janusGraph,vertexList.size());
                     }
-                    graph.tx().commit();
                 } else {
                     Long vid = vids.get(0);
                     emitter.emit(key, vid);
@@ -74,12 +82,18 @@ public class CombineObjectByConditionMapper extends AbstractCombineObjectMapper 
         if(values!=null){
             ArrayList<Long> vids = Lists.newArrayList(values);
             if(vids.size()>1){
-                Iterator<Vertex> vertices = graph.vertices(vids.toArray());
-                ArrayList<Vertex> vertexArrayList = Lists.newArrayList(vertices);
-                this.mergeVertex(vertexArrayList);
-                Long size = Long.parseLong(vertexArrayList.size()+"");
-                emitter.emit(key,size);
-                graph.tx().commit();
+                if(graph instanceof StandardJanusGraph) {
+                    StandardJanusGraph janusGraph = (StandardJanusGraph) graph;
+                    if(this.threadedTx==null||this.threadedTx.isClosed()) {
+                        this.threadedTx = (StandardJanusGraphTx) janusGraph.buildTransaction().consistencyChecks(false)
+                            .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start();
+                    }
+                    List<Vertex> vertexList = this.threadedTx.traversal().V(vids.toArray()).toList();
+                    this.mergeVertex(vertexList);
+                    Long size = Long.parseLong(vertexList.size()+"");
+                    emitter.emit(key,size);
+                    this.submit(janusGraph,vertexList.size());
+                }
             }
         }
             /*GraphTraversalSource g = graph.traversal();

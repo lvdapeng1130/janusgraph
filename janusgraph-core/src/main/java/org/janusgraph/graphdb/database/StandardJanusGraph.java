@@ -199,6 +199,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         this.registryZookeeper.registry();
     }
 
+    @Override
     public String getUniqueInstanceId(){
         return this.uniqueInstanceId;
     }

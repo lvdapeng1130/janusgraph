@@ -37,6 +37,7 @@ public class YarnComputeMergeGraph {
             .configure(SparkLauncher.EXECUTOR_MEMORY, "6g")
             .configure(SparkLauncher.DRIVER_MEMORY, "1g")
             .configure(SparkLauncher.EXECUTOR_CORES, 3)
+            .configure("spark.yarn.jars", "hdfs://192.168.1.47:8020/user/hadoop/janusgraph/spark_jars/*.jar")
             .configure("spark.task.cpus", 1)
             .configure("spark.executor.instances", 30)
             .configure("spark.default.parallelism", 270)

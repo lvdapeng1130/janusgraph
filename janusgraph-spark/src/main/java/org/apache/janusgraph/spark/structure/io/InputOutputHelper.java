@@ -21,11 +21,11 @@ package org.apache.janusgraph.spark.structure.io;
 
 import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
+import org.apache.janusgraph.spark.mapreduce.JanusgraphConnectionUtils;
 import org.apache.tinkerpop.gremlin.hadoop.Constants;
 import org.apache.tinkerpop.gremlin.hadoop.structure.HadoopConfiguration;
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;
 import org.janusgraph.core.JanusGraph;
-import org.janusgraph.core.JanusGraphFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -71,6 +71,6 @@ public final class InputOutputHelper {
             if (null != InputOutputHelper.getInputFormat(hadoopConfiguration.getGraphWriter()))
                 newConfiguration.setProperty(Constants.GREMLIN_HADOOP_GRAPH_READER, InputOutputHelper.getInputFormat(hadoopConfiguration.getGraphWriter()).getCanonicalName());
         }
-        return JanusGraphFactory.open(newConfiguration);
+        return JanusgraphConnectionUtils.createInstance().janusGraphConnection(newConfiguration);
     }
 }
