@@ -34,8 +34,11 @@ public class JanusgraphConnectionUtils {
     public synchronized JanusGraph janusGraphConnection(final Configuration graphComputerConfiguration){
         String graphName = graphComputerConfiguration.getString("storage.hbase.table");
         if(!janusGraphMap.containsKey(graphName)){
+            long begin=System.currentTimeMillis();
             JanusGraph janusGraph = JanusGraphFactory.open(graphComputerConfiguration);
-            log.info(String.format("thread %s,create janusgraph connection %s.....",Thread.currentThread().getName(),graphName));
+            long end=System.currentTimeMillis();
+            log.info(String.format("thread %s,create janusgraph connection %s,used times->%s .....",
+                Thread.currentThread().getName(),graphName,(end-begin)));
             janusGraphMap.put(graphName,janusGraph);
         }
         JanusGraph janusGraph= janusGraphMap.get(graphName);

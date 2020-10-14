@@ -152,7 +152,7 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
             ExecutorService pool = Executors.newFixedThreadPool(10,
                 new ThreadFactoryBuilder().setDaemon(true).setNameFormat("import-data-%d").build());//定义线程数
             List<Future<Integer>> futures= Lists.newArrayList();
-            for(int t=0;t<10;t++) {
+            for(int t=0;t<100;t++) {
                 Future<Integer> submit = pool.submit(() -> {
                     //int threadTotal = 1000000;
                     int threadTotal = 10000;

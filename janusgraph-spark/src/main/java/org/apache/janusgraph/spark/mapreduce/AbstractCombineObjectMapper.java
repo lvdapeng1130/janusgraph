@@ -37,6 +37,7 @@ public abstract class AbstractCombineObjectMapper extends StaticMapReduce<String
     //记录一次事物累计了多少个Vertex，当达到'CRITICAL_POINT'的值后提交图库事物
     protected int transactionalSize=0;
     protected StandardJanusGraphTx threadedTx;
+    protected Stage stage;
     @Override
     public void loadState(Graph graph, Configuration configuration) {
         this.graph=graph;
@@ -52,6 +53,7 @@ public abstract class AbstractCombineObjectMapper extends StaticMapReduce<String
 
     @Override
     public boolean doStage(Stage stage) {
+        this.stage=stage;
         return true;
     }
 
@@ -76,7 +78,8 @@ public abstract class AbstractCombineObjectMapper extends StaticMapReduce<String
             long begin = System.currentTimeMillis();
             this.threadedTx.commit();
             long end = System.currentTimeMillis();
-            LOGGER.info(String.format("%s->submit graph uuid->%s, transaction use time %s,vertex size %s", this.getMemoryKey(),janusGraph.getUniqueInstanceId(),(end-begin),transactionalSize));
+            LOGGER.info(String.format("%s->submit graph uuid->%s, transaction use time %s,vertex size %s,current stage is %s",
+                this.getMemoryKey(),janusGraph.getUniqueInstanceId(),(end-begin),transactionalSize,this.stage));
             if (this.threadedTx.isOpen()) {
                 this.threadedTx.close();
             }
