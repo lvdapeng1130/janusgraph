@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author: ldp
@@ -38,7 +39,10 @@ public class SelectTest extends JanusGraphApp{
             }
             LOGGER.info("reading elements");
             //List<Vertex> vertices = g.V().hasLabel("object_qq").has("name", Text.textContains("kizdnMZOO4aDwDFC2Y6XS5UaLnVCCT")).toList();
-            List<Vertex> vertices = g.V().hasLabel("object_qq").has("name", Text.textContains("kizdnMZOO4aDwDFC2Y6XS5UaLnVCCT")).toList();
+            List<Map<Object, Object>> maps = g.V().hasLabel("object_qqqun")
+                .has("qqqun_num", Text.textContains("2250")).elementMap().toList();
+            List<Vertex> vertices = g.V().hasLabel("object_qqqun").has("qqqun_num", "2250").toList();
+            //List<Vertex> vertices1 = g.V().hasLabel("object_qqqun").toList();
             System.out.println(vertices);
             //Vertex crc = g.V(LongEncoding.decode("9k0")).next();
         } finally {

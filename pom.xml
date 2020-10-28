@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.janusgraph</groupId>
     <artifactId>janusgraph</artifactId>
-    <version>KGYY_R3.01_2020072802-hbase2</version>
+    <version>KGYY_R3.01_20201027-hbase2</version>
     <packaging>pom</packaging>
     <prerequisites>
         <maven>2.2.1</maven>
@@ -358,6 +358,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>
+                <version>2.7</version>
                 <configuration>
                     <generateBackupPoms>false</generateBackupPoms>
                 </configuration>
@@ -365,6 +366,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.2.2</version>
                 <configuration>
                     <!--插件默认只会处理packaging属性为非pom的，如果要处理packaging为pom的，可将本属性值设置为true。-->
                     <updatePomFile>true</updatePomFile>
