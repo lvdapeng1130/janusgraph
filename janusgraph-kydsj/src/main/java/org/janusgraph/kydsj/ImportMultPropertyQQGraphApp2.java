@@ -158,7 +158,7 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
                     int threadTotal = 10000;
                     List<QQData> qqDataList=new ArrayList<>();
                     for (int i = 0; i < threadTotal; i++) {
-                        int qqqun_num = new Random().nextInt(10000);
+                        int qqqun_num = new Random().nextInt(1000);
                         QQData data = QQData.builder()
                             .qq_age(new Random().nextInt(100))
                             .qq_num(RandomStringUtils.randomAlphanumeric(11))
@@ -222,7 +222,9 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
                 .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
                 //StandardJanusGraphTx threadedTx = (StandardJanusGraphTx)this.getJanusGraph().tx().createThreadedTx();
                 for (QQData qqData : qqDataList) {
-                    Vertex qq = threadedTx.traversal().addV("object_qq").property("name", qqData.getQq_title(),
+                    Vertex qq = threadedTx.traversal().addV("object_qq")
+                        .property("tid",qqData.getQq_num())
+                        .property("name", qqData.getQq_title(),
                         "startDate", new Date(),
                         "endDate", new Date(),
                         "dsr", "程序导入",
@@ -249,6 +251,7 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
                             "geo", Geoshape.point(22.22, 113.1122))
                         .next();
                     Vertex qqqun = threadedTx.traversal().addV("object_qqqun")
+                        .property("tid",qqData.getQqqun_num())
                         .property("name", qqData.getQqqun_title(),
                             "startDate", new Date(),
                             "endDate", new Date(),

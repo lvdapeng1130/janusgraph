@@ -41,6 +41,7 @@ public class SelectTest extends JanusGraphApp{
             //List<Vertex> vertices = g.V().hasLabel("object_qq").has("name", Text.textContains("kizdnMZOO4aDwDFC2Y6XS5UaLnVCCT")).toList();
             List<Map<Object, Object>> maps = g.V().hasLabel("object_qqqun")
                 .has("qqqun_num", Text.textContains("2250")).elementMap().toList();
+            final List<Map<Object, Object>> maps1 = g.V().limit(10).elementMap().toList();
             List<Vertex> vertices = g.V().hasLabel("object_qqqun").has("qqqun_num", "2250").toList();
             //List<Vertex> vertices1 = g.V().hasLabel("object_qqqun").toList();
             System.out.println(vertices);

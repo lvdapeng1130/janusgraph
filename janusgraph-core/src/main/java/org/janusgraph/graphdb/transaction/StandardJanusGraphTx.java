@@ -307,8 +307,10 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
             Preconditions.checkArgument(v instanceof InternalVertex, "Invalid vertex: %s", v);
             if (!(v instanceof SystemRelationType) && this != ((InternalVertex) v).tx())
                 throw new IllegalStateException("The vertex or type is not associated with this transaction [" + v + "]");
-            if (v.isRemoved())
+            if (v.isRemoved()) {
+                //log.warn("The vertex or type has been removed [" + v + "]");
                 throw new IllegalStateException("The vertex or type has been removed [" + v + "]");
+            }
         }
     }
 
@@ -609,13 +611,18 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
     public void removeRelation(InternalRelation relation) {
         Preconditions.checkArgument(!relation.isRemoved());
         relation = relation.it();
-        for (int i = 0; i < relation.getLen(); i++)
-            verifyWriteAccess(relation.getVertex(i));
-
-        //Delete from Vertex
+        for (int i = 0; i < relation.getLen(); i++) {
+            InternalVertex vertex = relation.getVertex(i);
+            if (!vertex.isRemoved()) {
+                //Delete from Vertex
+                verifyWriteAccess(vertex);
+                vertex.removeRelation(relation);
+            }
+        }
+       /* //Delete from Vertex
         for (int i = 0; i < relation.getLen(); i++) {
             relation.getVertex(i).removeRelation(relation);
-        }
+        }*/
         //Update transaction data structures
         if (relation.isNew()) {
             addedRelations.remove(relation);
