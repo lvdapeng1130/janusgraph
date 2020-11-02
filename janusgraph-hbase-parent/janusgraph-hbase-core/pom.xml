@@ -106,13 +106,13 @@
                             <artifactId>junit</artifactId>
                         </exclusion>
                     </exclusions>
-                    <!--<optional>true</optional>-->
+                    <optional>true</optional>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hbase</groupId>
                     <artifactId>hbase-shaded-server</artifactId>
                     <version>${hbase1.version}</version>
-                   <!-- <optional>true</optional>-->
+                    <optional>true</optional>
                 </dependency>
             </dependencies>
         </profile>
