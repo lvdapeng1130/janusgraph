@@ -123,6 +123,7 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
                 .addKey(management.getPropertyKey("qq_num"))
                 .addKey(management.getPropertyKey("time"))
                 .addKey(management.getPropertyKey("age1"))
+                .addKey(management.getPropertyKey("tid"))
                 .indexOnly(management.getVertexLabel("object_qq"))
                 .buildMixedIndex(mixedIndexConfigName);
             management.buildIndex("object_qqqun", Vertex.class)
@@ -130,6 +131,7 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
                 .addKey(management.getPropertyKey("time"))
                 .addKey(management.getPropertyKey("qqqun_num"))
                 .addKey(management.getPropertyKey("text"))
+                .addKey(management.getPropertyKey("tid"))
                 .indexOnly(management.getVertexLabel("object_qqqun"))
                 .buildMixedIndex(mixedIndexConfigName);
 
