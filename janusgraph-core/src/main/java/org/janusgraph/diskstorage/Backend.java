@@ -103,6 +103,10 @@ public class Backend implements LockerProvider, AutoCloseable {
 
     public static final String SYSTEM_TX_LOG_NAME = "txlog";
     public static final String SYSTEM_MGMT_LOG_NAME = "systemlog";
+    //存储顶点附件表的列族名称
+    public static final String ATTACHMENT_FAMILY_NAME = "attachment";
+    //存储顶点信息的注释内容的列族名称
+    public static final String NOTE_FAMILY_NAME = "note";
 
     public static final double EDGESTORE_CACHE_PERCENT = 0.8;
     public static final double INDEXSTORE_CACHE_PERCENT = 0.2;
@@ -151,6 +155,8 @@ public class Backend implements LockerProvider, AutoCloseable {
 
     private KCVSCache edgeStore;
     private KCVSCache indexStore;
+    private KCVSCache attachmentStore;
+    private KCVSCache noteStore;
     private KCVSCache txLogStore;
     private IDAuthority idAuthority;
     private KCVSConfiguration systemConfig;
@@ -275,7 +281,10 @@ public class Backend implements LockerProvider, AutoCloseable {
 
             KeyColumnValueStore edgeStoreRaw = storeManagerLocking.openDatabase(EDGESTORE_NAME);
             KeyColumnValueStore indexStoreRaw = storeManagerLocking.openDatabase(INDEXSTORE_NAME);
-
+            KeyColumnValueStore attachmentStoreRaw = storeManagerLocking.openDatabase(ATTACHMENT_FAMILY_NAME);
+            KeyColumnValueStore noteStoreRaw = storeManagerLocking.openDatabase(NOTE_FAMILY_NAME);
+            attachmentStore = new NoKCVSCache(attachmentStoreRaw);
+            noteStore = new NoKCVSCache(noteStoreRaw);
             //Configure caches
             if (cacheEnabled) {
                 long expirationTime = configuration.get(DB_CACHE_TIME);
@@ -535,7 +544,7 @@ public class Backend implements LockerProvider, AutoCloseable {
         }
 
         return new BackendTransaction(cacheTx, configuration, storeFeatures,
-                edgeStore, indexStore, txLogStore,
+                edgeStore, indexStore,attachmentStore,noteStore, txLogStore,
                 maxReadTime, indexTx, threadPool);
     }
 
@@ -552,6 +561,8 @@ public class Backend implements LockerProvider, AutoCloseable {
             if (idAuthority != null) idAuthority.close();
             if (systemConfig != null) systemConfig.close();
             if (userConfig != null) userConfig.close();
+            if(attachmentStore !=null) attachmentStore.close();
+            if(noteStore !=null) noteStore.close();
             storeManager.close();
             if(threadPool != null) {
             	threadPool.shutdown();
@@ -585,6 +596,9 @@ public class Backend implements LockerProvider, AutoCloseable {
             userConfig.close();
             storeManager.clearStorage();
             storeManager.close();
+
+            attachmentStore.close();
+            noteStore.close();
             //Indexes
             for (IndexProvider index : indexes.values()) {
                 index.clearStorage();

@@ -14,28 +14,6 @@
 
 package org.janusgraph.diskstorage.hbase;
 
-import static org.janusgraph.diskstorage.Backend.EDGESTORE_NAME;
-import static org.janusgraph.diskstorage.Backend.INDEXSTORE_NAME;
-import static org.janusgraph.diskstorage.Backend.LOCK_STORE_SUFFIX;
-import static org.janusgraph.diskstorage.Backend.SYSTEM_MGMT_LOG_NAME;
-import static org.janusgraph.diskstorage.Backend.SYSTEM_TX_LOG_NAME;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.DROP_ON_CLEAR;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.IDS_STORE_NAME;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.SYSTEM_PROPERTIES_STORE_NAME;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.GRAPH_NAME;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -43,46 +21,19 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
-
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableNotEnabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.janusgraph.core.JanusGraphException;
-import org.janusgraph.diskstorage.BackendException;
-import org.janusgraph.diskstorage.BaseTransactionConfig;
-import org.janusgraph.diskstorage.Entry;
-import org.janusgraph.diskstorage.EntryMetaData;
-import org.janusgraph.diskstorage.PermanentBackendException;
-import org.janusgraph.diskstorage.StaticBuffer;
-import org.janusgraph.diskstorage.StoreMetaData;
-import org.janusgraph.diskstorage.TemporaryBackendException;
+import org.janusgraph.diskstorage.*;
 import org.janusgraph.diskstorage.common.DistributedStoreManager;
 import org.janusgraph.diskstorage.configuration.ConfigElement;
 import org.janusgraph.diskstorage.configuration.ConfigNamespace;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
-import org.janusgraph.diskstorage.keycolumnvalue.KCVMutation;
-import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStore;
-import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStoreManager;
-import org.janusgraph.diskstorage.keycolumnvalue.KeyRange;
-import org.janusgraph.diskstorage.keycolumnvalue.StandardStoreFeatures;
-import org.janusgraph.diskstorage.keycolumnvalue.StoreFeatures;
-import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
+import org.janusgraph.diskstorage.keycolumnvalue.*;
 import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.janusgraph.diskstorage.util.time.TimestampProviders;
@@ -93,6 +44,16 @@ import org.janusgraph.util.system.IOUtils;
 import org.janusgraph.util.system.NetworkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+
+import static org.janusgraph.diskstorage.Backend.*;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
 
 /**
  * Storage Manager for HBase
@@ -238,6 +199,12 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
             "When this option is unset, JanusGraph calls HBase's VersionInfo.getVersion() and loads the matching compat class " +
             "at runtime.  Setting this option forces JanusGraph to instead reflectively load and instantiate the specified class.",
             ConfigOption.Type.MASKABLE, String.class);
+    public static final ConfigOption<Boolean> IS_CRATE_ATTACHMENT_TABLE =
+        new ConfigOption<>(HBASE_NS, "create-attachmen-table","是否为顶点创建附件表", ConfigOption.Type.FIXED, true);
+    public static final ConfigOption<String> ATTACHMENT_TABLE_NAME =
+            new ConfigOption<>(HBASE_NS, "attachment-table-name",
+            "存储顶点附件的附件表名称",
+            ConfigOption.Type.MASKABLE, String.class,"attachment");
 
     public static final int PORT_DEFAULT = 2181;  // Not used. Just for the parent constructor.
 
@@ -257,6 +224,8 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
     private final ConnectionMask cnx;
     private final boolean shortCfNames;
     private final boolean skipSchemaCheck;
+    private final boolean isCreateAttachmentTable;
+    private final String attachmentSuffix;
     private final HBaseCompat compat;
     // Cached return value of getDeployment() as requesting it can be expensive.
     private Deployment deployment = null;
@@ -330,6 +299,8 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         }
 
         this.shortCfNames = config.get(SHORT_CF_NAMES);
+        this.isCreateAttachmentTable = config.get(IS_CRATE_ATTACHMENT_TABLE);
+        this.attachmentSuffix = config.get(ATTACHMENT_TABLE_NAME);
 
         try {
             //this.cnx = HConnectionManager.createConnection(hconf);
@@ -363,6 +334,8 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
                 .put(SYSTEM_PROPERTIES_STORE_NAME + LOCK_STORE_SUFFIX, "t")
                 .put(SYSTEM_MGMT_LOG_NAME, "m")
                 .put(SYSTEM_TX_LOG_NAME, "l")
+                .put(ATTACHMENT_FAMILY_NAME, "a")
+                .put(NOTE_FAMILY_NAME, "n")
                 .build();
     }
 
@@ -424,42 +397,69 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         return fb.build();
     }
 
+    public Map<String,Map<String, Map<StaticBuffer, KCVMutation>>> getSplitByTable(Map<String, Map<StaticBuffer, KCVMutation>> mutations){
+        Map<String,Map<String, Map<StaticBuffer, KCVMutation>>> mapMap=new HashMap<>();
+        for (Map.Entry<String, Map<StaticBuffer, KCVMutation>> entry : mutations.entrySet()) {
+            String cfString = entry.getKey();
+            if(cfString.startsWith(ATTACHMENT_FAMILY_NAME)||cfString.startsWith(NOTE_FAMILY_NAME)){
+                String attachmentTableName = this.getAttachmentTableName(this.tableName);
+                Map<String, Map<StaticBuffer, KCVMutation>> stringMapMap = mapMap.get(attachmentTableName);
+                if(stringMapMap==null){
+                    stringMapMap=new HashMap<>();
+                    mapMap.put(attachmentTableName,stringMapMap);
+                }
+                stringMapMap.put(cfString,entry.getValue());
+            }else{
+                Map<String, Map<StaticBuffer, KCVMutation>> stringMapMap = mapMap.get(this.tableName);
+                if(stringMapMap==null){
+                    stringMapMap=new HashMap<>();
+                    mapMap.put(this.tableName,stringMapMap);
+                }
+                stringMapMap.put(cfString,entry.getValue());
+            }
+        }
+        return mapMap;
+    }
+
     @Override
     public void mutateMany(Map<String, Map<StaticBuffer, KCVMutation>> mutations, StoreTransaction txh) throws BackendException {
         final MaskedTimestamp commitTime = new MaskedTimestamp(txh);
         // In case of an addition and deletion with identical timestamps, the
         // deletion tombstone wins.
         // https://hbase.apache.org/book/versions.html#d244e4250
-        final Map<StaticBuffer, Pair<List<Put>, Delete>> commandsPerKey =
+        Map<String, Map<String, Map<StaticBuffer, KCVMutation>>> mutationsByTable = this.getSplitByTable(mutations);
+        for(Map.Entry <String, Map<String, Map<StaticBuffer, KCVMutation>>> entry:mutationsByTable.entrySet()){
+            Map<String, Map<StaticBuffer, KCVMutation>> hbaseMutations=entry.getValue();
+            final Map<StaticBuffer, Pair<List<Put>, Delete>> commandsPerKey =
                 convertToCommands(
-                        mutations,
-                        commitTime.getAdditionTime(times),
-                        commitTime.getDeletionTime(times));
+                    hbaseMutations,
+                    commitTime.getAdditionTime(times),
+                    commitTime.getDeletionTime(times));
 
-        final List<Row> batch = new ArrayList<>(commandsPerKey.size()); // actual batch operation
+            final List<Row> batch = new ArrayList<>(commandsPerKey.size()); // actual batch operation
 
-        // convert sorted commands into representation required for 'batch' operation
-        for (Pair<List<Put>, Delete> commands : commandsPerKey.values()) {
-            if (commands.getFirst() != null && !commands.getFirst().isEmpty())
-                batch.addAll(commands.getFirst());
+            // convert sorted commands into representation required for 'batch' operation
+            for (Pair<List<Put>, Delete> commands : commandsPerKey.values()) {
+                if (commands.getFirst() != null && !commands.getFirst().isEmpty())
+                    batch.addAll(commands.getFirst());
 
-            if (commands.getSecond() != null)
-                batch.add(commands.getSecond());
-        }
-
-        try {
-            TableMask table = null;
+                if (commands.getSecond() != null)
+                    batch.add(commands.getSecond());
+            }
 
             try {
-                table = cnx.getTable(tableName);
-                table.batch(batch, new Object[batch.size()]);
-            } finally {
-                IOUtils.closeQuietly(table);
-            }
-        } catch (IOException | InterruptedException e) {
-            throw new TemporaryBackendException(e);
-        }
+                TableMask table = null;
 
+                try {
+                    table = cnx.getTable(entry.getKey());
+                    table.batch(batch, new Object[batch.size()]);
+                } finally {
+                    IOUtils.closeQuietly(table);
+                }
+            } catch (IOException | InterruptedException e) {
+                throw new TemporaryBackendException(e);
+            }
+        }
         sleepAfterWrite(txh, commitTime);
     }
 
@@ -472,25 +472,59 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         HBaseKeyColumnValueStore store = openStores.get(longName);
 
         if (store == null) {
-            final String cfName = getCfNameForStoreName(longName);
-
-            HBaseKeyColumnValueStore newStore = new HBaseKeyColumnValueStore(this, cnx, tableName, cfName, longName);
-
-            store = openStores.putIfAbsent(longName, newStore); // nothing bad happens if we loose to other thread
-
-            if (store == null) {
-                if (!skipSchemaCheck) {
-                    int cfTTLInSeconds = -1;
-                    if (metaData.contains(StoreMetaData.TTL)) {
-                        cfTTLInSeconds = metaData.get(StoreMetaData.TTL);
+            String hbaseTableName=tableName;
+            String cfName;
+            if(longName.startsWith(ATTACHMENT_FAMILY_NAME)){
+                cfName=longName;
+                hbaseTableName=this.getAttachmentTableName(tableName);
+                HBaseKeyColumnValueStore newStore = new HBaseKeyColumnValueStore(this, cnx, hbaseTableName, cfName, longName);
+                store = openStores.putIfAbsent(longName, newStore); // nothing bad happens if we loose to other thread
+                if (store == null) {
+                    if (!skipSchemaCheck) {
+                        int cfTTLInSeconds = -1;
+                        if (metaData.contains(StoreMetaData.TTL)) {
+                            cfTTLInSeconds = metaData.get(StoreMetaData.TTL);
+                        }
+                        if(this.isCreateAttachmentTable) {
+                            this.ensureAttachmentTableExists(tableName, cfTTLInSeconds);
+                        }
                     }
-                    ensureColumnFamilyExists(tableName, cfName, cfTTLInSeconds);
+                    store = newStore;
                 }
-
-                store = newStore;
+            }else if(longName.startsWith(NOTE_FAMILY_NAME)){
+                cfName=longName;
+                hbaseTableName=this.getAttachmentTableName(tableName);
+                HBaseKeyColumnValueStore newStore = new HBaseKeyColumnValueStore(this, cnx, hbaseTableName, cfName, longName);
+                store = openStores.putIfAbsent(longName, newStore); // nothing bad happens if we loose to other thread
+                if (store == null) {
+                    if (!skipSchemaCheck) {
+                        int cfTTLInSeconds = -1;
+                        if (metaData.contains(StoreMetaData.TTL)) {
+                            cfTTLInSeconds = metaData.get(StoreMetaData.TTL);
+                        }
+                        if(this.isCreateAttachmentTable) {
+                            this.ensureAttachmentTableExists(tableName, cfTTLInSeconds);
+                        }
+                    }
+                    store = newStore;
+                }
+            }else {
+                cfName = getCfNameForStoreName(longName);
+                HBaseKeyColumnValueStore newStore = new HBaseKeyColumnValueStore(this, cnx, hbaseTableName, cfName, longName);
+                store = openStores.putIfAbsent(longName, newStore); // nothing bad happens if we loose to other thread
+                if (store == null) {
+                    if (!skipSchemaCheck) {
+                        int cfTTLInSeconds = -1;
+                        if (metaData.contains(StoreMetaData.TTL)) {
+                            cfTTLInSeconds = metaData.get(StoreMetaData.TTL);
+                        }
+                        ensureColumnFamilyExists(tableName, cfName, cfTTLInSeconds);
+                    }
+                    store = newStore;
+                }
             }
-        }
 
+        }
         return store;
     }
 
@@ -510,11 +544,14 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
      */
     @Override
     public void clearStorage() throws BackendException {
+        String hbaseTableName=this.getAttachmentTableName(tableName);
         try (AdminMask adm = getAdminInterface()) {
             if (this.storageConfig.get(DROP_ON_CLEAR)) {
                 adm.dropTable(tableName);
+                adm.dropTable(hbaseTableName);
             } else {
                 adm.clearTable(tableName, times.getTime(times.getTime()));
+                adm.clearTable(hbaseTableName, times.getTime(times.getTime()));
             }
         } catch (IOException e)
         {
@@ -537,13 +574,21 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         try {
             ensureTableExists(
                 tableName, getCfNameForStoreName(GraphDatabaseConfiguration.SYSTEM_PROPERTIES_STORE_NAME), 0);
+            if(this.isCreateAttachmentTable) {
+                this.ensureAttachmentTableExists(tableName, 0);
+            }
             Map<KeyRange, ServerName> normed = normalizeKeyBounds(cnx.getRegionLocations(tableName));
-
+            Map<String,Boolean> isLocal=new HashMap<>(normed.size());
             for (Map.Entry<KeyRange, ServerName> e : normed.entrySet()) {
-                if (NetworkUtil.isLocalConnection(e.getValue().getHostname())) {
+                String hostname = e.getValue().getHostname();
+                if(!isLocal.containsKey(hostname)){
+                    boolean localConnection = NetworkUtil.isLocalConnection(e.getValue().getHostname());
+                    isLocal.put(hostname,localConnection);
+                }
+                if(isLocal.get(hostname)){
                     result.add(e.getKey());
                     logger.debug("Found local key/row partition {} on host {}", e.getKey(), e.getValue());
-                } else {
+                }else{
                     logger.debug("Discarding remote {}", e.getValue());
                 }
             }
@@ -761,6 +806,14 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         setCFOptions(columnDescriptor, ttlInSeconds);
 
         compat.addColumnFamilyToTableDescriptor(desc, columnDescriptor);
+        for(Map.Entry<String,String> entry:shortCfNameMap.entrySet()){
+            String familyName=shortCfNames?entry.getValue():entry.getKey();
+            if(!cfName.equals(familyName)&&!entry.getKey().equals(ATTACHMENT_FAMILY_NAME)&&!entry.getKey().equals(NOTE_FAMILY_NAME)){
+                HColumnDescriptor family = new HColumnDescriptor(familyName);
+                setCFOptions(family, ttlInSeconds);
+                compat.addColumnFamilyToTableDescriptor(desc, family);
+            }
+        }
 
         int count; // total regions to create
         String src;
@@ -781,6 +834,75 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         } else {
             adm.createTable(desc);
             logger.debug("Created table {} with default start key, end key, and region count", tableName);
+        }
+
+        return desc;
+    }
+
+
+    private HTableDescriptor ensureAttachmentTableExists(String vertexTableName, int ttlInSeconds) throws BackendException {
+        String attachmentTableName=this.getAttachmentTableName(vertexTableName);
+        AdminMask adm = null;
+        HTableDescriptor desc;
+
+        try { // Create our table, if necessary
+            adm = getAdminInterface();
+            if (adm.tableExists(attachmentTableName)) {
+                desc = adm.getTableDescriptor(attachmentTableName);
+            } else {
+                desc = this.createAttachmentTable(attachmentTableName, ttlInSeconds, adm);
+            }
+        } catch (IOException e) {
+            throw new TemporaryBackendException(e);
+        } finally {
+            IOUtils.closeQuietly(adm);
+        }
+        return desc;
+    }
+
+    private String getAttachmentTableName(String vertexTableName){
+        return vertexTableName+"_"+this.attachmentSuffix;
+    }
+    /**
+     * 创建附件表，保存顶点对应的一些附件。
+     * @param attachmentTableName
+     * @param ttlInSeconds
+     * @param adm
+     * @return
+     * @throws IOException
+     */
+    private HTableDescriptor createAttachmentTable(String attachmentTableName, int ttlInSeconds, AdminMask adm) throws IOException {
+        HTableDescriptor desc = compat.newTableDescriptor(attachmentTableName);
+
+        String attachmentFamily=ATTACHMENT_FAMILY_NAME;
+        String attachmentFamilyLock=ATTACHMENT_FAMILY_NAME+"_lock_";
+        String noteFamily=NOTE_FAMILY_NAME;
+        String noteFamilyLock=NOTE_FAMILY_NAME+"_lock_";
+        HColumnDescriptor attachmentColumnDescriptor = new HColumnDescriptor(attachmentFamily);
+        //attachmentColumnDescriptor.setMobEnabled(true);
+        setCFOptions(attachmentColumnDescriptor, ttlInSeconds);
+        compat.addColumnFamilyToTableDescriptor(desc, attachmentColumnDescriptor);
+        HColumnDescriptor noteColumnDescriptor = new HColumnDescriptor(noteFamily);
+        //noteColumnDescriptor.setMobEnabled(true);
+        setCFOptions(noteColumnDescriptor, ttlInSeconds);
+        compat.addColumnFamilyToTableDescriptor(desc, noteColumnDescriptor);
+        HColumnDescriptor attachmentLockColumnDescriptor = new HColumnDescriptor(attachmentFamilyLock);
+        setCFOptions(attachmentLockColumnDescriptor, ttlInSeconds);
+        compat.addColumnFamilyToTableDescriptor(desc, attachmentLockColumnDescriptor);
+        HColumnDescriptor noteLockColumnDescriptor = new HColumnDescriptor(noteFamilyLock);
+        setCFOptions(noteLockColumnDescriptor, ttlInSeconds);
+        compat.addColumnFamilyToTableDescriptor(desc, noteLockColumnDescriptor);
+
+        String src;
+        int regionsAttachPerServer=1;
+        int count= regionsAttachPerServer * adm.getEstimatedRegionServerCount();
+
+        if (count>MIN_REGION_COUNT) {
+            adm.createTable(desc, getStartKey(count), getEndKey(count), count);
+            logger.debug("Created table {} with region count {}", attachmentTableName, count);
+        } else {
+            adm.createTable(desc);
+            logger.debug("Created table {} with default start key, end key, and region count", attachmentTableName);
         }
 
         return desc;
@@ -819,7 +941,6 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         try {
             adm = getAdminInterface();
             HTableDescriptor desc = ensureTableExists(tableName, columnFamily, ttlInSeconds);
-
             Preconditions.checkNotNull(desc);
 
             HColumnDescriptor cf = desc.getFamily(Bytes.toBytes(columnFamily));
@@ -864,6 +985,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
             IOUtils.closeQuietly(adm);
         }
     }
+
 
     private void setCFOptions(HColumnDescriptor columnDescriptor, int ttlInSeconds) {
         if (null != compression && !compression.equals(COMPRESSION_DEFAULT))

@@ -115,7 +115,7 @@ public class PartitionIDRange {
 
     /**
      * Returns a random partition id that lies within this partition id range.
-     *
+     * 返回此分区ID范围内的随机分区ID。
      * @return
      */
     public int getRandomID() {

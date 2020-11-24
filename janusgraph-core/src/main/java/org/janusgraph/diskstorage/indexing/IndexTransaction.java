@@ -64,7 +64,13 @@ public class IndexTransaction implements BaseTransaction, LoggableTransaction {
     }
 
     public void add(String store, String documentId, IndexEntry entry, boolean isNew) {
-        getIndexMutation(store,documentId, isNew, false).addition(new IndexEntry(entry.field, entry.value, entry.getMetaData()));
+        IndexEntry indexEntry = new IndexEntry(entry.field, entry.value, entry.getMetaData());
+        indexEntry.setRole(entry.getRole());
+        indexEntry.setEndDate(entry.getEndDate());
+        indexEntry.setStartDate(entry.getStartDate());
+        indexEntry.setGeo(entry.getGeo());
+        indexEntry.setDsr(entry.getDsr());
+        getIndexMutation(store,documentId, isNew, false).addition(indexEntry);
     }
 
     public void add(String store, String documentId, String key, Object value, boolean isNew) {

@@ -21,6 +21,9 @@ import org.janusgraph.graphdb.relations.RelationCache;
  * <p>
  * An entry consists of a column and value both of which are general {@link java.nio.ByteBuffer}s.
  * The value may be null but the column may not.
+ * 条目是图形数据库存储后端中使用的原始持久性单元。
+ * 条目由一列和一个值组成，两者均为常规{@link java.nio.ByteBuffer}。
+ * 值可以为null，但列不能为null。
  *
  * @author Matthias Br&ouml;cheler (me@matthiasb.com);
  */

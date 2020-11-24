@@ -28,4 +28,14 @@ public class ElasticSearchConstants {
     public static final String ES_ANALYZER = "analyzer";
     public static final String ES_GEO_COORDS_KEY = "coordinates";
     public static final String CUSTOM_ALL_FIELD = "all";
+    //lvdapeng 定义elasticsearch属性的内置字段
+    public static final String KG_PROPERTY_VALUE = "value";
+    public static final String KG_PROPERTY_STARTDATE = "startDate";
+    public static final String KG_PROPERTY_ENDDATE = "endDate";
+    public static final String KG_PROPERTY_GEO = "geo";
+    public static final String KG_PROPERTY_DSR = "dsr";
+    public static final String KG_PROPERTY_ROLE = "role";
+    public static final String KG_PROPERTY_DS = "ds";
+    public static final String KG_PROPERTY_DS_NAME = "name";
+    public static final String KG_PROPERTY_DS_RECORD = "record";
 }

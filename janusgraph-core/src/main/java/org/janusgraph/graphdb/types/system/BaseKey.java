@@ -29,6 +29,8 @@ import org.janusgraph.graphdb.types.IndexField;
 import org.janusgraph.graphdb.types.IndexType;
 import org.janusgraph.graphdb.types.TypeDefinitionDescription;
 import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
 
 import java.util.Collections;
 
@@ -54,6 +56,13 @@ public class BaseKey extends BaseRelationType implements PropertyKey {
 
     public static final BaseKey SchemaUpdateTime =
             new BaseKey("SchemaUpdateTimestamp", Long.class, 36, Index.NONE, Cardinality.SINGLE);
+
+    //顶点的附件内置数据
+    public static final BaseKey VertexAttachment =
+        new BaseKey("VertexAttachment", MediaData.class, 22, Index.NONE, Cardinality.LIST);
+    //顶点的注释内置数据
+    public static final BaseKey VertexNote =
+        new BaseKey("VertexNote", Note.class, 23, Index.NONE, Cardinality.LIST);
 
 
 

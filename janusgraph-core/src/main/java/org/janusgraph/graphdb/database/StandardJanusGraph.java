@@ -14,21 +14,11 @@
 
 package org.janusgraph.graphdb.database;
 
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.REGISTRATION_TIME;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.REPLACE_INSTANCE_IF_EXISTS;
-
 import com.carrotsearch.hppc.LongArrayList;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
-import java.io.IOException;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.tinkerpop.gremlin.process.traversal.TraversalStrategies;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Graph;
@@ -48,6 +38,7 @@ import org.janusgraph.diskstorage.log.Log;
 import org.janusgraph.diskstorage.log.Message;
 import org.janusgraph.diskstorage.log.ReadMarker;
 import org.janusgraph.diskstorage.log.kcvs.KCVSLog;
+import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.RecordIterator;
 import org.janusgraph.diskstorage.util.StaticArrayEntry;
 import org.janusgraph.diskstorage.util.time.TimestampProvider;
@@ -55,10 +46,13 @@ import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.database.cache.SchemaCache;
 import org.janusgraph.graphdb.database.idassigner.VertexIDAssigner;
 import org.janusgraph.graphdb.database.idhandling.IDHandler;
+import org.janusgraph.graphdb.database.idhandling.VariableLong;
+import org.janusgraph.graphdb.database.leader.RegistryZookeeper;
 import org.janusgraph.graphdb.database.log.LogTxStatus;
 import org.janusgraph.graphdb.database.log.TransactionLogHeader;
 import org.janusgraph.graphdb.database.management.ManagementLogger;
 import org.janusgraph.graphdb.database.management.ManagementSystem;
+import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.database.serialize.Serializer;
 import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.internal.InternalRelation;
@@ -66,19 +60,11 @@ import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.internal.InternalVertexLabel;
 import org.janusgraph.graphdb.query.QueryUtil;
-import org.janusgraph.graphdb.query.index.ApproximateIndexSelectionStrategy;
-import org.janusgraph.graphdb.query.index.BruteForceIndexSelectionStrategy;
 import org.janusgraph.graphdb.query.index.IndexSelectionStrategy;
-import org.janusgraph.graphdb.query.index.ThresholdBasedIndexSelectionStrategy;
 import org.janusgraph.graphdb.relations.EdgeDirection;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphBlueprintsGraph;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphFeatures;
-import org.janusgraph.graphdb.tinkerpop.optimize.strategy.AdjacentVertexFilterOptimizerStrategy;
-import org.janusgraph.graphdb.tinkerpop.optimize.strategy.AdjacentVertexIsOptimizerStrategy;
-import org.janusgraph.graphdb.tinkerpop.optimize.strategy.AdjacentVertexHasIdOptimizerStrategy;
-import org.janusgraph.graphdb.tinkerpop.optimize.strategy.JanusGraphIoRegistrationStrategy;
-import org.janusgraph.graphdb.tinkerpop.optimize.strategy.JanusGraphLocalQueryOptimizerStrategy;
-import org.janusgraph.graphdb.tinkerpop.optimize.strategy.JanusGraphStepStrategy;
+import org.janusgraph.graphdb.tinkerpop.optimize.*;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.graphdb.transaction.StandardTransactionBuilder;
 import org.janusgraph.graphdb.transaction.TransactionConfiguration;
@@ -88,10 +74,23 @@ import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.graphdb.types.system.BaseRelationType;
 import org.janusgraph.graphdb.types.vertices.JanusGraphSchemaVertex;
 import org.janusgraph.graphdb.util.ExceptionFactory;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
 import org.janusgraph.util.system.IOUtils;
 import org.janusgraph.util.system.TXUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.REGISTRATION_TIME;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.REPLACE_INSTANCE_IF_EXISTS;
 
 public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
@@ -147,6 +146,10 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
     private final String name;
 
+    private final RegistryZookeeper registryZookeeper;
+
+    private final String uniqueInstanceId;
+
     public StandardJanusGraph(GraphDatabaseConfiguration configuration) {
 
         this.config = configuration;
@@ -173,7 +176,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         openTransactions = Collections.newSetFromMap(new ConcurrentHashMap<StandardJanusGraphTx, Boolean>(100, 0.75f, 1));
 
         //Register instance and ensure uniqueness
-        String uniqueInstanceId = configuration.getUniqueGraphId();
+        uniqueInstanceId = configuration.getUniqueGraphId();
         ModifiableConfiguration globalConfig = getGlobalSystemConfig(backend);
         final boolean instanceExists = globalConfig.has(REGISTRATION_TIME, uniqueInstanceId);
         final boolean replaceExistingInstance = configuration.getConfiguration().get(REPLACE_INSTANCE_IF_EXISTS);
@@ -191,6 +194,14 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         shutdownHook = new ShutdownThread(this);
         Runtime.getRuntime().addShutdownHook(shutdownHook);
         log.debug("Installed shutdown hook {}", shutdownHook, new Throwable("Hook creation trace"));
+        //注册zookeeper
+        this.registryZookeeper=new RegistryZookeeper(configuration,uniqueInstanceId,this);
+        this.registryZookeeper.registry();
+    }
+
+    @Override
+    public String getUniqueInstanceId(){
+        return this.uniqueInstanceId;
     }
 
     public String getGraphName() {
@@ -229,6 +240,8 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                 uniqueId = config.getUniqueGraphId();
                 ModifiableConfiguration globalConfig = getGlobalSystemConfig(backend);
                 globalConfig.remove(REGISTRATION_TIME, uniqueId);
+                //关闭zookeeper连接
+                registryZookeeper.close();
             } catch (Exception e) {
                 log.warn("Unable to remove graph instance uniqueid {}", uniqueId, e);
             }
@@ -540,7 +553,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
     }
 
     public ModificationSummary prepareCommit(final Collection<InternalRelation> addedRelations,
-                                     final Collection<InternalRelation> deletedRelations,
+                                     final Collection<InternalRelation> deletedRelations,final HashMultimap<Long, MediaData> attachments, final HashMultimap<Long, Note> notes,
                                      final Predicate<InternalRelation> filter,
                                      final BackendTransaction mutator, final StandardJanusGraphTx tx,
                                      final boolean acquireLocks) throws BackendException {
@@ -661,7 +674,59 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                     itx.delete(indexStore,update.getKey(),update.getEntry().field,update.getEntry().value,update.getElement().isRemoved());
             }
         }
+        //7) 添加顶点的附件
+        if(attachments!=null){
+            for(long rowkey:attachments.keys()){
+                Set<MediaData> mediaDatas = attachments.get(rowkey);
+                if(mediaDatas!=null&&mediaDatas.size()>0){
+                    StaticBuffer key=this.getAttachmentTableRowkey(rowkey);
+                    List<Entry> addList = Lists.newArrayList();
+                    for(MediaData mediaData:mediaDatas){
+                        Entry entry = this.getAttachmentTableEntry(mediaData);
+                        addList.add(entry);
+                    }
+                    mutator.mutateAttachment(key,addList,KCVSCache.NO_DELETIONS);
+                }
+            }
+        }
+        //8)添加顶点的注释信息
+        if(notes!=null){
+            for(long rowkey:notes.keys()){
+                Set<Note> noteSet = notes.get(rowkey);
+                if(noteSet!=null&&noteSet.size()>0){
+                    StaticBuffer key=this.getAttachmentTableRowkey(rowkey);
+                    List<Entry> addList = Lists.newArrayList();
+                    for(Note note:noteSet){
+                        Entry entry = this.getAttachmentTableEntry(note);
+                        addList.add(entry);
+                    }
+                    mutator.mutateNote(key,addList,KCVSCache.NO_DELETIONS);
+                }
+            }
+        }
+
         return new ModificationSummary(!mutations.isEmpty(),has2iMods);
+    }
+
+    public StaticBuffer getAttachmentTableRowkey(long vertextID){
+        DataOutput out = this.getDataSerializer().getDataOutput(8);
+        VariableLong.writePositive(out, vertextID);
+        StaticBuffer key = out.getStaticBuffer();
+        return key;
+    }
+    public Entry getAttachmentTableEntry(MediaData mediaData){
+        final DataOutput out = this.getDataSerializer().getDataOutput(10);
+        out.writeObjectNotNull(mediaData.getKey());
+        final int valuePosition=out.getPosition();
+        out.writeObjectNotNull(mediaData);
+        return new StaticArrayEntry(out.getStaticBuffer(),valuePosition);
+    }
+    public Entry getAttachmentTableEntry(Note note){
+        final DataOutput out = this.getDataSerializer().getDataOutput(10);
+        out.writeObjectNotNull(note.getId());
+        final int valuePosition=out.getPosition();
+        out.writeObjectNotNull(note);
+        return new StaticArrayEntry(out.getStaticBuffer(),valuePosition);
     }
 
     private static final Predicate<InternalRelation> SCHEMA_FILTER =
@@ -672,8 +737,8 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
     private static final Predicate<InternalRelation> NO_FILTER = Predicates.alwaysTrue();
 
     public void commit(final Collection<InternalRelation> addedRelations,
-                     final Collection<InternalRelation> deletedRelations, final StandardJanusGraphTx tx) {
-        if (addedRelations.isEmpty() && deletedRelations.isEmpty()) return;
+                       final Collection<InternalRelation> deletedRelations, final HashMultimap<Long, MediaData> attachments, final HashMultimap<Long, Note> notes, final StandardJanusGraphTx tx) {
+        if (addedRelations.isEmpty() && deletedRelations.isEmpty()&&attachments.isEmpty()&&notes.isEmpty()) return;
         //1. Finalize transaction
         log.debug("Saving transaction. Added {}, removed {}", addedRelations.size(), deletedRelations.size());
         if (!tx.getConfiguration().hasCommitTime()) tx.getConfiguration().setCommitTime(times.getTime());
@@ -721,7 +786,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
                 try {
                     //[FAILURE] If the preparation throws an exception abort directly - nothing persisted since batch-loading cannot be enabled for schema elements
-                    commitSummary = prepareCommit(addedRelations,deletedRelations, SCHEMA_FILTER, schemaMutator, tx, acquireLocks);
+                    commitSummary = prepareCommit(addedRelations,deletedRelations,attachments,notes, SCHEMA_FILTER, schemaMutator, tx, acquireLocks);
                     assert commitSummary.hasModifications && !commitSummary.has2iModifications;
                 } catch (Throwable e) {
                     //Roll back schema tx and escalate exception
@@ -740,7 +805,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
             //[FAILURE] Exceptions during preparation here cause the entire transaction to fail on transactional systems
             //or just the non-system part on others. Nothing has been persisted unless batch-loading
-            commitSummary = prepareCommit(addedRelations,deletedRelations, hasTxIsolation? NO_FILTER : NO_SCHEMA_FILTER, mutator, tx, acquireLocks);
+            commitSummary = prepareCommit(addedRelations,deletedRelations,attachments,notes, hasTxIsolation? NO_FILTER : NO_SCHEMA_FILTER, mutator, tx, acquireLocks);
             if (commitSummary.hasModifications) {
                 String logTxIdentifier = tx.getConfiguration().getLogIdentifier();
                 boolean hasSecondaryPersistence = logTxIdentifier!=null || commitSummary.has2iModifications;
@@ -845,5 +910,56 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         }
     }
 
+    /***********************************mediaData和note**************************/
+    @Override
+    public List<MediaData> getMediaDatas(long vertexId){
+        Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
+        StandardJanusGraphTx consistentTx = null;
+        try {
+            consistentTx = StandardJanusGraph.this.newTransaction(new StandardTransactionBuilder(getConfiguration(),
+                StandardJanusGraph.this, customTxOptions).groupName(GraphDatabaseConfiguration.METRICS_SCHEMA_PREFIX_DEFAULT));
+            consistentTx.getTxHandle().disableCache();
+            StaticBuffer attachmentTableRowkey = this.getAttachmentTableRowkey(vertexId);
+            KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
+            EntryList entries = consistentTx.getTxHandle().attachmentQuery(keySliceQuery);
+            Iterator<Entry> iterator = entries.iterator();
+            List<MediaData> mediaDataList=new ArrayList<>();
+            while (iterator.hasNext()){
+                Entry entry = iterator.next();
+                ReadBuffer buffer = entry.asReadBuffer();
+                String col = this.serializer.readObjectNotNull(buffer, String.class);
+                MediaData mediaData = this.serializer.readObjectNotNull(buffer, MediaData.class);
+                mediaDataList.add(mediaData);
+            }
+            return mediaDataList;
+        } finally {
+            TXUtils.rollbackQuietly(consistentTx);
+        }
+    }
+    @Override
+    public List<Note> getNotes(long vertexId){
+        Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
+        StandardJanusGraphTx consistentTx = null;
+        try {
+            consistentTx = StandardJanusGraph.this.newTransaction(new StandardTransactionBuilder(getConfiguration(),
+                StandardJanusGraph.this, customTxOptions).groupName(GraphDatabaseConfiguration.METRICS_SCHEMA_PREFIX_DEFAULT));
+            consistentTx.getTxHandle().disableCache();
+            StaticBuffer attachmentTableRowkey = this.getAttachmentTableRowkey(vertexId);
+            KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
+            EntryList entries = consistentTx.getTxHandle().noteQuery(keySliceQuery);
+            Iterator<Entry> iterator = entries.iterator();
+            List<Note> noteList=new ArrayList<>();
+            while (iterator.hasNext()){
+                Entry entry = iterator.next();
+                ReadBuffer buffer = entry.asReadBuffer();
+                String col = this.serializer.readObjectNotNull(buffer, String.class);
+                Note note = this.serializer.readObjectNotNull(buffer, Note.class);
+                noteList.add(note);
+            }
+            return noteList;
+        } finally {
+            TXUtils.rollbackQuietly(consistentTx);
+        }
+    }
 
 }

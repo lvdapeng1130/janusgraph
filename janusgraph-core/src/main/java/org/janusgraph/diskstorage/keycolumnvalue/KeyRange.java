@@ -18,7 +18,7 @@ import org.janusgraph.diskstorage.StaticBuffer;
 
 /**
  * A range of bytes between start and end where start is inclusive and end is exclusive.
- *
+ * 在start和end之间的字节范围，其中start包括在内，end排除在外。
  * @author Matthias Broecheler (me@matthiasb.com)
  */
 public class KeyRange {

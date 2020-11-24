@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.janusgraph</groupId>
     <artifactId>janusgraph</artifactId>
-    <version>0.6.0-SNAPSHOT</version>
+    <version>KGYY_R3.01_20201027-hbase2</version>
     <packaging>pom</packaging>
     <prerequisites>
         <maven>2.2.1</maven>
@@ -52,49 +52,67 @@
         </license>
     </licenses>
     <scm>
-        <connection>scm:git:git@github.com:JanusGraph/janusgraph.git</connection>
-        <developerConnection>scm:git:git@github.com:JanusGraph/janusgraph.git</developerConnection>
-        <url>git@github.com:JanusGraph/janusgraph.git</url>
+        <connection>scm:git:git@github.com:lvdapeng/janusgraph.git</connection>
+        <developerConnection>scm:git:git@github.com:lvdapeng/janusgraph.git</developerConnection>
+        <url>git@github.com:lvdapeng/janusgraph.git</url>
         <tag>HEAD</tag>
     </scm>
     <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
         <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <id>NifiRelease</id>
+            <name>nifiRelease</name>
+            <url>http://192.168.0.6:8081/nexus/content/repositories/NifiRelease/</url>
         </repository>
+        <snapshotRepository>
+            <id>NifiSnapshots</id>
+            <name>nifiSnapshots</name>
+            <url>http://192.168.0.6:8081/nexus/content/repositories/NifiSnapshots/</url>
+            <uniqueVersion>true</uniqueVersion>
+        </snapshotRepository>
     </distributionManagement>
     <properties>
         <titan.compatible-versions>1.0.0,1.1.0-SNAPSHOT</titan.compatible-versions>
         <tinkerpop.version>3.4.6</tinkerpop.version>
-        <junit-platform.version>1.7.0</junit-platform.version>
-        <junit.version>5.7.0</junit.version>
+        <junit-platform.version>1.6.1</junit-platform.version>
+        <junit.version>5.6.1</junit.version>
+        <mrunit.version>1.1.0</mrunit.version>
         <mockito.version>2.23.0</mockito.version>
         <jamm.version>0.3.0</jamm.version>
         <metrics.version>4.1.5</metrics.version>
         <slf4j.version>1.7.30</slf4j.version>
         <httpcomponents.httpclient.version>4.5.10</httpcomponents.httpclient.version>
-        <httpcomponents.httpcore.version>4.4.13</httpcomponents.httpcore.version>
-        <hadoop2.version>2.7.7</hadoop2.version>
+        <httpcomponents.httpcore.version>4.4.12</httpcomponents.httpcore.version>
+        <!--<hadoop2.version>2.7.7</hadoop2.version>
         <hbase1.version>1.4.10</hbase1.version>
         <hbase2.version>2.1.5</hbase2.version>
+        <hbase.server.version>1.4.10</hbase.server.version>-->
+        <!-- <zookeeper.version>3.5.7</zookeeper.version>-->
+        <zookeeper.version>3.4.5-cdh6.2.0</zookeeper.version>
+        <hadoop2.version>3.0.0-cdh6.2.0</hadoop2.version>
+        <spark.version>2.4.0-cdh6.2.0</spark.version>
+        <hbase1.version>1.4.10</hbase1.version>
+        <hbase2.version>2.1.0-cdh6.2.0</hbase2.version>
         <hbase.server.version>1.4.10</hbase.server.version>
-        <bigtable.version>1.16.0</bigtable.version>
+        <bigtable.version>1.14.0</bigtable.version>
         <scylladb.version>1.7.1</scylladb.version>
         <!-- align with org.apache.hbase:hbase -->
         <jackson1.version>1.9.13</jackson1.version>
-        <jackson2.version>2.11.2</jackson2.version>
-        <lucene-solr.version>8.6.2</lucene-solr.version>
+        <jackson2.version>2.11.1</jackson2.version>
+        <lucene-solr.version>8.6.0</lucene-solr.version>
         <elasticsearch.version>7.6.2</elasticsearch.version>
         <commons.beanutils.version>1.7.0</commons.beanutils.version>
         <commons.collections.version>3.2.2</commons.collections.version>
-        <zookeeper.version>3.5.7</zookeeper.version>
+        <joda.version>2.9.9</joda.version>
+        <concurrentlinkedhashmap.version>1.4</concurrentlinkedhashmap.version>
+        <antlr2.version>2.7.7</antlr2.version>
+        <antlr.version>3.5.2</antlr.version>
+        <asm3.version>3.1</asm3.version>
+        <asm4.version>4.0</asm4.version>
         <!-- align with org.apache.tinkerpop:tinkerpop -->
-        <netty4.version>4.1.52.Final</netty4.version>
+        <netty4.version>4.1.49.Final</netty4.version>
         <jna.version>4.0.0</jna.version>
+        <kuali.s3.wagon.version>1.1.20</kuali.s3.wagon.version>
+        <jasper.version>5.5.23</jasper.version>
         <gmavenplus.version>1.5</gmavenplus.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -115,8 +133,9 @@
         <dependency.locations.enabled>false</dependency.locations.enabled>
         <cassandra.version>3.11.6</cassandra.version>
         <cassandra-driver.version>3.9.0</cassandra-driver.version>
-        <testcontainers.version>1.14.3</testcontainers.version>
+        <testcontainers.version>1.13.0</testcontainers.version>
         <easymock.version>3.4</easymock.version>
+        <curator.version>2.12.0</curator.version>
     </properties>
     <modules>
         <module>janusgraph-driver</module>
@@ -137,8 +156,20 @@
         <module>janusgraph-doc</module>
         <module>janusgraph-solr</module>
         <module>janusgraph-examples</module>
+        <module>janusgraph-kydsj</module>
+        <module>janusgraph-spark</module>
     </modules>
     <repositories>
+        <repository>
+            <id>NifiRelease</id>
+            <name>nifiRelease</name>
+            <url>http://192.168.0.6:8081/nexus/content/repositories/NifiRelease/</url>
+        </repository>
+        <repository>
+            <id>NifiSnapshots</id>
+            <name>nifiSnapshots</name>
+            <url>http://192.168.0.6:8081/nexus/content/repositories/NifiSnapshots/</url>
+        </repository>
         <repository>
             <id>apache-snapshots</id>
             <name>repository.apache.org snapshots</name>
@@ -170,6 +201,22 @@
                 <enabled>false</enabled>
             </snapshots>
         </repository>
+        <repository>
+            <id>tbds</id>
+            <url>https://tbdsrepo.cloud.tencent.com/repository/tbds/</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </releases>
+        </repository>
+        <repository>
+            <id>cloudera</id>
+            <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+        </repository>
     </repositories>
     <build>
         <directory>${basedir}/target</directory>
@@ -189,6 +236,8 @@
                                 <requireUpperBoundDeps>
                                     <excludes>
                                         <exclude>com.google.guava:guava</exclude>
+                                        <exclude>io.netty:netty-transport-native-unix-common</exclude>
+                                        <exclude>junit:junit</exclude>
                                     </excludes>
                                 </requireUpperBoundDeps>
                                 <DependencyConvergence />
@@ -242,6 +291,17 @@
 
                     <!-- applies to both release:prepare and :perform -->
                     <arguments>-DskipTests=true</arguments>
+                    <checkModificationExcludes>
+                        <checkModificationExclude>.project</checkModificationExclude>
+                        <checkModificationExclude>.settings</checkModificationExclude>
+                        <checkModificationExclude>.classpath</checkModificationExclude>
+                        <checkModificationExclude>.iml</checkModificationExclude>
+                        <checkModificationExclude>release.properties</checkModificationExclude>
+                        <checkModificationExclude>pom.xml.backup</checkModificationExclude>
+                        <checkModificationExclude>pom.xml.releaseBackup</checkModificationExclude>
+                        <checkModificationExclude>.svn</checkModificationExclude>
+                        <checkModificationExclude>.flattened-pom.xml</checkModificationExclude>
+                    </checkModificationExcludes>
                 </configuration>
             </plugin>
             <plugin>
@@ -293,8 +353,49 @@
                         <exclude>**/src/test/resources/org/janusgraph/hadoop/formats/edgelist/rdf/**</exclude>
                     </excludes>
                 </configuration>
-            </plugin>        
-
+            </plugin>
+            <!-- 一键更新子模块版本号 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+                <version>2.7</version>
+                <configuration>
+                    <generateBackupPoms>false</generateBackupPoms>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.2.2</version>
+                <configuration>
+                    <!--插件默认只会处理packaging属性为非pom的，如果要处理packaging为pom的，可将本属性值设置为true。-->
+                    <updatePomFile>true</updatePomFile>
+                    <!--推荐开源项目使用，会展开ciManagement、contributors、
+                    distributionManagement、inceptionYear、issueManagement、
+                    mailingLists、organization、prerequisites-->
+                    <flattenMode>oss</flattenMode>
+                    <!--由OS或者JDK的不同而触发的profile，可能根据环境的不同而产生不同的依赖，但是由属性等触发的profile，
+                    就不确定了，如果属性设置为true，profile中的依赖会直接写入生成的pom中，如果设置为false，
+                    所有的profile信息都会保留,默认是false。-->
+                    <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
@@ -405,7 +506,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-deploy-plugin</artifactId>
-                    <version>2.8.2</version>
+                    <version>2.7</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-jar-plugin</artifactId>
@@ -610,6 +711,36 @@
                 <version>${jackson2.version}</version>
             </dependency>
             <dependency>
+                <groupId>joda-time</groupId>
+                <artifactId>joda-time</artifactId>
+                <version>${joda.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.googlecode.concurrentlinkedhashmap</groupId>
+                <artifactId>concurrentlinkedhashmap-lru</artifactId>
+                <version>${concurrentlinkedhashmap.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr-runtime</artifactId>
+                <version>${antlr.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr</artifactId>
+                <version>${antlr.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr-master</artifactId>
+                <version>${antlr.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>antlr</groupId>
+                <artifactId>antlr</artifactId>
+                <version>${antlr2.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
                 <version>3.0.2</version>
@@ -714,7 +845,7 @@
             <dependency>
                 <artifactId>jboss-logging</artifactId>
                 <groupId>org.jboss.logging</groupId>
-                <version>3.4.1.Final</version>
+                <version>3.1.2.GA</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -859,7 +990,7 @@
                 -->
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>29.0-jre</version>
+                <version>11.0.2</version>
             </dependency>
             <dependency>
                 <groupId>commons-lang</groupId>
@@ -1030,7 +1161,7 @@
             <dependency>
                 <groupId>org.apache.ant</groupId>
                 <artifactId>ant</artifactId>
-                <version>1.10.8</version>
+                <version>1.10.7</version>
             </dependency>
             <dependency>
                 <groupId>javax.servlet</groupId>
@@ -1088,6 +1219,28 @@
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
                 <version>${easymock.version}</version>
+            </dependency>
+
+            <!--curator version-->
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-framework</artifactId>
+                <version>${curator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-recipes</artifactId>
+                <version>${curator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-test</artifactId>
+                <version>${curator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-client</artifactId>
+                <version>${curator.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -1150,6 +1303,7 @@
                                 <configuration>
                                     <!-- Quiet mode still shows warnings and errors -->
                                     <quiet>true</quiet>
+                                    <additionalparam>-Xdoclint:none</additionalparam>
                                 </configuration>
                             </execution>
                         </executions>

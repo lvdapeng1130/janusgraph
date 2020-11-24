@@ -176,6 +176,8 @@ public interface JanusGraphManagement extends JanusGraphConfiguration, SchemaMan
 
     void addIndexKey(final JanusGraphIndex index, final PropertyKey key, Parameter... parameters);
 
+    void addKGIndexKey(final JanusGraphIndex index, final PropertyKey key, Parameter... parameters);
+
     /**
      * Builder for {@link JanusGraphIndex}. Allows for the configuration of a graph index prior to its construction.
      */
@@ -231,6 +233,15 @@ public interface JanusGraphManagement extends JanusGraphConfiguration, SchemaMan
          * @return the created mixed {@link JanusGraphIndex}
          */
         JanusGraphIndex buildMixedIndex(String backingIndex);
+
+        /**
+         * Builds a mixed index according to the specification against the backend index with the given name (i.e.
+         * the name under which that index is configured in the graph configuration)
+         *
+         * @param backingIndex the name of the mixed index
+         * @return the created mixed {@link JanusGraphIndex}
+         */
+        JanusGraphIndex buildKGMixedIndex(String backingIndex);
 
     }
 

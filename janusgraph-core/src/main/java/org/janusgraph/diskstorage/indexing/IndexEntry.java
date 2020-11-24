@@ -15,16 +15,18 @@
 package org.janusgraph.diskstorage.indexing;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
 import org.janusgraph.diskstorage.EntryMetaData;
 import org.janusgraph.diskstorage.MetaAnnotatable;
 import org.janusgraph.diskstorage.MetaAnnotated;
-import org.apache.commons.lang.StringUtils;
 
+import java.util.Date;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * An index entry is a key-value pair (or field-value pair).
- *
+ * 索引条目是键值对（或字段-值对）
  * @author Matthias Broecheler (me@matthiasb.com)
  */
 
@@ -32,6 +34,12 @@ public class IndexEntry implements MetaAnnotated, MetaAnnotatable {
 
     public final String field;
     public final Object value;
+    private Date startDate;
+    private Date endDate;
+    private String role;
+    private Set<String> dsr;
+    private double[] geo;
+
 
     public IndexEntry(final String field, final Object value) {
         this(field, value, null);
@@ -75,4 +83,43 @@ public class IndexEntry implements MetaAnnotated, MetaAnnotatable {
         return metadata;
     }
 
+    public Date getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(Date startDate) {
+        this.startDate = startDate;
+    }
+
+    public Date getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public Set<String> getDsr() {
+        return dsr;
+    }
+
+    public void setDsr(Set<String> dsr) {
+        this.dsr = dsr;
+    }
+
+    public double[] getGeo() {
+        return geo;
+    }
+
+    public void setGeo(double[] geo) {
+        this.geo = geo;
+    }
 }

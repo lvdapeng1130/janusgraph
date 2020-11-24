@@ -46,6 +46,19 @@ public class IDManagementTest {
             IDManager.VertexIDType.PartitionedVertex, IDManager.VertexIDType.UnmodifiableVertex};
 
     @Test
+    public void testVertexID(){
+        long partition=0;
+        long count=1;
+        IDManager.VertexIDType userVertexType =IDManager.VertexIDType.NormalVertex;
+        IDManager eid = new IDManager(16);
+        long id = eid.getVertexID(count, partition,userVertexType);
+        assertTrue(eid.isUserVertexId(id));
+        assertTrue(userVertexType.is(id));
+        assertEquals(eid.getPartitionId(id), partition);
+        assertEquals(id, eid.getKeyID(eid.getKey(id)));
+    }
+
+    @Test
     public void EntityIDTest() {
         testEntityID(12, 2341, 1234123, 1235123);
         testEntityID(16, 64000, 582919, 583219);
@@ -83,7 +96,8 @@ public class IDManagementTest {
 
             for (IDManager.VertexIDType userVertexType : USER_VERTEX_TYPES) {
                 if (partitionBits==0 && userVertexType== IDManager.VertexIDType.PartitionedVertex) continue;
-                if (userVertexType== IDManager.VertexIDType.PartitionedVertex) partition=IDManager.PARTITIONED_VERTEX_PARTITION;
+                if (userVertexType== IDManager.VertexIDType.PartitionedVertex)
+                    partition=IDManager.PARTITIONED_VERTEX_PARTITION;
                 long id = eid.getVertexID(count, partition,userVertexType);
                 assertTrue(eid.isUserVertexId(id));
                 assertTrue(userVertexType.is(id));

@@ -17,20 +17,16 @@ package org.janusgraph.graphdb.database;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
+import org.apache.commons.lang.StringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.Order;
+import org.apache.tinkerpop.gremlin.structure.Property;
+import org.apache.tinkerpop.gremlin.structure.util.empty.EmptyProperty;
 import org.janusgraph.core.*;
+import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.schema.Parameter;
 import org.janusgraph.core.schema.SchemaStatus;
-import org.janusgraph.diskstorage.configuration.Configuration;
-import org.janusgraph.graphdb.database.serialize.InternalAttributeUtil;
-import org.janusgraph.graphdb.idmanagement.IDManager;
-import org.janusgraph.graphdb.internal.ElementCategory;
-import org.janusgraph.graphdb.internal.InternalRelation;
-import org.janusgraph.graphdb.internal.InternalRelationType;
-import org.janusgraph.graphdb.internal.InternalVertex;
-import org.janusgraph.graphdb.internal.OrderList;
-import org.janusgraph.graphdb.query.graph.MultiKeySliceQuery;
 import org.janusgraph.diskstorage.*;
+import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.indexing.*;
 import org.janusgraph.diskstorage.keycolumnvalue.KeySliceQuery;
 import org.janusgraph.diskstorage.util.BufferUtil;
@@ -39,18 +35,23 @@ import org.janusgraph.diskstorage.util.StaticArrayEntry;
 import org.janusgraph.graphdb.database.idhandling.VariableLong;
 import org.janusgraph.graphdb.database.management.ManagementSystem;
 import org.janusgraph.graphdb.database.serialize.DataOutput;
+import org.janusgraph.graphdb.database.serialize.InternalAttributeUtil;
 import org.janusgraph.graphdb.database.serialize.Serializer;
-import org.janusgraph.graphdb.query.graph.IndexQueryBuilder;
+import org.janusgraph.graphdb.idmanagement.IDManager;
+import org.janusgraph.graphdb.internal.*;
 import org.janusgraph.graphdb.query.JanusGraphPredicate;
-import org.janusgraph.graphdb.query.condition.*;
+import org.janusgraph.graphdb.query.condition.Condition;
+import org.janusgraph.graphdb.query.condition.ConditionUtil;
+import org.janusgraph.graphdb.query.condition.PredicateCondition;
+import org.janusgraph.graphdb.query.graph.IndexQueryBuilder;
 import org.janusgraph.graphdb.query.graph.JointIndexQuery;
+import org.janusgraph.graphdb.query.graph.MultiKeySliceQuery;
 import org.janusgraph.graphdb.query.index.IndexSelectionUtil;
 import org.janusgraph.graphdb.query.vertex.VertexCentricQueryBuilder;
 import org.janusgraph.graphdb.relations.RelationIdentifier;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.graphdb.types.*;
 import org.janusgraph.util.encoding.LongEncoding;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -284,7 +285,7 @@ public class IndexSerializer {
                 } else {
                     assert relation.valueOrNull(key)!=null;
                     if (((MixedIndexType)index).getField(key).getStatus()== SchemaStatus.DISABLED) continue;
-                    update = getMixedIndexUpdate(relation, key, relation.valueOrNull(key), (MixedIndexType) index, updateType);
+                    update = getMixedIndexUpdate(relation, null,key, relation.valueOrNull(key), (MixedIndexType) index, updateType);
                 }
                 if (ttl>0) update.setTTL(ttl);
                 updates.add(update);
@@ -330,7 +331,7 @@ public class IndexSerializer {
                     }
                 } else { //Update mixed indexes
                     if (((MixedIndexType)index).getField(p.propertyKey()).getStatus()== SchemaStatus.DISABLED) continue;
-                    final IndexUpdate update = getMixedIndexUpdate(vertex, p.propertyKey(), p.value(), (MixedIndexType) index, updateType);
+                    final IndexUpdate update = getMixedIndexUpdate(vertex,p, p.propertyKey(), p.value(), (MixedIndexType) index, updateType);
                     final int ttl = getIndexTTL(vertex,p.propertyKey());
                     if (ttl>0 && updateType== IndexUpdate.Type.ADD) update.setTTL(ttl);
                     updates.add(update);
@@ -340,9 +341,42 @@ public class IndexSerializer {
         return updates;
     }
 
-    private IndexUpdate<String,IndexEntry> getMixedIndexUpdate(JanusGraphElement element, PropertyKey key, Object value,
+    private IndexUpdate<String,IndexEntry> getMixedIndexUpdate(JanusGraphElement element,JanusGraphVertexProperty p, PropertyKey key, Object value,
                                                                MixedIndexType index, IndexUpdate.Type updateType)  {
-        return new IndexUpdate<>(index, updateType, element2String(element), new IndexEntry(key2Field(index.getField(key)), value), element);
+        IndexEntry indexEntry = new IndexEntry(key2Field(index.getField(key)), value);
+        if(p!=null){
+            Property<Object> startDatePrperty = p.property("startDate");
+            if(startDatePrperty!=null&&!(startDatePrperty instanceof EmptyProperty)){
+                Date startDate = (Date)startDatePrperty.value();
+                indexEntry.setStartDate(startDate);
+            }
+            Property<Object> endDateProperty = p.property("endDate");
+            if(endDateProperty!=null&&!(endDateProperty instanceof EmptyProperty)){
+                Date endDate = (Date)endDateProperty.value();
+                indexEntry.setEndDate(endDate);
+            }
+            Property<Object> geoProperty = p.property("geo");
+            if(geoProperty!=null&&!(geoProperty instanceof EmptyProperty)){
+                Geoshape geoshape = (Geoshape)geoProperty.value();
+                if(geoshape!=null&&geoshape.getPoint()!=null){
+                    Geoshape.Point point = geoshape.getPoint();
+                    indexEntry.setGeo(new double[]{point.getLongitude(),point.getLatitude()});
+                }
+            }
+            Property<Object> dsrProperty = p.property("dsr");
+            if(dsrProperty!=null&&!(dsrProperty instanceof EmptyProperty)){
+                String dsr = (String)dsrProperty.value();
+                if(StringUtils.isNotBlank(dsr)) {
+                    indexEntry.setDsr(Sets.newHashSet(dsr));
+                }
+            }
+            Property<Object> roleProperty = p.property("role");
+            if(roleProperty!=null&&!(roleProperty instanceof EmptyProperty)){
+                String role = (String)roleProperty.value();
+                indexEntry.setRole(role);
+            }
+        }
+        return new IndexUpdate<>(index, updateType, element2String(element), indexEntry, element);
     }
 
     public boolean reindexElement(JanusGraphElement element, MixedIndexType index, Map<String,Map<String,List<IndexEntry>>> documentsPerStore) {
@@ -661,7 +695,11 @@ public class IndexSerializer {
         final RawQuery rawQuery = new RawQuery(index.getStoreName(),queryStr,orders,query.getParameters());
         if (query.hasLimit()) rawQuery.setLimit(query.getLimit());
         rawQuery.setOffset(query.getOffset());
-        return backendTx.rawQuery(index.getBackingIndexName(), rawQuery).map(result ->  new RawQuery.Result(string2ElementId(result.getResult()), result.getScore()));
+        Stream<RawQuery.Result> stream= backendTx.rawQuery(index.getBackingIndexName(), rawQuery)
+            .map(result ->
+                new RawQuery.Result(string2ElementId(result.getResult()),
+                result.getScore()));
+        return stream;
     }
 
     public Long executeTotals(IndexQueryBuilder query, final ElementCategory resultType,

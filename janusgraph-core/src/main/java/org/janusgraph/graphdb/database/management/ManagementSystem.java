@@ -14,11 +14,13 @@
 
 package org.janusgraph.graphdb.database.management;
 
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.REGISTRATION_NS;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.REGISTRATION_TIME;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.ROOT_NS;
-import static org.janusgraph.graphdb.database.management.RelationTypeIndexWrapper.RELATION_INDEX_SEPARATOR;
-
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
+import org.apache.commons.lang.StringUtils;
+import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.apache.tinkerpop.gremlin.structure.Edge;
+import org.apache.tinkerpop.gremlin.structure.Element;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.*;
 import org.janusgraph.core.schema.*;
 import org.janusgraph.diskstorage.BackendException;
@@ -45,15 +47,6 @@ import org.janusgraph.graphdb.types.vertices.EdgeLabelVertex;
 import org.janusgraph.graphdb.types.vertices.JanusGraphSchemaVertex;
 import org.janusgraph.graphdb.types.vertices.PropertyKeyVertex;
 import org.janusgraph.graphdb.types.vertices.RelationTypeVertex;
-
-import org.apache.tinkerpop.gremlin.structure.Direction;
-import org.apache.tinkerpop.gremlin.structure.Edge;
-import org.apache.tinkerpop.gremlin.structure.Element;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,6 +60,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
+import static org.janusgraph.graphdb.database.management.RelationTypeIndexWrapper.RELATION_INDEX_SEPARATOR;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -660,6 +656,57 @@ public class ManagementSystem implements JanusGraphManagement {
         if (!key.isNew()) updateIndex(index, SchemaAction.REGISTER_INDEX);
     }
 
+    @Override
+    public void addKGIndexKey(final JanusGraphIndex index, final PropertyKey key, Parameter... parameters) {
+        Preconditions.checkArgument(index != null && key != null && index instanceof JanusGraphIndexWrapper
+                && !(key instanceof BaseKey), "Need to provide valid index and key");
+        if (parameters == null) parameters = new Parameter[0];
+        IndexType indexType = ((JanusGraphIndexWrapper) index).getBaseIndex();
+        Preconditions.checkArgument(indexType instanceof MixedIndexType, "Can only add keys to an external index, not %s", index.name());
+        Preconditions.checkArgument(indexType instanceof IndexTypeWrapper && key instanceof JanusGraphSchemaVertex
+                && ((IndexTypeWrapper) indexType).getSchemaBase() instanceof JanusGraphSchemaVertex);
+
+        JanusGraphSchemaVertex indexVertex = (JanusGraphSchemaVertex) ((IndexTypeWrapper) indexType).getSchemaBase();
+
+        for (IndexField field : indexType.getFieldKeys()) {
+            Preconditions.checkArgument(!field.getFieldKey().equals(key), "Key [%s] has already been added to index %s", key.name(), index.name());
+        }
+
+        //Assemble parameters
+        boolean addMappingParameter = !ParameterType.MAPPED_NAME.hasParameter(parameters);
+        Parameter[] extendedParas = new Parameter[parameters.length + 1 + (addMappingParameter ? 1 : 0)];
+        System.arraycopy(parameters, 0, extendedParas, 0, parameters.length);
+        int arrPosition = parameters.length;
+        if (addMappingParameter) {
+            extendedParas[arrPosition++] = ParameterType.MAPPED_NAME.getParameter(
+                graph.getIndexSerializer().getDefaultFieldName(key, parameters, indexType.getBackingIndexName()));
+        }
+        extendedParas[arrPosition] = ParameterType.STATUS.getParameter(SchemaStatus.ENABLED);
+
+        addSchemaEdge(indexVertex, key, TypeDefinitionCategory.INDEX_FIELD, extendedParas);
+        updateSchemaVertex(indexVertex);
+        indexType.resetCache();
+        //Check to see if the index supports this
+        if (!graph.getIndexSerializer().supports((MixedIndexType) indexType, ParameterIndexField.of(key, parameters))) {
+            throw new JanusGraphException("Could not register new index field '" + key.name() + "' with index backend as the data type, cardinality or parameter combination is not supported.");
+        }
+
+        try {
+            IndexSerializer.register((MixedIndexType) indexType, key, transaction.getTxHandle());
+        } catch (BackendException e) {
+            throw new JanusGraphException("Could not register new index field with index backend", e);
+        }
+
+        if (!indexVertex.isNew()) {
+            updatedTypes.add(indexVertex);
+        }
+        if (!key.isNew()){
+            if(key instanceof JanusGraphSchemaVertex) {
+                updatedTypes.add((JanusGraphSchemaVertex)key);
+            }
+        }
+    }
+
     private JanusGraphIndex createCompositeIndex(String indexName, ElementCategory elementCategory, boolean unique, JanusGraphSchemaType constraint, PropertyKey... keys) {
         checkIndexName(indexName);
         Preconditions.checkArgument(keys != null && keys.length > 0, "Need to provide keys to index [%s]", indexName);
@@ -768,6 +815,22 @@ public class ManagementSystem implements JanusGraphManagement {
             JanusGraphIndex index = createMixedIndex(indexName, elementCategory, constraint, backingIndex);
             for (Map.Entry<PropertyKey, Parameter[]> entry : keys.entrySet()) {
                 addIndexKey(index, entry.getKey(), entry.getValue());
+            }
+            return index;
+        }
+
+        @Override
+        public JanusGraphIndex buildKGMixedIndex(String backingIndex) {
+            Preconditions.checkArgument(StringUtils.isNotBlank(backingIndex), "Need to specify backing index name");
+            Preconditions.checkArgument(!unique, "An external index cannot be unique");
+
+            JanusGraphIndex index = createMixedIndex(indexName, elementCategory, constraint, backingIndex);
+            for (Map.Entry<PropertyKey, Parameter[]> entry : keys.entrySet()) {
+                addKGIndexKey(index, entry.getKey(), entry.getValue());
+            }
+            //集群节点中同步schema消息
+            if(updatedTypes!=null&&updatedTypes.size()>0) {
+                setUpdateTrigger(new GraphCacheEvictionCompleteTrigger(graph.getGraphName()));
             }
             return index;
         }

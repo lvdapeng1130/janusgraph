@@ -14,57 +14,53 @@
 
 package org.janusgraph.graphdb.configuration;
 
-import org.janusgraph.core.*;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import org.apache.commons.configuration.BaseConfiguration;
+import org.apache.commons.lang3.ClassUtils;
+import org.apache.tinkerpop.gremlin.structure.Graph;
+import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.core.schema.DefaultSchemaMaker;
-import org.janusgraph.diskstorage.configuration.Configuration;
+import org.janusgraph.core.schema.LoggingSchemaMaker;
+import org.janusgraph.diskstorage.Backend;
 import org.janusgraph.diskstorage.StandardIndexProvider;
 import org.janusgraph.diskstorage.StandardStoreManager;
+import org.janusgraph.diskstorage.configuration.*;
+import org.janusgraph.diskstorage.configuration.backend.CommonsConfiguration;
 import org.janusgraph.diskstorage.configuration.converter.ReadConfigurationConverter;
+import org.janusgraph.diskstorage.idmanagement.ConflictAvoidanceMode;
+import org.janusgraph.diskstorage.idmanagement.ConsistentKeyIDAuthority;
+import org.janusgraph.diskstorage.keycolumnvalue.StoreFeatures;
+import org.janusgraph.diskstorage.util.time.TimestampProvider;
+import org.janusgraph.diskstorage.util.time.TimestampProviders;
 import org.janusgraph.graphdb.configuration.converter.RegisteredAttributeClassesConverter;
+import org.janusgraph.graphdb.database.cache.MetricInstrumentedSchemaCache;
+import org.janusgraph.graphdb.database.cache.SchemaCache;
+import org.janusgraph.graphdb.database.cache.StandardSchemaCache;
+import org.janusgraph.graphdb.database.idassigner.VertexIDAssigner;
+import org.janusgraph.graphdb.database.serialize.Serializer;
+import org.janusgraph.graphdb.database.serialize.StandardSerializer;
 import org.janusgraph.graphdb.query.index.ApproximateIndexSelectionStrategy;
 import org.janusgraph.graphdb.query.index.BruteForceIndexSelectionStrategy;
 import org.janusgraph.graphdb.query.index.IndexSelectionStrategy;
 import org.janusgraph.graphdb.query.index.ThresholdBasedIndexSelectionStrategy;
-import org.janusgraph.core.schema.JanusGraphDefaultSchemaMaker;
-import org.janusgraph.core.schema.Tp3DefaultSchemaMaker;
-import org.janusgraph.core.schema.DisableDefaultSchemaMaker;
-import org.janusgraph.core.schema.IgnorePropertySchemaMaker;
+import org.janusgraph.graphdb.tinkerpop.JanusGraphDefaultSchemaMaker;
+import org.janusgraph.graphdb.tinkerpop.Tp3DefaultSchemaMaker;
+import org.janusgraph.graphdb.transaction.StandardTransactionBuilder;
+import org.janusgraph.graphdb.types.typemaker.DisableDefaultSchemaMaker;
 import org.janusgraph.util.StringUtils;
+import org.janusgraph.util.stats.MetricManager;
 import org.janusgraph.util.stats.NumberUtil;
-import org.janusgraph.diskstorage.util.time.*;
-import org.janusgraph.diskstorage.configuration.*;
-import org.janusgraph.diskstorage.configuration.backend.CommonsConfiguration;
-import org.janusgraph.diskstorage.idmanagement.ConflictAvoidanceMode;
-import org.janusgraph.diskstorage.idmanagement.ConsistentKeyIDAuthority;
-import org.janusgraph.diskstorage.keycolumnvalue.StoreFeatures;
-import org.janusgraph.graphdb.database.cache.MetricInstrumentedSchemaCache;
-import org.janusgraph.graphdb.database.cache.StandardSchemaCache;
-import org.janusgraph.graphdb.database.cache.SchemaCache;
-import org.janusgraph.graphdb.database.serialize.StandardSerializer;
 import org.janusgraph.util.system.ConfigurationUtil;
 import org.janusgraph.util.system.NetworkUtil;
-
-import org.apache.tinkerpop.gremlin.structure.Graph;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-
-import javax.annotation.Nullable;
-import javax.management.MBeanServerFactory;
-
-import org.apache.commons.configuration.*;
-import org.apache.commons.lang3.ClassUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import org.janusgraph.diskstorage.Backend;
-import org.janusgraph.graphdb.database.idassigner.VertexIDAssigner;
-import org.janusgraph.graphdb.database.serialize.Serializer;
-import org.janusgraph.graphdb.transaction.StandardTransactionBuilder;
-import org.janusgraph.util.stats.MetricManager;
+import javax.annotation.Nullable;
+import javax.management.MBeanServerFactory;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
 
 /**
  * Provides functionality to configure a {@link org.janusgraph.core.JanusGraph} INSTANCE.
@@ -179,6 +175,23 @@ public class GraphDatabaseConfiguration {
             "will throw an exception, refusing to start.",
             ConfigOption.Type.MASKABLE, Boolean.class, true);
 
+    public static final ConfigOption<String> JANUSGRAPH_ZOOKEEPER_URI = new ConfigOption<>(GRAPH_NS,"zookeeper-uri",
+        "zookeeper的地址",
+        ConfigOption.Type.GLOBAL_OFFLINE, String.class);
+    public static final ConfigOption<String> JANUSGRAPH_ZOOKEEPER_NAMESPACE = new ConfigOption<>(GRAPH_NS,"zookeeper-namespace",
+        "实现不同的Zookeeper业务之间的隔离，需要为每个业务分配一个独立的命名空间",
+        ConfigOption.Type.GLOBAL_OFFLINE, String.class,"trs-graph");
+
+    public static final ConfigOption<String> GRAPH_NODE = new ConfigOption<>(GRAPH_NS,"zookeeper-graph-node",
+        "每一个graph在zookeeper中的目录名称",
+        ConfigOption.Type.GLOBAL_OFFLINE, String.class);
+    public static final ConfigOption<Integer> ZOOKEEPER_SESSIONTIMEOUTMS = new ConfigOption<>(GRAPH_NS,"zookeeper-sessionTimeoutMs",
+        "zookeeper的sessionTimeoutMs时间",
+        ConfigOption.Type.MASKABLE, Integer.class,5000);
+    public static final ConfigOption<Integer> ZOOKEEPER_CONNECTIONTIMEOUTMS = new ConfigOption<>(GRAPH_NS,"zookeeper-connectionTimeoutMs",
+        "zookeeper的connectionTimeoutMs时间",
+        ConfigOption.Type.MASKABLE, Integer.class,5000);
+
     // ################ INSTANCE REGISTRATION (system) #######################
     // ##############################################################
 
@@ -291,9 +304,8 @@ public class GraphDatabaseConfiguration {
             "Configures the DefaultSchemaMaker to be used by this graph."
             + " Either one of the following shorthands can be used: <br>"
             + " - `default` (a blueprints compatible schema maker with MULTI edge labels and SINGLE property keys),<br>"
-            + " - `tp3` (same as default, but has LIST property keys),<br>"
             + " - `none` (automatic schema creation is disabled)<br>"
-            + " - `ignore-prop` (same as none, but simply ignore unknown properties rather than throw exceptions)<br>"
+            + " - `logging` (same as default, but with a log done when an automatic schema creation is done)<br>"
             + " - or to the full package and classname of a custom/third-party implementing the"
             + " interface `org.janusgraph.core.schema.DefaultSchemaMaker`",
             ConfigOption.Type.MASKABLE, "default", new Predicate<String>() {
@@ -313,17 +325,11 @@ public class GraphDatabaseConfiguration {
     private static final Map<String, DefaultSchemaMaker> PREREGISTERED_AUTO_TYPE = Collections.unmodifiableMap(
         new HashMap<String, DefaultSchemaMaker>(4){{
             put("none", DisableDefaultSchemaMaker.INSTANCE);
-            put("ignore-prop", IgnorePropertySchemaMaker.INSTANCE);
             put("default", JanusGraphDefaultSchemaMaker.INSTANCE);
             put("tp3", Tp3DefaultSchemaMaker.INSTANCE);
+            put("logging", LoggingSchemaMaker.DEFAULT_INSTANCE);
         }}
     );
-
-    public static final ConfigOption<Boolean> SCHEMA_MAKER_LOGGING = new ConfigOption<>(SCHEMA_NS, "logging",
-            "Controls whether logging is enabled for schema makers. This only takes effect if you set `schema.default` " +
-            "to `default` or `ignore-prop`. For `default` schema maker, warning messages will be logged before schema types " +
-            "are created automatically. For `ignore-prop` schema maker, warning messages will be logged before unknown properties " +
-            "are ignored.", ConfigOption.Type.MASKABLE, false);
 
     public static final ConfigOption<Boolean> SCHEMA_CONSTRAINTS = new ConfigOption<>(SCHEMA_NS, "constraints",
             "Configures the schema constraints to be used by this graph. If config 'schema.constraints' " +
@@ -1358,8 +1364,6 @@ public class GraphDatabaseConfiguration {
         else defaultSchemaMaker = ConfigurationUtil.instantiate(autoTypeMakerName);
         //Disable auto-type making when batch-loading is enabled since that may overwrite types without warning
         if (batchLoading) defaultSchemaMaker = DisableDefaultSchemaMaker.INSTANCE;
-
-        defaultSchemaMaker.enableLogging(configuration.get(SCHEMA_MAKER_LOGGING));
 
         hasDisabledSchemaConstraints = !configuration.get(SCHEMA_CONSTRAINTS);
 

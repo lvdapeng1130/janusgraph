@@ -14,31 +14,10 @@
 
 package org.janusgraph.olap;
 
-import org.janusgraph.core.Cardinality;
-import org.janusgraph.core.JanusGraphComputer;
-import org.janusgraph.core.JanusGraphTransaction;
-import org.janusgraph.core.JanusGraphVertex;
-import org.janusgraph.core.Multiplicity;
-import org.janusgraph.core.PropertyKey;
-import org.janusgraph.core.Transaction;
-import org.janusgraph.diskstorage.keycolumnvalue.scan.ScanJob;
-import org.janusgraph.diskstorage.keycolumnvalue.scan.ScanMetrics;
-import org.janusgraph.graphdb.JanusGraphBaseTest;
-import org.janusgraph.graphdb.olap.QueryContainer;
-import org.janusgraph.graphdb.olap.VertexJobConverter;
-import org.janusgraph.graphdb.olap.VertexScanJob;
-import org.janusgraph.graphdb.olap.computer.FulgoraGraphComputer;
-import org.janusgraph.graphdb.olap.job.GhostVertexRemover;
-
-import org.apache.tinkerpop.gremlin.process.computer.ComputerResult;
-import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;
-import org.apache.tinkerpop.gremlin.process.computer.KeyValue;
-import org.apache.tinkerpop.gremlin.process.computer.Memory;
-import org.apache.tinkerpop.gremlin.process.computer.MemoryComputeKey;
-import org.apache.tinkerpop.gremlin.process.computer.MessageCombiner;
-import org.apache.tinkerpop.gremlin.process.computer.MessageScope;
-import org.apache.tinkerpop.gremlin.process.computer.Messenger;
-import org.apache.tinkerpop.gremlin.process.computer.VertexComputeKey;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import org.apache.tinkerpop.gremlin.process.computer.*;
 import org.apache.tinkerpop.gremlin.process.computer.traversal.step.map.ConnectedComponent;
 import org.apache.tinkerpop.gremlin.process.computer.traversal.step.map.ShortestPath;
 import org.apache.tinkerpop.gremlin.process.computer.util.StaticMapReduce;
@@ -52,36 +31,27 @@ import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
+import org.janusgraph.core.*;
+import org.janusgraph.diskstorage.keycolumnvalue.scan.ScanJob;
+import org.janusgraph.diskstorage.keycolumnvalue.scan.ScanMetrics;
+import org.janusgraph.graphdb.JanusGraphBaseTest;
+import org.janusgraph.graphdb.olap.QueryContainer;
+import org.janusgraph.graphdb.olap.VertexJobConverter;
+import org.janusgraph.graphdb.olap.VertexScanJob;
+import org.janusgraph.graphdb.olap.computer.FulgoraGraphComputer;
+import org.janusgraph.graphdb.olap.job.GhostVertexRemover;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.janusgraph.testutil.JanusGraphAssert.assertCount;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -282,13 +252,13 @@ public abstract class OLAPTest extends JanusGraphBaseTest {
 
     @Test
     public void degreeCounting() throws Exception {
-        int numV = 200;
+        int numV = 3;
         int numE = generateRandomGraph(numV);
         clopen();
 
         final JanusGraphComputer computer = graph.compute();
         computer.resultMode(JanusGraphComputer.ResultMode.NONE);
-        computer.workers(4);
+        computer.workers(1);
         computer.program(new DegreeCounter());
         computer.mapReduce(new DegreeMapper());
         ComputerResult result = computer.submit().get();

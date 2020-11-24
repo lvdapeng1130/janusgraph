@@ -14,31 +14,27 @@
 
 package org.janusgraph.graphdb.idmanagement;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.time.Duration;
-import java.util.List;
-import java.util.Random;
-
+import org.easymock.EasyMock;
+import org.easymock.IMocksControl;
+import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.IDAuthority;
 import org.janusgraph.diskstorage.IDBlock;
 import org.janusgraph.diskstorage.TemporaryBackendException;
 import org.janusgraph.diskstorage.keycolumnvalue.KeyRange;
 import org.janusgraph.graphdb.database.idassigner.IDBlockSizer;
-import org.easymock.EasyMock;
-import org.easymock.IMocksControl;
-import org.junit.jupiter.api.Test;
-
-import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.graphdb.database.idassigner.IDPoolExhaustedException;
 import org.janusgraph.graphdb.database.idassigner.StandardIDPool;
 import org.janusgraph.util.datastructures.IntHashSet;
 import org.janusgraph.util.datastructures.IntSet;
+import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.Random;
+
+import static org.easymock.EasyMock.expect;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -65,6 +61,13 @@ public class IDPoolTest {
     public void testStandardIDPool3() throws InterruptedException {
         final MockIDAuthority idAuthority = new MockIDAuthority(200);
         testIDPoolWith(partitionID -> new StandardIDPool(idAuthority, partitionID, partitionID, Integer.MAX_VALUE, Duration.ofMillis(2000), 0.2), 10, 20, 100000);
+    }
+
+    @Test
+    public void testStandardIDPool4() throws InterruptedException {
+        final MockIDAuthority idAuthority = new MockIDAuthority(10, Integer.MAX_VALUE, 2000);
+        testIDPoolWith(partitionID -> new StandardIDPool(idAuthority, partitionID, partitionID, Integer.MAX_VALUE, Duration.ofMillis(400000), 0.1),
+            10, 2, 100);
     }
 
     private void testIDPoolWith(IDPoolFactory poolFactory, final int numPartitions,

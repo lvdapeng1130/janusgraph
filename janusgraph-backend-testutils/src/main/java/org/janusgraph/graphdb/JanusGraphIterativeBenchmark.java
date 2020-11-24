@@ -15,7 +15,6 @@
 package org.janusgraph.graphdb;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterators;
 import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.JanusGraphEdge;
@@ -29,6 +28,7 @@ import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.RecordIterator;
 import org.janusgraph.diskstorage.util.StandardBaseTransactionConfig;
 import org.janusgraph.diskstorage.util.time.TimestampProviders;
+import org.janusgraph.graphdb.database.idassigner.Stopwatch;
 import org.janusgraph.graphdb.types.StandardEdgeLabelMaker;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 

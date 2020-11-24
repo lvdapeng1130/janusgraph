@@ -15,11 +15,11 @@
 package org.janusgraph.diskstorage.log.kcvs;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.ListMultimap;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.diskstorage.*;
-import org.janusgraph.diskstorage.util.time.*;
-
 import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.keycolumnvalue.*;
@@ -27,13 +27,10 @@ import org.janusgraph.diskstorage.log.*;
 import org.janusgraph.diskstorage.log.util.FutureMessage;
 import org.janusgraph.diskstorage.log.util.ProcessMessageJob;
 import org.janusgraph.diskstorage.util.*;
-
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
-
+import org.janusgraph.diskstorage.util.time.TimestampProvider;
 import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
 import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.util.system.BackgroundThread;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +40,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
 
 /**
  * Implementation of {@link Log} wrapped around a {@link KeyColumnValueStore}. Each message is written as a column-value pair ({@link Entry})
@@ -347,6 +346,9 @@ public class KCVSLog implements Log, BackendOperation.TransactionalProvider {
         Instant rawTimestamp = msg.getTimestamp();
         Preconditions.checkArgument(rawTimestamp.isAfter(Instant.EPOCH));
         out.putLong(times.getTime(rawTimestamp));
+        if(log.isDebugEnabled()) {
+            log.debug(String.format("write:rawTimestamp->%s,senderID->%s", times.getTime(rawTimestamp), manager.senderId));
+        }
         out.writeObjectNotNull(manager.senderId);
         out.putLong(numMsgCounter.incrementAndGet());
         final int valuePos = out.getPosition();
@@ -415,7 +417,11 @@ public class KCVSLog implements Log, BackendOperation.TransactionalProvider {
         KCVSMessage msg = new KCVSMessage(content,timestamp,manager.senderId);
         FutureMessage futureMessage = new FutureMessage(msg);
 
-        StaticBuffer key=getLogKey(partitionId,(int)(numBucketCounter.incrementAndGet()%numBuckets),getTimeSlice(timestamp));
+        int bucketid=(int)(numBucketCounter.incrementAndGet()%numBuckets);
+        StaticBuffer key=getLogKey(partitionId,bucketid,getTimeSlice(timestamp));
+        if(log.isDebugEnabled()) {
+            log.debug(String.format("write:partitionId->%s,bucketid->%s,timeslice->%s", partitionId, bucketid, getTimeSlice(timestamp)));
+        }
         MessageEnvelope envelope = new MessageEnvelope(futureMessage,key,writeMessage(msg));
 
         if (persistor!=null) {
@@ -678,7 +684,6 @@ public class KCVSLog implements Log, BackendOperation.TransactionalProvider {
                 setReadMarker();
 
                 final int timeslice = getTimeSlice(messageTimeStart);
-
                 // Setup time range we're about to query
                 final Instant currentTime = times.getTime();
                 // Can only read messages stamped up to the following time without violating design constraints
@@ -718,11 +723,20 @@ public class KCVSLog implements Log, BackendOperation.TransactionalProvider {
                 Preconditions.checkState(messageTimeEnd.compareTo(currentTime) <= 0, "Attempting to read messages from the future: messageTimeEnd=% vs currentTime=%s", messageTimeEnd, currentTime);
 
                 StaticBuffer logKey = getLogKey(partitionId,bucketId,timeslice);
+                if(log.isDebugEnabled()) {
+                    log.debug(String.format("read:partitionId->%s,bucketId->%s,timeslice->%s", partitionId, bucketId, timeslice));
+                }
                 KeySliceQuery query = new KeySliceQuery(logKey, BufferUtil.getLongBuffer(times.getTime(messageTimeStart)), BufferUtil.getLongBuffer(times.getTime(messageTimeEnd)));
+                if(log.isDebugEnabled()) {
+                    log.debug(String.format("read:messageTimeStart->%s,messageTimeEnd->%s,maxReadTime->%s", times.getTime(messageTimeStart), times.getTime(messageTimeEnd), maxReadTime));
+                }
                 query.setLimit(maxReadMsg);
                 log.trace("Converted MessagePuller time window to {}", query);
 
                 List<Entry> entries= BackendOperation.execute(getOperation(query),KCVSLog.this,times,maxReadTime);
+                if(log.isDebugEnabled()) {
+                    log.debug(String.format("read:entries size->%s", entries.size()));
+                }
                 prepareMessageProcessing(entries);
                 if (entries.size()>=maxReadMsg) {
                     /*Read another set of messages to ensure that we have exhausted all messages to the next timestamp.
