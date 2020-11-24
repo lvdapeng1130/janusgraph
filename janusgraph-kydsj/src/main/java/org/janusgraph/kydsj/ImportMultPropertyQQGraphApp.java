@@ -15,7 +15,10 @@ import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.Cardinality;
+import org.janusgraph.core.PropertyKey;
+import org.janusgraph.core.RelationType;
 import org.janusgraph.core.attribute.Geoshape;
+import org.janusgraph.core.schema.ConsistencyModifier;
 import org.janusgraph.core.schema.JanusGraphIndex;
 import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.core.schema.Mapping;
@@ -65,8 +68,10 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
     protected void createProperties(final JanusGraphManagement management) {
         management.makePropertyKey("name").dataType(String.class).cardinality(Cardinality.SET).make();
         management.makePropertyKey("grade").dataType(Integer.class).make();
-        management.makePropertyKey("qq_num").dataType(String.class).cardinality(Cardinality.SINGLE).make();
-        management.makePropertyKey("qqqun_num").dataType(String.class).cardinality(Cardinality.SINGLE).make();
+        PropertyKey qq_num = management.makePropertyKey("qq_num").dataType(String.class).cardinality(Cardinality.SINGLE).make();
+        PropertyKey qqqun_num = management.makePropertyKey("qqqun_num").dataType(String.class).cardinality(Cardinality.SINGLE).make();
+        management.setConsistency(qq_num, ConsistencyModifier.LOCK);
+        management.setConsistency(qqqun_num,ConsistencyModifier.LOCK);
         management.makePropertyKey("text").dataType(String.class).cardinality(Cardinality.SINGLE).make();
         management.makePropertyKey("time").dataType(Date.class).make();
         management.makePropertyKey("age1").dataType(Integer.class).make();
@@ -97,9 +102,11 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
     @Override
     protected void createCompositeIndexes(final JanusGraphManagement management) {
         JanusGraphIndex janusGraphIndex = management.buildIndex("qqqun_num_composite_index", Vertex.class)
-            .addKey(management.getPropertyKey("qqqun_num")).buildCompositeIndex();
+            .addKey(management.getPropertyKey("qqqun_num")).unique().buildCompositeIndex();
+        management.setConsistency(janusGraphIndex,ConsistencyModifier.LOCK);
         JanusGraphIndex janusGraphIndex1 = management.buildIndex("qq_num_composite_index", Vertex.class)
-            .addKey(management.getPropertyKey("qq_num")).buildCompositeIndex();
+            .addKey(management.getPropertyKey("qq_num")).unique().buildCompositeIndex();
+        management.setConsistency(janusGraphIndex1,ConsistencyModifier.LOCK);
         //关系索引
         JanusGraphIndex edgeIndex = management.buildIndex("eget_link_tid", Edge.class)
             .addKey(management.getPropertyKey("linktid")).buildCompositeIndex();
@@ -119,6 +126,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             //对象的混合索引
             JanusGraphIndex janusGraphIndex = management.buildIndex("object_qq", Vertex.class)
                 .addKey(management.getPropertyKey("name"))
+                .addKey(management.getPropertyKey("tid"))
                 .addKey(management.getPropertyKey("grade"))
                 .addKey(management.getPropertyKey("qq_num"))
                 .addKey(management.getPropertyKey("time"))
@@ -127,6 +135,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                 .buildMixedIndex(mixedIndexConfigName);
             management.buildIndex("object_qqqun", Vertex.class)
                 .addKey(management.getPropertyKey("name"))
+                .addKey(management.getPropertyKey("tid"))
                 .addKey(management.getPropertyKey("time"))
                 .addKey(management.getPropertyKey("qqqun_num"))
                 .addKey(management.getPropertyKey("text"))
@@ -218,7 +227,8 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
             .build();
         retryer.call(() -> {
             Stopwatch started = Stopwatch.createStarted();
-            try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction().consistencyChecks(false)
+            try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
+                .consistencyChecks(true)
                 .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
                 //StandardJanusGraphTx threadedTx = (StandardJanusGraphTx)this.getJanusGraph().tx().createThreadedTx();
                 for (QQData qqData : qqDataList) {
@@ -242,6 +252,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                                 "endDate", new Date(),
                                 "dsr", "程序导入",
                                 "geo", Geoshape.point(22.22, 113.1122))
+                            .property("tid", qqData.getQq_num())
                             .property("time", qqData.getQq_date(),
                                 "startDate", new Date(),
                                 "endDate", new Date(),
@@ -268,6 +279,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                                 "endDate", new Date(),
                                 "dsr", "程序导入",
                                 "geo", Geoshape.point(22.22, 113.1122))
+                            .property("tid", qqData.getQq_num())
                             .property("time", qqData.getQq_date(),
                                 "startDate", new Date(),
                                 "endDate", new Date(),
@@ -299,6 +311,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                                 "endDate", new Date(),
                                 "dsr", "程序导入",
                                 "geo", Geoshape.point(22.22, 113.1122))
+                            .property("tid", qqData.getQqqun_num())
                             .property("text", qqData.getText(),
                                 "startDate", new Date(),
                                 "endDate", new Date(),
@@ -321,6 +334,7 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
                                 "endDate", new Date(),
                                 "dsr", "程序导入",
                                 "geo", Geoshape.point(22.22, 113.1122))
+                            .property("tid", qqData.getQqqun_num())
                             .property("text", qqData.getText(),
                                 "startDate", new Date(),
                                 "endDate", new Date(),
@@ -347,10 +361,10 @@ public class  ImportMultPropertyQQGraphApp extends JanusGraphApp {
     public void createSchema() {
         final JanusGraphManagement management = getJanusGraph().openManagement();
         try {
-           /* if (management.getRelationTypes(RelationType.class).iterator().hasNext()) {
+            if (management.getRelationTypes(RelationType.class).iterator().hasNext()) {
                 management.rollback();
                 return;
-            }*/
+            }
             LOGGER.info("creating schema");
             createProperties(management);
             createVertexLabels(management);
