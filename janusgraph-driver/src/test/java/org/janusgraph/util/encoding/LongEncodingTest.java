@@ -29,6 +29,13 @@ import static org.junit.jupiter.api.Assertions.*;
 public class LongEncodingTest {
 
     @Test
+    public void test(){
+        System.out.println(LongEncoding.decode("ohvc"));
+        System.out.println(LongEncoding.decode("37s"));
+        System.out.println(LongEncoding.decode("368"));
+    }
+
+    @Test
     public void testEncoding() {
         final int number = 1000000;
         final Random r = new Random();

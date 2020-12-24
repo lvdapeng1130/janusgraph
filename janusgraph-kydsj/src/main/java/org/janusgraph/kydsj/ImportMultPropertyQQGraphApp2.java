@@ -12,6 +12,7 @@ import lombok.Data;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.structure.Edge;
+import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.RelationType;
@@ -325,9 +326,15 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
             }
             LOGGER.info("reading elements");
             //long vid = LongEncoding.decode("2v1msg");
-            //List<Vertex> v = g.V(vid).toList();
-            List<Vertex> vertices1 = g.V().hasLabel("object_qqqun")
-                .has("qqqun_num", P.eq("620")).toList();
+            List<Map<Object, Object>> maps1 = g.V(LongEncoding.decode("39k")).elementMap().toList();
+            List<Map<Object, Object>> maps2 = g.V(4168).elementMap().toList();
+            List<Map<Object, Object>> maps3 = g.V(4112).elementMap().toList();
+            List<Vertex> vertices1 = g.V().hasLabel("eidentity_qqqun")
+                .has("tid", P.eq("c2c9ffd5315c1c1c3d45205884e56b2c")).toList();
+            List<Vertex> vertices2 = g.V().hasLabel("eidentity_qqqun")
+                .has("eidentity_qqqun", P.eq("4275025")).toList();
+            List<? extends Property<Object>> properties = g.V().hasLabel("eidentity_qqqun")
+                .has("eidentity_qqqun", P.eq("4275025")).properties().toList();
 
             List<Comparable> comparables = g.V().hasLabel("object_qqqun")
                 .has("qqqun_num", P.eq("620")).id().min().toList();
@@ -373,12 +380,12 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
            // }
             printSchema();
             // build the graph structure
-            createElements();
+            //createElements();
             //createElementsMediaDataAndNote();
             //appendOtherDsr();
             // read to see they were made
             //hideVertex();
-            //readElements();
+            readElements();
             //indexQuery();
 
             /*for (int i = 0; i < 3; i++) {

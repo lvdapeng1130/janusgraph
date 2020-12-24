@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.janusgraph</groupId>
         <artifactId>janusgraph-hbase-parent</artifactId>
-        <version>KGYY_R3.01_20201027-hbase2</version>
+        <version>KGYY_R3.01_20201218-hbase1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>janusgraph-hbase-core</artifactId>
@@ -134,7 +134,7 @@
                             <artifactId>junit</artifactId>
                         </exclusion>
                     </exclusions>
-                    <!--<optional>true</optional>-->
+                    <optional>true</optional>
                 </dependency>
                 <dependency>
                     <groupId>org.apache.hbase</groupId>
@@ -146,7 +146,7 @@
                             <artifactId>junit</artifactId>
                         </exclusion>
                     </exclusions>
-                    <!--<optional>true</optional>-->
+                    <optional>true</optional>
                 </dependency>
             </dependencies>
         </profile>

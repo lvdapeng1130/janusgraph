@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.janusgraph</groupId>
         <artifactId>janusgraph</artifactId>
-        <version>KGYY_R3.01_20201027-hbase2</version>
+        <version>KGYY_R3.01_20201218-hbase1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -62,7 +62,7 @@
             <artifactId>hbase-shaded-mapreduce</artifactId>
             <version>${hbase2.version}</version>
         </dependency>-->
-      <dependency>
+     <!-- <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-client</artifactId>
             <version>${hbase2.version}</version>
@@ -71,7 +71,7 @@
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-mapreduce</artifactId>
             <version>${hbase2.version}</version>
-        </dependency>
+        </dependency>-->
         <dependency>
             <groupId>org.apache.tinkerpop</groupId>
             <artifactId>gremlin-server</artifactId>
@@ -81,7 +81,7 @@
             <artifactId>gremlin-groovy</artifactId>
         </dependency>
 
-       <!-- <dependency>
+        <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-shaded-client</artifactId>
             <version>${hbase1.version}</version>
@@ -92,7 +92,8 @@
             <artifactId>hbase-shaded-server</artifactId>
             <version>${hbase1.version}</version>
             <optional>true</optional>
-        </dependency>-->
+        </dependency>
+
         <dependency>
             <groupId>org.apache.tinkerpop</groupId>
             <artifactId>gremlin-core</artifactId>
