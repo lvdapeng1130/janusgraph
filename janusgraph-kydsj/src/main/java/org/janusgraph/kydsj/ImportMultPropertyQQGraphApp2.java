@@ -12,11 +12,11 @@ import lombok.Data;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.structure.Edge;
-import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.RelationType;
 import org.janusgraph.core.attribute.Geoshape;
+import org.janusgraph.core.attribute.Text;
 import org.janusgraph.core.schema.JanusGraphIndex;
 import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
@@ -324,10 +324,19 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
             if (g == null) {
                 return;
             }
+            List<Vertex> vertices22 = g.V().hasLabel("eidentity_qqqun").has("eidentity_qqqun", P.eq("13095066")).toList();
             LOGGER.info("reading elements");
-            //long vid = LongEncoding.decode("2v1msg");
-            List<Map<Object, Object>> maps1 = g.V(LongEncoding.decode("39k")).elementMap().toList();
-            List<Map<Object, Object>> maps2 = g.V(4168).elementMap().toList();
+            //long vid = LongEncoding.decode("2v1msg");254144,122936
+            List<Edge> edges = g.E(LongEncoding.decode("2q0o")).toList();
+            List<Vertex> vertices3 = g.V(385224).toList();
+            List<Map<Object, Object>> maps = g.V(LongEncoding.decode("898o")).elementMap().toList();
+            List<Map<Object, Object>> maps1 = g.V(LongEncoding.decode("68eo")).elementMap().toList();
+
+            List<Map<Object, Object>> maps12 = g.V(LongEncoding.decode("co8")).out().elementMap().toList();
+            List<Map<Object, Object>> maps13 = g.V(254144).in().elementMap().toList();
+            List<Map<Object, Object>> maps14 = g.V().hasLabel("eidentity_qqqun")
+                .has("eidentity_qqqun", Text.textContains("13095066")).elementMap().toList();
+           /* List<Map<Object, Object>> maps2 = g.V(4168).elementMap().toList();
             List<Map<Object, Object>> maps3 = g.V(4112).elementMap().toList();
             List<Vertex> vertices1 = g.V().hasLabel("eidentity_qqqun")
                 .has("tid", P.eq("c2c9ffd5315c1c1c3d45205884e56b2c")).toList();
@@ -339,7 +348,7 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
             List<Comparable> comparables = g.V().hasLabel("object_qqqun")
                 .has("qqqun_num", P.eq("620")).id().min().toList();
 
-            List<Vertex> vertices = g.V(comparables.get(0)).toList();
+            List<Vertex> vertices = g.V(comparables.get(0)).toList();*/
 
             /*List<Vertex> vertices = g.V().hasLabel("object_qqqun").has("qqqun_num", P.eq("1")).toList();
             List<Vertex> vertices1 = g.V().hasLabel("object_qqqun")
@@ -398,17 +407,45 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
                 updateElements();
                 // read to see the changes were made
                 readElements();
-            }
+            }*/
 
             // delete some graph elements
             deleteElements();
             // read to see the changes were made
-            readElements();*/
+            readElements();
 
             // close the graph
             closeGraph();
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void deleteElements() {
+        try {
+            if (g == null) {
+                return;
+            }
+            LOGGER.info("deleting elements");
+            List<Vertex> vertices = g.V().hasLabel("eidentity_qqqun").has("eidentity_qqqun", Text.textContains("13095066")).toList();
+            for(Vertex vertex:vertices){
+                Object id = vertex.id();
+                String label = vertex.label();
+                if(label.equals("vertex")){
+                    vertex.remove();
+                }
+            }
+            // note that this will succeed whether or not pluto exists
+            //g.V().has("name", "pluto").drop().iterate();
+            if (supportsTransactions) {
+                g.tx().commit();
+            }
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage(), e);
+            if (supportsTransactions) {
+                g.tx().rollback();
+            }
         }
     }
 

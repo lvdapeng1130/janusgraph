@@ -15,12 +15,9 @@
 package org.janusgraph.hadoop.formats.util.input.current;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.tinkerpop.gremlin.structure.Direction;
-import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.core.JanusGraphVertex;
 import org.janusgraph.diskstorage.StaticBuffer;
-import org.janusgraph.diskstorage.configuration.BasicConfiguration;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.janusgraph.graphdb.database.RelationReader;
@@ -29,14 +26,13 @@ import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.internal.JanusGraphSchemaCategory;
 import org.janusgraph.graphdb.query.QueryUtil;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
+import org.janusgraph.graphdb.transaction.StandardTransactionBuilder;
 import org.janusgraph.graphdb.types.TypeDefinitionCategory;
 import org.janusgraph.graphdb.types.TypeDefinitionMap;
 import org.janusgraph.graphdb.types.TypeInspector;
 import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.graphdb.types.system.BaseLabel;
 import org.janusgraph.graphdb.types.vertices.JanusGraphSchemaVertex;
-import org.janusgraph.hadoop.config.JanusGraphHadoopConfiguration;
-import org.janusgraph.hadoop.config.ModifiableHadoopConfiguration;
 import org.janusgraph.hadoop.formats.util.input.JanusGraphHadoopSetup;
 import org.janusgraph.hadoop.formats.util.input.SystemTypeInspector;
 
@@ -48,15 +44,24 @@ public class KGJanusGraphHadoopSetupImpl implements JanusGraphHadoopSetup {
     private static final StaticBuffer DEFAULT_COLUMN = StaticArrayBuffer.of(new byte[0]);
     public static final SliceQuery DEFAULT_SLICE_QUERY = new SliceQuery(DEFAULT_COLUMN, DEFAULT_COLUMN);
 
-    private final ModifiableHadoopConfiguration scanConf;
     private final StandardJanusGraph graph;
     private final StandardJanusGraphTx tx;
 
-    public KGJanusGraphHadoopSetupImpl(final Configuration config) {
-        scanConf = ModifiableHadoopConfiguration.of(JanusGraphHadoopConfiguration.MAPRED_NS, config);
-        BasicConfiguration bc = scanConf.getJanusGraphConf();
-        graph = (StandardJanusGraph) JanusGraphFactory.open(bc);
-        tx = (StandardJanusGraphTx)graph.buildTransaction().readOnly().vertexCacheSize(200).start();
+    public KGJanusGraphHadoopSetupImpl(StandardJanusGraph janusGraph) {
+        graph = janusGraph;
+        tx = (StandardJanusGraphTx)graph.buildTransaction().readOnly()
+        .dirtyVertexSize(0)
+        .checkInternalVertexExistence(false)
+        .vertexCacheSize(0).start();
+    }
+
+    public StandardJanusGraphTx startTransaction(StandardJanusGraph graph) {
+        StandardTransactionBuilder txb = graph.buildTransaction().readOnly();
+        txb.setPreloadedData(true);
+        txb.checkInternalVertexExistence(false);
+        txb.dirtyVertexSize(0);
+        txb.vertexCacheSize(0);
+        return (StandardJanusGraphTx)txb.start();
     }
 
     @Override
@@ -119,13 +124,18 @@ public class KGJanusGraphHadoopSetupImpl implements JanusGraphHadoopSetup {
     }
 
     @Override
+    /**
+     * 只关闭事务，而不关闭graph图库连接
+     */
     public void close() {
         tx.rollback();
-        graph.close();
+        if (tx.isOpen()) {
+            tx.close();
+        }
     }
 
     @Override
     public boolean getFilterPartitionedVertices() {
-        return scanConf.get(JanusGraphHadoopConfiguration.FILTER_PARTITIONED_VERTICES, true);
+        return true;
     }
 }

@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.janusgraph</groupId>
     <artifactId>janusgraph</artifactId>
-    <version>KGYY_R3.01_20201218-hbase1</version>
+    <version>KGYY_R3.01_20201228-hbase1</version>
     <packaging>pom</packaging>
     <prerequisites>
         <maven>2.2.1</maven>

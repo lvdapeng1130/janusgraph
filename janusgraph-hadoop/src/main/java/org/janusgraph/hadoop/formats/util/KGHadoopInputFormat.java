@@ -37,7 +37,7 @@ public abstract class KGHadoopInputFormat extends InputFormat<NullWritable, Vert
 
     static {
         refCounter = new HadoopInputFormat.RefCountedCloseable<>((conf) ->
-            new JanusGraphVertexDeserializer(new KGJanusGraphHadoopSetupImpl(conf)));
+            new JanusGraphVertexDeserializer(new KGJanusGraphHadoopSetupImpl(null)));
     }
 
     public KGHadoopInputFormat(InputFormat<StaticBuffer, Iterable<Entry>> inputFormat) {
