@@ -1,16 +1,5 @@
 package org.janusgraph.kydsj;
 
-import com.google.common.collect.Lists;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.apache.curator.test.TestingServer;
-import org.apache.curator.utils.CloseableUtils;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.util.List;
-
 public class LeaderSelectorDemo {
 
     protected static String PATH = "/francis/leader";
@@ -18,7 +7,7 @@ public class LeaderSelectorDemo {
 
 
     public static void main(String[] args) throws Exception {
-        List<CuratorFramework> clients = Lists.newArrayList();
+       /* List<CuratorFramework> clients = Lists.newArrayList();
         List<LeaderSelectorAdapter> examples = Lists.newArrayList();
         TestingServer server = new TestingServer();
         try {
@@ -42,6 +31,6 @@ public class LeaderSelectorDemo {
                 CloseableUtils.closeQuietly(client);
             }
             CloseableUtils.closeQuietly(server);
-        }
+        }*/
     }
 }

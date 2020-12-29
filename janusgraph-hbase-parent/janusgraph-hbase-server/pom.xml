@@ -14,21 +14,6 @@
         <top.level.basedir>${basedir}/../..</top.level.basedir>
     </properties>
     
-    <dependencies>
-        <dependency>
-            <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-server</artifactId>
-            <version>${hbase.server.version}</version>
-            <optional>true</optional>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.commons</groupId>
-                    <artifactId>commons-compress</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-    </dependencies>
-    
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -123,6 +108,20 @@
             <properties>
                 <hbase.server.version>${hbase1.version}</hbase.server.version>
             </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.hbase</groupId>
+                    <artifactId>hbase-server</artifactId>
+                    <version>${hbase.server.version}</version>
+                    <optional>true</optional>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.apache.commons</groupId>
+                            <artifactId>commons-compress</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
         </profile>
         <profile>
             <id>hbase2</id>
@@ -134,6 +133,20 @@
             <properties>
                 <hbase.server.version>${hbase2.version}</hbase.server.version>
             </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.hbase</groupId>
+                    <artifactId>hbase-server</artifactId>
+                    <version>${hbase.server.version}</version>
+                    <optional>true</optional>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.apache.commons</groupId>
+                            <artifactId>commons-compress</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
         </profile>
     </profiles>
 </project>

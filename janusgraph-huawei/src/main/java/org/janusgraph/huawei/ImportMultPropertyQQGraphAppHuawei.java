@@ -1,4 +1,4 @@
-package org.janusgraph.kydsj;
+package org.janusgraph.huawei;
 
 import com.github.rholder.retry.Retryer;
 import com.github.rholder.retry.RetryerBuilder;
@@ -35,9 +35,9 @@ import java.util.concurrent.TimeUnit;
  * @time: 2020/7/20 13:42
  * @jira:
  */
-public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ImportMultPropertyQQGraphApp2.class);
-    public ImportMultPropertyQQGraphApp2(String fileName) {
+public class ImportMultPropertyQQGraphAppHuawei extends JanusGraphApp {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportMultPropertyQQGraphAppHuawei.class);
+    public ImportMultPropertyQQGraphAppHuawei(String fileName) {
         super(fileName);
     }
 
@@ -456,7 +456,7 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
     public static void main(String[] args) throws Exception {
         final String fileName = (args != null && args.length > 0) ? args[0] : null;
         final boolean drop = (args != null && args.length > 1) && "drop".equalsIgnoreCase(args[1]);
-        final ImportMultPropertyQQGraphApp2 app = new ImportMultPropertyQQGraphApp2(fileName);
+        final ImportMultPropertyQQGraphAppHuawei app = new ImportMultPropertyQQGraphAppHuawei(fileName);
         if (drop) {
             app.openGraph();
             app.dropGraph();

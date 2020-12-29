@@ -158,6 +158,7 @@
         <module>janusgraph-examples</module>
         <module>janusgraph-kydsj</module>
         <module>janusgraph-spark</module>
+        <module>janusgraph-huawei</module>
     </modules>
     <repositories>
         <repository>
@@ -1242,6 +1243,68 @@
                 <artifactId>curator-client</artifactId>
                 <version>${curator.version}</version>
             </dependency>
+
+            <!--hadoop -->
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-client</artifactId>
+                <version>${hadoop2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-annotations</artifactId>
+                <version>${hadoop2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-yarn-server-web-proxy</artifactId>
+                <version>${hadoop2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-yarn-server-common</artifactId>
+                <version>${hadoop2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-yarn-client</artifactId>
+                <version>${hadoop2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-auth</artifactId>
+                <version>${hadoop2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-common</artifactId>
+                <version>${hadoop2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-hdfs</artifactId>
+                <version>${hadoop2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-mapreduce-client-core</artifactId>
+                <version>${hadoop2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-yarn-api</artifactId>
+                <version>${hadoop2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-mapreduce-client-shuffle</artifactId>
+                <version>${hadoop2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-yarn-common</artifactId>
+                <version>${hadoop2.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -1266,7 +1329,17 @@
     </dependencies>
 
     <profiles>
-
+        <profile>
+            <id>huawei</id>
+            <properties>
+                <zookeeper.version>3.5.1</zookeeper.version>
+                <hadoop2.version>3.1.1</hadoop2.version>
+                <spark.version>2.3.2</spark.version>
+                <hbase1.version>1.3.1</hbase1.version>
+                <hbase.server.version>1.3.1</hbase.server.version>
+                <elasticsearch.version>6.7.1</elasticsearch.version>
+            </properties>
+        </profile>
         <profile>
             <id>janusgraph-release</id>
             <!--
@@ -1341,13 +1414,11 @@
 
         <profile>
             <id>hadoop2</id>
-
-            <activation>
+          <!--  <activation>
                 <property>
                     <name>!hadoop.profile</name>
                 </property>
-            </activation>
-
+            </activation>-->
             <dependencyManagement>
                 <dependencies>
                     <dependency>
