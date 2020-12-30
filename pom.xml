@@ -1414,11 +1414,11 @@
 
         <profile>
             <id>hadoop2</id>
-          <!--  <activation>
+            <activation>
                 <property>
                     <name>!hadoop.profile</name>
                 </property>
-            </activation>-->
+            </activation>
             <dependencyManagement>
                 <dependencies>
                     <dependency>
