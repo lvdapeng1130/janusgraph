@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.janusgraph</groupId>
         <artifactId>janusgraph</artifactId>
-        <version>KGYY_R3.01_20201228-hbase1</version>
+        <version>KGYY_R3.01_20201230-hbase1</version>
     </parent>
 
     <artifactId>janusgraph-cql</artifactId>
@@ -21,6 +21,9 @@
         <test.excluded.groups>MEMORY_TESTS,PERFORMANCE_TESTS,BRITTLE_TESTS</test.excluded.groups>
         <top.level.basedir>${basedir}/..</top.level.basedir>
         <test.docker.version.cassandra3>3.11.4</test.docker.version.cassandra3>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
 
     <dependencies>

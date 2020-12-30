@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.janusgraph</groupId>
         <artifactId>janusgraph</artifactId>
-        <version>KGYY_R3.01_20201228-hbase1</version>
+        <version>KGYY_R3.01_20201230-hbase1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>janusgraph-berkeleyje</artifactId>

@@ -5,7 +5,7 @@
     <parent>
         <artifactId>janusgraph</artifactId>
         <groupId>org.janusgraph</groupId>
-        <version>KGYY_R3.01_20201228-hbase1</version>
+        <version>KGYY_R3.01_20201230-hbase1</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
