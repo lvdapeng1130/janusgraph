@@ -157,7 +157,7 @@ public class ImportMultPropertyQQGraphAppHuawei extends JanusGraphApp {
             for(int t=0;t<100;t++) {
                 Future<Integer> submit = pool.submit(() -> {
                     //int threadTotal = 1000000;
-                    int threadTotal = 10000;
+                    int threadTotal = 1000;
                     List<QQData> qqDataList=new ArrayList<>();
                     for (int i = 0; i < threadTotal; i++) {
                         int qqqun_num = new Random().nextInt(1000);
@@ -387,17 +387,17 @@ public class ImportMultPropertyQQGraphAppHuawei extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-            if (supportsSchema) {
+           /* if (supportsSchema) {
                 createSchema();
-            }
+            }*/
             printSchema();
             // build the graph structure
-            //createElements();
+            createElements();
             //createElementsMediaDataAndNote();
             //appendOtherDsr();
             // read to see they were made
             //hideVertex();
-            readElements();
+            //readElements();
             //indexQuery();
 
             /*for (int i = 0; i < 3; i++) {
