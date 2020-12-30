@@ -14,8 +14,6 @@
 
 package org.janusgraph.diskstorage.hbase;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -23,6 +21,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.io.compress.Compression;
+
+import java.io.IOException;
 
 public class HBaseCompat1_0 implements HBaseCompat {
 
@@ -40,6 +40,11 @@ public class HBaseCompat1_0 implements HBaseCompat {
     @Override
     public ConnectionMask createConnection(Configuration conf) throws IOException
     {
+        return new HConnection1_0(ConnectionFactory.createConnection(conf));
+    }
+
+    @Override
+    public ConnectionMask createConnection(Configuration conf, String kerberosPrincipal, String kerberosKeytab) throws IOException {
         return new HConnection1_0(ConnectionFactory.createConnection(conf));
     }
 

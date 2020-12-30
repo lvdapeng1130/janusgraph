@@ -14,12 +14,12 @@
 
 package org.janusgraph.diskstorage.hbase;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
+
+import java.io.IOException;
 
 public interface HBaseCompat {
 
@@ -53,6 +53,8 @@ public interface HBaseCompat {
     HTableDescriptor newTableDescriptor(String tableName);
 
     ConnectionMask createConnection(Configuration conf) throws IOException;
+
+    ConnectionMask createConnection(Configuration conf,String kerberosPrincipal,String kerberosKeytab) throws IOException, InterruptedException;
 
     void addColumnFamilyToTableDescriptor(HTableDescriptor tableDescriptor, HColumnDescriptor columnDescriptor);
 

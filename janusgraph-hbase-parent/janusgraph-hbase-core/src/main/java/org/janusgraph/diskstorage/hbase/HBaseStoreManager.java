@@ -21,6 +21,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -40,11 +41,13 @@ import org.janusgraph.diskstorage.util.time.TimestampProviders;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
 import org.janusgraph.hadoop.HBaseHadoopStoreManager;
+import org.janusgraph.hadoop.kerberos.SecurityUtil;
 import org.janusgraph.util.system.IOUtils;
 import org.janusgraph.util.system.NetworkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -213,6 +216,15 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
     public static final ConfigNamespace HBASE_CONFIGURATION_NAMESPACE =
             new ConfigNamespace(HBASE_NS, "ext", "Overrides for hbase-{site,default}.xml options", true);
 
+    public static final ConfigOption<String> KERBEROSPRINCIPAL =
+        new ConfigOption<>(HBASE_NS, "kerberosPrincipal",
+            "kerberos的用户",
+            ConfigOption.Type.MASKABLE, String.class);
+
+    public static final ConfigOption<String> KERBEROSKEYTAB =
+        new ConfigOption<>(HBASE_NS, "kerberosKeytab",
+            "kerberos的keytab密钥",
+            ConfigOption.Type.MASKABLE, String.class);
     private static final StaticBuffer FOUR_ZERO_BYTES = BufferUtil.zeroBuffer(4);
 
     // Immutable instance fields
@@ -226,6 +238,8 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
     private final boolean skipSchemaCheck;
     private final boolean isCreateAttachmentTable;
     private final String attachmentSuffix;
+    private final String kerberosPrincipal;
+    private final String kerberosKeytab;
     private final HBaseCompat compat;
     // Cached return value of getDeployment() as requesting it can be expensive.
     private Deployment deployment = null;
@@ -253,6 +267,8 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         this.skipSchemaCheck = config.get(SKIP_SCHEMA_CHECK);
         final String compatClass = config.has(COMPAT_CLASS) ? config.get(COMPAT_CLASS) : null;
         this.compat = HBaseCompatLoader.getCompat(compatClass);
+        this.kerberosPrincipal=config.has(KERBEROSPRINCIPAL)?config.get(KERBEROSPRINCIPAL):null;
+        this.kerberosKeytab=config.has(KERBEROSKEYTAB)?config.get(KERBEROSKEYTAB):null;
 
         /*
          * Specifying both region count options is permitted but may be
@@ -269,7 +285,8 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
          * applies the contents of hbase-site.xml.
          */
         hconf = HBaseConfiguration.create();
-
+        //加载连接hbase的配置文件
+        this.loadHbaseConfig();
         // Copy a subset of our commons config into a Hadoop config
         int keysLoaded=0;
         Map<String,Object> configSub = config.getSubset(HBASE_CONFIGURATION_NAMESPACE);
@@ -304,8 +321,12 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
 
         try {
             //this.cnx = HConnectionManager.createConnection(hconf);
-            this.cnx = compat.createConnection(hconf);
-        } catch (IOException e) {
+            if (SecurityUtil.isSecurityEnabled(hconf)) {
+                this.cnx = compat.createConnection(hconf,kerberosPrincipal,kerberosKeytab);
+            }else {
+                this.cnx = compat.createConnection(hconf);
+            }
+        } catch (IOException | InterruptedException e) {
             throw new PermanentBackendException(e);
         }
 
@@ -321,6 +342,23 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         logger.debug("End of HBase config key=value pairs");
 
         openStores = new ConcurrentHashMap<>();
+    }
+
+    private void loadHbaseConfig(){
+        //加载hbase-site.xml文件。
+        this.loadConfig("core-site.xml");
+        this.loadConfig("hdfs-site.xml");
+        this.loadConfig("hbase-site.xml");
+    }
+
+    private void loadConfig(String fileName) {
+        String userdir = System.getProperty("user.dir") + File.separator + "conf" + File.separator;
+        String filePath=userdir + fileName;
+        File file=new File(filePath);
+        if(file.exists()){
+            logger.info("加载配置文件->"+filePath);
+            hconf.addResource(new Path(filePath), false);
+        }
     }
 
     public static BiMap<String, String> createShortCfMap(Configuration config) {

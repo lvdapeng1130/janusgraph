@@ -387,9 +387,9 @@ public class ImportMultPropertyQQGraphAppHuawei extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-            //if (supportsSchema) {
-                //createSchema();
-           // }
+            if (supportsSchema) {
+                createSchema();
+            }
             printSchema();
             // build the graph structure
             //createElements();
@@ -413,9 +413,9 @@ public class ImportMultPropertyQQGraphAppHuawei extends JanusGraphApp {
             }*/
 
             // delete some graph elements
-            deleteElements();
+           // deleteElements();
             // read to see the changes were made
-            readElements();
+            //readElements();
 
             // close the graph
             closeGraph();
