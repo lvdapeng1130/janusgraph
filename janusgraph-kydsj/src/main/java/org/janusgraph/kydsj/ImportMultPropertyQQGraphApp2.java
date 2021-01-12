@@ -13,22 +13,22 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.RelationType;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.attribute.Text;
 import org.janusgraph.core.schema.JanusGraphIndex;
 import org.janusgraph.core.schema.JanusGraphManagement;
+import org.janusgraph.graphdb.database.StandardJanusGraph;
+import org.janusgraph.graphdb.database.idassigner.placement.PropertyPlacementStrategy;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.util.encoding.LongEncoding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * @author: ldp
@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
     private static final Logger LOGGER = LoggerFactory.getLogger(ImportMultPropertyQQGraphApp2.class);
+    String qq_qunn="3091231";
     public ImportMultPropertyQQGraphApp2(String fileName) {
         super(fileName);
     }
@@ -147,17 +148,17 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
     /**
      * Adds the vertices, edges, and properties to the graph.
      */
-    public void createElements() {
+    public void createElements(String qq_qunn,int p,int size) {
         try {
             LOGGER.info("多线程程序写入大量qq和qq群信息");
             Stopwatch started = Stopwatch.createStarted();
-            ExecutorService pool = Executors.newFixedThreadPool(10,
+            ExecutorService pool = Executors.newFixedThreadPool(p,
                 new ThreadFactoryBuilder().setDaemon(true).setNameFormat("import-data-%d").build());//定义线程数
             List<Future<Integer>> futures= Lists.newArrayList();
-            for(int t=0;t<100;t++) {
+            for(int t=0;t<p;t++) {
                 Future<Integer> submit = pool.submit(() -> {
                     //int threadTotal = 1000000;
-                    int threadTotal = 10000;
+                    int threadTotal = size;
                     List<QQData> qqDataList=new ArrayList<>();
                     for (int i = 0; i < threadTotal; i++) {
                         int qqqun_num = new Random().nextInt(1000);
@@ -168,7 +169,8 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
                             .qq_date(new Date())
                             .qq_title(RandomStringUtils.randomAlphanumeric(30))
                             .qqqun_date(new Date())
-                            .qqqun_num(qqqun_num+"")
+                            //.qqqun_num(qqqun_num+"")
+                            .qqqun_num(qq_qunn)
                             //.qqqun_num(RandomStringUtils.randomAlphanumeric(11))
                             .qqqun_title(String.format("插入的qq群号是%s的QQ群",qqqun_num))
                             .text("我是qq群的说明"+qqqun_num)
@@ -315,19 +317,83 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
         LOGGER.info(printSchemaStr);
         management.rollback();
     }
-
+    public long readOneId(String qq_qunn){
+        /*List<Vertex> vertices4 = g.V().hasLabel("object_qqqun")
+            .has("qqqun_num", qq_qunn).limit(1).toList();
+        Vertex v = vertices4.get(0);
+        long minId = Long.parseLong(v.id().toString());
+        return minId;*/
+        StandardJanusGraph janusGraph=(StandardJanusGraph)this.getJanusGraph();
+        Integer limit = janusGraph.getConfiguration().getConfiguration().get(PropertyPlacementStrategy.CONCURRENT_PARTITIONS);
+        List<Comparable> comparables = g.V().hasLabel("eidentity_qqqun")
+            .has("eidentity_qqqun", qq_qunn).limit(limit).id().min().toList();
+        long minId = Long.parseLong(comparables.get(0).toString());
+        return minId;
+    }
     /**
      * Runs some traversal queries to get data from the graph.
      */
+    public void readId() throws ExecutionException, InterruptedException {
+        if (g == null) {
+            return;
+        }
+        List<Comparable> comparables = g.V().hasLabel("object_qqqun")
+            .has("qqqun_num", qq_qunn).limit(100).id().min().toList();
+        List<Vertex> vertices4 = g.V().hasLabel("object_qqqun")
+            .has("qqqun_num", qq_qunn).limit(1).toList();
+        Vertex v = vertices4.get(0);
+        long minId= Long.parseLong(v.id().toString());
+        boolean isEqual=minId==269492232;
+        LOGGER.info(String.format("期望值%s,当前查询值%s,查询的id值和期望值是否相等%s",269492232,minId,isEqual));
+       /* System.out.println(minId);
+        ExecutorService pool = Executors.newFixedThreadPool(10,
+            new ThreadFactoryBuilder().setDaemon(true).setNameFormat("selected-%d").build());//定义线程数
+        List<Future<Boolean>> futures= Lists.newArrayList();
+        for(int t=0;t<100;t++) {
+            Future<Boolean> submit = pool.submit(() -> {
+                boolean chanage=false;
+                for(int i=0;i<1000;i++){
+                    List<Vertex> vertices = g.V().hasLabel("object_qqqun")
+                        .has("qqqun_num", qq_qunn).limit(1).toList();
+                    Vertex v1 = vertices.get(0);
+                    long cid= Long.parseLong(v1.id().toString());
+                    if(minId!=cid){
+                        System.out.println(cid);
+                        chanage=true;
+                        break;
+                    }
+                }
+                LOGGER.info(String.format("线程%s,期望值%s,查询的id值是否变化%s",Thread.currentThread().getName(),minId,chanage));
+                return chanage;
+            });
+            futures.add(submit);
+        }
+        for(Future<Boolean> future:futures){
+            future.get();
+        }*/
+
+    }
     public void readElements() {
         try {
             if (g == null) {
                 return;
             }
-            List<Vertex> vertices1 = g.V(147623944).toList();
-            List<Vertex> vertices2 = g.V(174600240).toList();
-            List<Vertex> vertices = g.V().hasLabel("eidentity_qqqun").has("tid", "f689500d5db598900517be12c685ac6b").toList();
-            List<Vertex> vertices22 = g.V().hasLabel("eidentity_qqqun").has("eidentity_qqqun", P.eq("13095066")).toList();
+            Vertex next = g.V(LongEncoding.decode("47xts4w")).next();
+            Iterator<VertexProperty<Object>> ozfk_bqdj = next.properties("eidentity_qq");
+            List<Vertex> vertices4 = g.V().hasLabel("object_qqqun")
+                .has("qqqun_num", "308").limit(1).toList();
+            List<Vertex> vertices = g.V().hasLabel("object_qqqun").has("qqqun_num", "308").toList();
+            boolean isMin=true;
+            Vertex v = vertices4.get(0);
+            long minId= Long.parseLong(v.id().toString());
+            for(Vertex vertex:vertices){
+                long crid = Long.parseLong(vertex.id().toString());
+                if(crid<minId){
+                    isMin=false;
+                    minId=crid;
+                }
+            }
+            List<Vertex> vertices22 = g.V().hasLabel("object_qqqun").has("eidentity_qqqun", P.eq("13095066")).toList();
             LOGGER.info("reading elements");
             //long vid = LongEncoding.decode("2v1msg");254144,122936
             List<Edge> edges = g.E(LongEncoding.decode("2q0o")).toList();
@@ -387,17 +453,27 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-            //if (supportsSchema) {
-                //createSchema();
-           // }
+            /*if (supportsSchema) {
+                createSchema();
+            }*/
             printSchema();
-            // build the graph structure
-            //createElements();
+           /* for(int i=0;i<10000;i++){
+                qq_qunn=UUID.randomUUID().toString();
+                createElements(qq_qunn,1,1);
+                long startMinId = readOneId(qq_qunn);
+                createElements(qq_qunn,10,10);
+                long endMinID = readOneId(qq_qunn);
+                if(endMinID>startMinId){
+                    LOGGER.info(String.format("对比------>qqqun->%s,开始%s,结束%s",qq_qunn, startMinId, endMinID));
+                    break;
+                }
+            }*/
             //createElementsMediaDataAndNote();
             //appendOtherDsr();
             // read to see they were made
             //hideVertex();
-            readElements();
+            readOneId("32971642");
+            //readId();
             //indexQuery();
 
             /*for (int i = 0; i < 3; i++) {
@@ -413,9 +489,9 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
             }*/
 
             // delete some graph elements
-            deleteElements();
+            //deleteElements();
             // read to see the changes were made
-            readElements();
+            //readElements();
 
             // close the graph
             closeGraph();
