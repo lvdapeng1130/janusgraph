@@ -324,9 +324,10 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
         long minId = Long.parseLong(v.id().toString());
         return minId;*/
         StandardJanusGraph janusGraph=(StandardJanusGraph)this.getJanusGraph();
+        List<Vertex> vertices = g.V(LongEncoding.decode("4te34")).toList();
         Integer limit = janusGraph.getConfiguration().getConfiguration().get(PropertyPlacementStrategy.CONCURRENT_PARTITIONS);
         List<Comparable> comparables = g.V().hasLabel("eidentity_qqqun")
-            .has("eidentity_qqqun", qq_qunn).limit(limit).id().min().toList();
+            .has("tid", "479f19e73589ed75ebd825a786137c80").limit(limit).id().min().toList();
         long minId = Long.parseLong(comparables.get(0).toString());
         return minId;
     }
