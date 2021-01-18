@@ -33,6 +33,8 @@ public class IDHandler {
 
     public static final StaticBuffer MIN_KEY = BufferUtil.getLongBuffer(0);
     public static final StaticBuffer MAX_KEY = BufferUtil.getLongBuffer(-1);
+    private static final byte BIT_MASK = 127;
+    private static final byte STOP_MASK = -128;
 
     public enum DirectionID {
 
@@ -114,12 +116,12 @@ public class IDHandler {
      * @param dirID
      */
     public static void writeRelationType(DataOutput out, String relationTypeId, DirectionID dirID, boolean invisible) {
-        String strippedId = IDManager.stripEntireRelationTypePadding(relationTypeId) + dirID.getDirectionInt();
+        String strippedId = IDManager.stripEntireRelationTypePadding(relationTypeId);
+        int directionInt = dirID.getDirectionInt();
         int prefix = dirID.getPrefix(invisible, IDManager.isSystemRelationTypeId(relationTypeId));
-        //String newId=prefix+strippedId;
         VariableLong.writePositive(out,prefix);
-
         out.writeObjectNotNull(strippedId);
+        VariableLong.writePositive(out,directionInt);
     }
 
     public static StaticBuffer getRelationType(String relationTypeId, DirectionID dirID, boolean invisible) {
@@ -131,12 +133,12 @@ public class IDHandler {
 
     public static RelationTypeParse readRelationType(ReadBuffer in) {
         int relationType = (int)VariableLong.readPositive(in);
-        String id=BufferUtil.getSerializer().readObjectNotNull(in,String.class);
+        String typeId=BufferUtil.getSerializer().readObjectNotNull(in,String.class);
+        int direction=(int)VariableLong.readPositive(in);
         //int relationType=Integer.parseInt(id.charAt(0)+"");
-        int direction = Integer.parseInt(id.charAt(id.length() - 1)+"");
+        //int direction = Integer.parseInt(id.charAt(id.length() - 1)+"");
 
         DirectionID dirID = DirectionID.getDirectionID(relationType & 1, direction & 1);
-        String typeId = id.substring(0,id.length() - 1);
         boolean isSystemType = (relationType>>1)==0;
 
         if (dirID == DirectionID.PROPERTY_DIR)
@@ -169,15 +171,6 @@ public class IDHandler {
     }
 
     private static StaticBuffer getPrefixed(int prefix) {
-        assert prefix < (1 << PREFIX_BIT_LEN) && prefix >= 0;
-        byte[] arr = new byte[1];
-        arr[0] = (byte) (prefix << (Byte.SIZE - PREFIX_BIT_LEN));
-        return new StaticArrayBuffer(arr);
-    }
-
-    private static final byte BIT_MASK = 127;
-    private static final byte STOP_MASK = -128;
-    private static StaticBuffer getPrefixedNew(int prefix) {
         byte b = (byte) ((prefix) & BIT_MASK);
         b = (byte) (b | STOP_MASK);
         byte[] arr = new byte[1];
@@ -205,10 +198,9 @@ public class IDHandler {
         }
         end++;
         assert end > start;
-        StaticBuffer prefixed = new StaticArrayBuffer(getPrefixedNew(start));
-        StaticBuffer prefixed1 = new StaticArrayBuffer(getPrefixedNew(end));
-        return new StaticBuffer[]{prefixed, prefixed1};
-        //return new StaticBuffer[]{getPrefixed(start), getPrefixed(end)};
+        StaticBuffer startBuffer = new StaticArrayBuffer(getPrefixed(start));
+        StaticBuffer endBuffer = new StaticArrayBuffer(getPrefixed(end));
+        return new StaticBuffer[]{startBuffer, endBuffer};
     }
 
 }
