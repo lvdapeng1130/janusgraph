@@ -97,6 +97,8 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
      */
     @Override
     protected void createCompositeIndexes(final JanusGraphManagement management) {
+        JanusGraphIndex tidJanusGraphIndex = management.buildIndex("tid_composite_index", Vertex.class)
+            .addKey(management.getPropertyKey("tid")).buildCompositeIndex();
         JanusGraphIndex janusGraphIndex = management.buildIndex("qqqun_num_composite_index", Vertex.class)
             .addKey(management.getPropertyKey("qqqun_num")).buildCompositeIndex();
         JanusGraphIndex janusGraphIndex1 = management.buildIndex("qq_num_composite_index", Vertex.class)
@@ -464,7 +466,7 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
                 createSchema();
             }
             printSchema();
-            createElements(qq_qunn,1,1);
+            createElements(qq_qunn,10,100);
            /* for(int i=0;i<10000;i++){
                 qq_qunn=UUID.randomUUID().toString();
                 createElements(qq_qunn,1,1);

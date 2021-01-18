@@ -55,8 +55,8 @@ public abstract class SystemTypeManager {
             ADDITIONAL_RESERVED_NAMES = Collections.unmodifiableSet(
                 Stream.of("key", "vertex", "edge", "element", "property", "label").collect(Collectors.toSet()));
         }
-        assert SYSTEM_TYPES_BY_ID.size()==17;
-        assert SYSTEM_TYPES_BY_NAME.size()==17;
+        assert SYSTEM_TYPES_BY_ID.size()==19;
+        assert SYSTEM_TYPES_BY_NAME.size()==19;
     }
 
     public static SystemRelationType getSystemTypeById(String id) {
