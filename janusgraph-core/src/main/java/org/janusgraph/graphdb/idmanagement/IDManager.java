@@ -524,7 +524,7 @@ public class IDManager {
         long partition = (vertexId>>>USERVERTEX_PADDING_BITWIDTH) & (partitionIDBound-1);
         assert partition>=0;*/
         //long partition=Math.abs(vertexId.hashCode())%partitionIDBound;
-        long partition=Math.abs(vertexId.hashCode())%10;
+        long partition=Math.abs(vertexId.hashCode())%partitionIDBound;
         return partition;
     }
 
@@ -590,7 +590,7 @@ public class IDManager {
         }
         assert result>=0 && result<partitionIDBound;
         return result;*/
-        long partition=Math.abs(id.hashCode())%10;
+        long partition=Math.abs(id.hashCode())%partitionIDBound;
         return partition;
     }
 
