@@ -23,7 +23,7 @@ import org.apache.tinkerpop.gremlin.structure.Direction;
  */
 public interface SchemaSource {
 
-    long longId();
+    String longId();
 
     String name();
 

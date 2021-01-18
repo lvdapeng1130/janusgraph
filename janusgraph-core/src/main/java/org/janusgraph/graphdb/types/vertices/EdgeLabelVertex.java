@@ -27,7 +27,7 @@ import java.util.stream.StreamSupport;
 
 public class EdgeLabelVertex extends RelationTypeVertex implements EdgeLabel {
 
-    public EdgeLabelVertex(StandardJanusGraphTx tx, long id, byte lifecycle) {
+    public EdgeLabelVertex(StandardJanusGraphTx tx, String id, byte lifecycle) {
         super(tx, id, lifecycle);
     }
 

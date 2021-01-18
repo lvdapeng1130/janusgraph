@@ -84,7 +84,7 @@ public abstract class BaseVertexCentricQueryBuilder<Q extends BaseVertexQuery<Q>
 
     protected abstract Q getThis();
 
-    protected abstract JanusGraphVertex getVertex(long vertexId);
+    protected abstract JanusGraphVertex getVertex(String vertexId);
 
 
     /* ---------------------------------------------------------------
@@ -106,8 +106,8 @@ public abstract class BaseVertexCentricQueryBuilder<Q extends BaseVertexQuery<Q>
         //Treat special cases
         if (type.equals(ImplicitKey.ADJACENT_ID.name())) {
             Preconditions.checkArgument(rel == Cmp.EQUAL, "Only equality constraints are supported for %s", type);
-            long vertexId = ElementUtils.getVertexId(value);
-            Preconditions.checkArgument(vertexId > 0, "Expected valid vertex id: %s", value);
+            String vertexId = ElementUtils.getVertexId(value);
+            Preconditions.checkArgument(StringUtils.isNotBlank(vertexId), "Expected valid vertex id: %s", value);
             return adjacent(getVertex(vertexId));
         } else if (type.equals(ImplicitKey.ID.name())) {
             RelationIdentifier rid = ElementUtils.getEdgeId(value);

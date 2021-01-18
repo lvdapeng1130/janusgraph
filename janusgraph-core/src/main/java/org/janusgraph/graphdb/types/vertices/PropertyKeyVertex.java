@@ -22,7 +22,7 @@ import org.apache.tinkerpop.gremlin.structure.Direction;
 
 public class PropertyKeyVertex extends RelationTypeVertex implements PropertyKey {
 
-    public PropertyKeyVertex(StandardJanusGraphTx tx, long id, byte lifecycle) {
+    public PropertyKeyVertex(StandardJanusGraphTx tx, String id, byte lifecycle) {
         super(tx, id, lifecycle);
     }
 

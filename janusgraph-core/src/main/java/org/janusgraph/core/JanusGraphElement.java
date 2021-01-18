@@ -71,7 +71,7 @@ public interface JanusGraphElement extends Element, Idfiable, Removable {
      * @return Unique long id
      */
     @Override
-    long longId();
+    String longId();
 
     /**
      * Checks whether this entity has a unique identifier.

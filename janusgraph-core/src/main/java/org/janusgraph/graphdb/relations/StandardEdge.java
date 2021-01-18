@@ -15,6 +15,7 @@
 package org.janusgraph.graphdb.relations;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
 import org.janusgraph.core.EdgeLabel;
 import org.janusgraph.core.PropertyKey;
 import org.janusgraph.graphdb.internal.ElementLifeCycle;
@@ -35,10 +36,10 @@ public class StandardEdge extends AbstractEdge implements StandardRelation, Reas
     private static final Map<PropertyKey, Object> EMPTY_PROPERTIES = Collections.emptyMap();
 
     private byte lifecycle;
-    private long previousID = 0;
+    private String previousID;
     private volatile Map<PropertyKey, Object> properties = EMPTY_PROPERTIES;
 
-    public StandardEdge(long id, EdgeLabel label, InternalVertex start, InternalVertex end, byte lifecycle) {
+    public StandardEdge(String id, EdgeLabel label, InternalVertex start, InternalVertex end, byte lifecycle) {
         super(id, label, start, end);
         this.lifecycle = lifecycle;
     }
@@ -46,14 +47,13 @@ public class StandardEdge extends AbstractEdge implements StandardRelation, Reas
     //############## SAME CODE AS StandardProperty #############################
 
     @Override
-    public long getPreviousID() {
+    public String getPreviousID() {
         return previousID;
     }
 
     @Override
-    public void setPreviousID(long previousID) {
-        Preconditions.checkArgument(previousID > 0);
-        Preconditions.checkArgument(this.previousID == 0);
+    public void setPreviousID(String previousID) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(previousID));
         this.previousID = previousID;
     }
 

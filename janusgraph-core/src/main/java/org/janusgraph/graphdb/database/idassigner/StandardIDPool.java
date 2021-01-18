@@ -190,7 +190,7 @@ public class StandardIDPool implements IDPool {
     }
 
     @Override
-    public synchronized long nextID() {
+    public synchronized String nextID() {
         assert currentIndex <= currentBlock.numIds();
 
         if (currentIndex == currentBlock.numIds()) {
@@ -209,7 +209,7 @@ public class StandardIDPool implements IDPool {
         currentIndex++;
         if (returnId >= idUpperBound) throw new IDPoolExhaustedException("Reached id upper bound of " + idUpperBound);
         log.trace("partition({})-namespace({}) Returned id: {}", partition, idNamespace, returnId);
-        return returnId;
+        return returnId+"";
     }
 
     @Override

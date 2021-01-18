@@ -87,7 +87,7 @@ public class IDPoolTest {
             threads[i] = new Thread(() -> {
                 for (int attempt = 0; attempt < attemptsPerThread; attempt++) {
                     int offset = random.nextInt(numPartitions);
-                    long id = idPools[offset].nextID();
+                    long id = Long.parseLong(idPools[offset].nextID());
                     assertTrue(id < Integer.MAX_VALUE);
                     IntSet idSet = ids[offset];
                     synchronized (idSet) {
@@ -181,7 +181,7 @@ public class IDPoolTest {
 
         assertThrows(JanusGraphException.class, pool::nextID);
 
-        long nextID = pool.nextID();
+        long nextID = Long.parseLong(pool.nextID());
         assertEquals(200, nextID);
 
         ctrl.verify();
@@ -194,7 +194,7 @@ public class IDPoolTest {
         StandardIDPool pool = new StandardIDPool(idAuthority, 0, 1, idUpper, Duration.ofMillis(2000), 0.2);
         for (int i = 1; i < idUpper * 2; i++) {
             try {
-                long id = pool.nextID();
+                long id = Long.parseLong(pool.nextID());
                 assertTrue(id < idUpper);
             } catch (IDPoolExhaustedException e) {
                 assertEquals(idUpper, i);
@@ -210,7 +210,7 @@ public class IDPoolTest {
         StandardIDPool pool = new StandardIDPool(idAuthority, 0, 1, Integer.MAX_VALUE, Duration.ofMillis(2000), 0.2);
         for (int i = 1; i < idUpper * 2; i++) {
             try {
-                long id = pool.nextID();
+                long id = Long.parseLong(pool.nextID());
                 assertTrue(id < idUpper);
             } catch (IDPoolExhaustedException e) {
                 assertEquals(idUpper, i);

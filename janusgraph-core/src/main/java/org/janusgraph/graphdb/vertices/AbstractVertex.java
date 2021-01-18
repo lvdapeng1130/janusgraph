@@ -40,7 +40,7 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
     private final StandardJanusGraphTx tx;
 
 
-    protected AbstractVertex(StandardJanusGraphTx tx, long id) {
+    protected AbstractVertex(StandardJanusGraphTx tx, String id) {
         super(id);
         assert tx != null;
         this.tx = tx;
@@ -66,7 +66,7 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
     }
 
     @Override
-    public long getCompareId() {
+    public String getCompareId() {
         if (tx.isPartitionedVertex(this)) return tx.getIdInspector().getCanonicalVertexId(longId());
         else return longId();
     }

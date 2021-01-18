@@ -14,10 +14,7 @@
 
 package org.janusgraph.graphdb.database;
 
-import com.carrotsearch.hppc.LongArrayList;
-import com.carrotsearch.hppc.LongObjectHashMap;
-import com.carrotsearch.hppc.LongHashSet;
-import com.carrotsearch.hppc.LongSet;
+import com.carrotsearch.hppc.*;
 import com.google.common.base.Preconditions;
 import org.janusgraph.core.*;
 import org.janusgraph.diskstorage.Entry;
@@ -88,35 +85,39 @@ public class EdgeSerializer implements RelationReader {
 
         RelationTypeParse typeAndDir = IDHandler.readRelationType(in);
 
-        long typeId = typeAndDir.typeId;
+        String typeId = typeAndDir.typeId;
         Direction dir = typeAndDir.dirID.getDirection();
 
         RelationType relationType = tx.getExistingRelationType(typeId);
         InternalRelationType def = (InternalRelationType) relationType;
         Multiplicity multiplicity = def.multiplicity();
-        long[] keySignature = def.getSortKey();
+        String[] keySignature = def.getSortKey();
 
-        long relationId;
+        String relationId;
         Object other;
         int startKeyPos = in.getPosition();
         int endKeyPos = 0;
         if (relationType.isEdgeLabel()) {
-            long otherVertexId;
+            String otherVertexId;
             if (multiplicity.isConstrained()) {
                 if (multiplicity.isUnique(dir)) {
-                    otherVertexId = VariableLong.readPositive(in);
+                    //otherVertexId = VariableLong.readPositive(in);
+                    otherVertexId= serializer.readObjectNotNull(in,String.class);
                 } else {
-                    in.movePositionTo(data.getValuePosition());
-                    otherVertexId = VariableLong.readPositiveBackward(in);
+                    //in.movePositionTo(data.getValuePosition());
+                    //otherVertexId = VariableLong.readPositiveBackward(in);
+                    otherVertexId=serializer.readObjectNotNull(in,String.class);
                     in.movePositionTo(data.getValuePosition());
                 }
-                relationId = VariableLong.readPositive(in);
+                //relationId = VariableLong.readPositive(in);
+                relationId = serializer.readObjectNotNull(in,String.class);
             } else {
-                in.movePositionTo(data.getValuePosition());
-
-                relationId = VariableLong.readPositiveBackward(in);
-                otherVertexId = VariableLong.readPositiveBackward(in);
+                //in.movePositionTo(data.getValuePosition());
+                //relationId = VariableLong.readPositiveBackward(in);
+                //otherVertexId = VariableLong.readPositiveBackward(in);
                 endKeyPos = in.getPosition();
+                otherVertexId = serializer.readObjectNotNull(in,String.class);
+                relationId=serializer.readObjectNotNull(in,String.class);
                 in.movePositionTo(data.getValuePosition());
             }
             other = otherVertexId;
@@ -126,11 +127,13 @@ public class EdgeSerializer implements RelationReader {
 
             if (multiplicity.isConstrained()) {
                 other = readPropertyValue(in,key);
-                relationId = VariableLong.readPositive(in);
+               // relationId = VariableLong.readPositive(in);
+                relationId = serializer.readObjectNotNull(in,String.class);
             } else {
-                in.movePositionTo(data.getValuePosition());
-                relationId = VariableLong.readPositiveBackward(in);
+                //in.movePositionTo(data.getValuePosition());
+                //relationId = VariableLong.readPositiveBackward(in);
                 endKeyPos = in.getPosition();
+                relationId = serializer.readObjectNotNull(in,String.class);
                 in.movePositionTo(data.getValuePosition());
                 other = readPropertyValue(in,key);
             }
@@ -140,7 +143,7 @@ public class EdgeSerializer implements RelationReader {
 
         if (!excludeProperties) {
 
-            LongObjectHashMap<Object> properties = new LongObjectHashMap<>(4);
+            ObjectObjectIdentityHashMap<String,Object> properties = new ObjectObjectIdentityHashMap<>(4);
 
             if (!multiplicity.isConstrained() && keySignature.length > 0) {
                 int currentPos = in.getPosition();
@@ -181,9 +184,9 @@ public class EdgeSerializer implements RelationReader {
         }
     }
 
-    private void readInlineTypes(long[] keyIds, LongObjectHashMap<Object> properties, ReadBuffer in, TypeInspector tx,
+    private void readInlineTypes(String[] keyIds, ObjectObjectIdentityHashMap<String,Object> properties, ReadBuffer in, TypeInspector tx,
                                  InlineType inlineType) {
-        for (long keyId : keyIds) {
+        for (String keyId : keyIds) {
             PropertyKey keyType = tx.getExistingPropertyKey(keyId);
             Object value = readInline(in, keyType, inlineType);
             if (value != null) properties.put(keyId, value);
@@ -242,7 +245,7 @@ public class EdgeSerializer implements RelationReader {
                 && type.getBaseType().equals(relation.getType()));
         Direction dir = EdgeDirection.fromPosition(position);
         Preconditions.checkArgument(type.isUnidirected(Direction.BOTH) || type.isUnidirected(dir));
-        long typeId = type.longId();
+        String typeId = type.longId();
         DirectionID dirID = getDirID(dir, relation.isProperty() ? RelationCategory.PROPERTY : RelationCategory.EDGE);
 
         DataOutput out = serializer.getDataOutput(DEFAULT_CAPACITY);
@@ -250,7 +253,7 @@ public class EdgeSerializer implements RelationReader {
         IDHandler.writeRelationType(out, typeId, dirID, type.isInvisibleType());
         Multiplicity multiplicity = type.multiplicity();
 
-        long[] sortKey = type.getSortKey();
+        String[] sortKey = type.getSortKey();
         assert !multiplicity.isConstrained() || sortKey.length==0: type.name();
         int keyStartPos = out.getPosition();
         if (!multiplicity.isConstrained()) {
@@ -258,23 +261,28 @@ public class EdgeSerializer implements RelationReader {
         }
         int keyEndPos = out.getPosition();
 
-        long relationId = relation.longId();
+        String relationId = relation.longId();
 
         //How multiplicity is handled for edges and properties is slightly different
         if (relation.isEdge()) {
-            long otherVertexId = relation.getVertex((position + 1) % 2).longId();
+            String otherVertexId = relation.getVertex((position + 1) % 2).longId();
             if (multiplicity.isConstrained()) {
                 if (multiplicity.isUnique(dir)) {
                     valuePosition = out.getPosition();
-                    VariableLong.writePositive(out, otherVertexId);
+                    //VariableLong.writePositive(out, otherVertexId);
+                    out.writeObjectNotNull(otherVertexId);
                 } else {
-                    VariableLong.writePositiveBackward(out, otherVertexId);
+                    //VariableLong.writePositiveBackward(out, otherVertexId);
+                    out.writeObjectNotNull(otherVertexId);
                     valuePosition = out.getPosition();
                 }
-                VariableLong.writePositive(out, relationId);
+                //VariableLong.writePositive(out, relationId);
+                out.writeObjectNotNull(relationId);
             } else {
-                VariableLong.writePositiveBackward(out, otherVertexId);
-                VariableLong.writePositiveBackward(out, relationId);
+                //VariableLong.writePositiveBackward(out, otherVertexId);
+                //VariableLong.writePositiveBackward(out, relationId);
+                out.writeObjectNotNull(otherVertexId);
+                out.writeObjectNotNull(relationId);
                 valuePosition = out.getPosition();
             }
         } else {
@@ -293,35 +301,37 @@ public class EdgeSerializer implements RelationReader {
                     writePropertyValue(out,key,value);
                     valuePosition = out.getPosition();
                 }
-                VariableLong.writePositive(out, relationId);
+                //VariableLong.writePositive(out, relationId);
+                out.writeObjectNotNull(relationId);
             } else {
                 assert multiplicity.getCardinality()== Cardinality.LIST;
-                VariableLong.writePositiveBackward(out, relationId);
+                //VariableLong.writePositiveBackward(out, relationId);
+                out.writeObjectNotNull(relationId);
                 valuePosition = out.getPosition();
                 writePropertyValue(out,key,value);
             }
         }
 
         //Write signature
-        long[] signature = type.getSignature();
+        String[] signature = type.getSignature();
         writeInlineTypes(signature, relation, out, tx, InlineType.SIGNATURE);
 
         //Write remaining properties
-        LongSet writtenTypes = new LongHashSet(sortKey.length + signature.length);
+        ObjectSet<String> writtenTypes = new ObjectHashSet<>(sortKey.length + signature.length);
         if (sortKey.length > 0 || signature.length > 0) {
-            for (long id : sortKey) writtenTypes.add(id);
-            for (long id : signature) writtenTypes.add(id);
+            for (String id : sortKey) writtenTypes.add(id);
+            for (String id : signature) writtenTypes.add(id);
         }
-        LongArrayList remainingTypes = new LongArrayList(8);
+        ObjectArrayList<String> remainingTypes = new ObjectArrayList(8);
         for (PropertyKey t : relation.getPropertyKeysDirect()) {
             if (!(t instanceof ImplicitKey) && !writtenTypes.contains(t.longId())) {
                 remainingTypes.add(t.longId());
             }
         }
         //Sort types before writing to ensure that value is always written the same way
-        long[] remaining = remainingTypes.toArray();
+        String[] remaining = remainingTypes.toArray(String.class);
         Arrays.sort(remaining);
-        for (long tid : remaining) {
+        for (String tid : remaining) {
             PropertyKey t = tx.getExistingPropertyKey(tid);
             writeInline(out, t, relation.getValueDirect(t), InlineType.NORMAL);
         }
@@ -346,9 +356,9 @@ public class EdgeSerializer implements RelationReader {
 
     }
 
-    private void writeInlineTypes(long[] keyIds, InternalRelation relation, DataOutput out, TypeInspector tx,
+    private void writeInlineTypes(String[] keyIds, InternalRelation relation, DataOutput out, TypeInspector tx,
                                   InlineType inlineType) {
-        for (long keyId : keyIds) {
+        for (String keyId : keyIds) {
             PropertyKey t = tx.getExistingPropertyKey(keyId);
             writeInline(out, t, relation.getValueDirect(t), inlineType);
         }
@@ -407,7 +417,7 @@ public class EdgeSerializer implements RelationReader {
             IDHandler.writeRelationType(colStart, type.longId(), dirID, type.isInvisibleType());
             IDHandler.writeRelationType(colEnd, type.longId(), dirID, type.isInvisibleType());
 
-            long[] sortKeyIDs = type.getSortKey();
+            String[] sortKeyIDs = type.getSortKey();
             Preconditions.checkArgument(sortKey.length >= sortKeyIDs.length);
             assert colStart.getPosition() == colEnd.getPosition();
             int keyStartPos = colStart.getPosition();
@@ -429,7 +439,7 @@ public class EdgeSerializer implements RelationReader {
 
                 } else {
                     assert !type.multiplicity().isConstrained();
-                    assert propertyKey.longId() == sortKeyIDs[i];
+                    assert propertyKey.longId().equals(sortKeyIDs[i]);
                 }
 
                 if (interval == null || interval.isEmpty()) {

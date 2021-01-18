@@ -36,13 +36,13 @@ public class MetricInstrumentedSchemaCache implements SchemaCache {
     public MetricInstrumentedSchemaCache(final StoreRetrieval retriever) {
         cache = new StandardSchemaCache(new StoreRetrieval() {
             @Override
-            public Long retrieveSchemaByName(String typeName) {
+            public String retrieveSchemaByName(String typeName) {
                 incAction(METRICS_TYPENAME,CacheMetricsAction.MISS);
                 return retriever.retrieveSchemaByName(typeName);
             }
 
             @Override
-            public EntryList retrieveSchemaRelations(long schemaId, BaseRelationType type, Direction dir) {
+            public EntryList retrieveSchemaRelations(String schemaId, BaseRelationType type, Direction dir) {
                 incAction(METRICS_RELATIONS,CacheMetricsAction.MISS);
                 return retriever.retrieveSchemaRelations(schemaId, type, dir);
             }
@@ -54,19 +54,19 @@ public class MetricInstrumentedSchemaCache implements SchemaCache {
     }
 
     @Override
-    public Long getSchemaId(String schemaName) {
+    public String getSchemaId(String schemaName) {
         incAction(METRICS_TYPENAME,CacheMetricsAction.RETRIEVAL);
         return cache.getSchemaId(schemaName);
     }
 
     @Override
-    public EntryList getSchemaRelations(long schemaId, BaseRelationType type, Direction dir) {
+    public EntryList getSchemaRelations(String schemaId, BaseRelationType type, Direction dir) {
         incAction(METRICS_RELATIONS,CacheMetricsAction.RETRIEVAL);
         return cache.getSchemaRelations(schemaId, type, dir);
     }
 
     @Override
-    public void expireSchemaElement(long schemaId) {
+    public void expireSchemaElement(String schemaId) {
         cache.expireSchemaElement(schemaId);
     }
 

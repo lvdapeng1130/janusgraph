@@ -15,6 +15,7 @@
 package org.janusgraph.graphdb.query.vertex;
 
 import com.carrotsearch.hppc.LongArrayList;
+import com.carrotsearch.hppc.ObjectArrayList;
 import org.janusgraph.core.JanusGraphVertex;
 import org.janusgraph.core.VertexList;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
@@ -37,14 +38,14 @@ import java.util.NoSuchElementException;
 public class VertexLongList implements VertexListInternal {
 
     private final StandardJanusGraphTx tx;
-    private LongArrayList vertices;
+    private ObjectArrayList<String> vertices;
     private boolean sorted;
 
     public VertexLongList(StandardJanusGraphTx tx) {
-        this(tx,new LongArrayList(10),true);
+        this(tx,new ObjectArrayList(10),true);
     }
 
-    public VertexLongList(StandardJanusGraphTx tx, LongArrayList vertices, boolean sorted) {
+    public VertexLongList(StandardJanusGraphTx tx, ObjectArrayList<String> vertices, boolean sorted) {
         assert !sorted || AbstractLongListUtil.isSorted(vertices);
         this.tx = tx;
         this.vertices = vertices;
@@ -53,17 +54,17 @@ public class VertexLongList implements VertexListInternal {
 
     @Override
     public void add(JanusGraphVertex n) {
-        if (!vertices.isEmpty()) sorted = sorted && vertices.get(vertices.size()-1)<=n.longId();
+        if (!vertices.isEmpty()) sorted = sorted && vertices.get(vertices.size()-1).compareTo(n.longId())<=0;
         vertices.add(n.longId());
     }
 
     @Override
-    public long getID(int pos) {
+    public String getID(int pos) {
         return vertices.get(pos);
     }
 
     @Override
-    public LongArrayList getIDs() {
+    public ObjectArrayList getIDs() {
         return vertices;
     }
 
@@ -86,7 +87,7 @@ public class VertexLongList implements VertexListInternal {
 
     @Override
     public VertexList subList(int fromPosition, int length) {
-        LongArrayList subList = new LongArrayList(length);
+        ObjectArrayList subList = new ObjectArrayList(length);
         subList.add(vertices.buffer, fromPosition, length);
         assert subList.size()==length;
         return new VertexLongList(tx,subList,sorted);
@@ -99,12 +100,12 @@ public class VertexLongList implements VertexListInternal {
 
     @Override
     public void addAll(VertexList vertexlist) {
-        final LongArrayList otherVertexIds;
+        final ObjectArrayList<String> otherVertexIds;
         if (vertexlist instanceof VertexLongList) {
             otherVertexIds = ((VertexLongList) vertexlist).vertices;
         } else if (vertexlist instanceof VertexArrayList) {
             VertexArrayList other = (VertexArrayList) vertexlist;
-            otherVertexIds = new LongArrayList(other.size());
+            otherVertexIds = new ObjectArrayList<String>(other.size());
             for (int i = 0; i < other.size(); i++) otherVertexIds.add(other.getID(i));
         } else {
             throw new IllegalArgumentException("Unsupported vertex-list: " + vertexlist.getClass());
@@ -114,7 +115,7 @@ public class VertexLongList implements VertexListInternal {
             vertices = AbstractLongListUtil.mergeSort(vertices,otherVertexIds);
         } else {
             sorted = false;
-            vertices.add(otherVertexIds.buffer, 0, otherVertexIds.size());
+            vertices.add((String[])otherVertexIds.buffer, 0, otherVertexIds.size());
         }
     }
 

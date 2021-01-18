@@ -423,7 +423,7 @@ public abstract class JanusGraphBaseTest implements JanusGraphBaseStoreFeaturesT
         else return obj.toString();
     }
 
-    public static long getId(Element e) {
+    public static String getId(Element e) {
         return ((JanusGraphElement)e).longId();
     }
 

@@ -409,7 +409,7 @@ public class KyGraphApp1 extends JanusGraphApp {
             //final List<Map<Object, Object>> v = g.V().hasLabel("person","teacher").has("name","张三").has("age", P.eq(66)).valueMap(true).next(2);
             Vertex next = g.V().hasLabel("person").has("name",
                 Text.textContains("测试附件和注释")).next();
-            long vertexId =Long.parseLong(next.id().toString());
+            String vertexId =next.id().toString();
             List<MediaData> mediaDatas = this.getJanusGraph().getMediaDatas(vertexId);
             List<Note> notes = this.getJanusGraph().getNotes(vertexId);
             // numerical range query can use a mixed index in JanusGraph

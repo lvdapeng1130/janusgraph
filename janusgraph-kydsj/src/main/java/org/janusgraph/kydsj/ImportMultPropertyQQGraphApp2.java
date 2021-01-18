@@ -324,12 +324,18 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
         long minId = Long.parseLong(v.id().toString());
         return minId;*/
         StandardJanusGraph janusGraph=(StandardJanusGraph)this.getJanusGraph();
-        List<Vertex> vertices = g.V(LongEncoding.decode("4te34")).toList();
+        List<Vertex> vertices = g.V(LongEncoding.decode("16_18_000")).toList();
+        List<Map<Object, Object>> maps3 = g.V(LongEncoding.decode("16_18_000")).elementMap().toList();
         Integer limit = janusGraph.getConfiguration().getConfiguration().get(PropertyPlacementStrategy.CONCURRENT_PARTITIONS);
-        List<Comparable> comparables = g.V().hasLabel("eidentity_qqqun")
-            .has("tid", "479f19e73589ed75ebd825a786137c80").limit(limit).id().min().toList();
-        long minId = Long.parseLong(comparables.get(0).toString());
-        return minId;
+        List<Comparable> comparables = g.V().hasLabel("object_qqqun")
+            .has("tid", Text.textContains("shY0d01JtpQ")).limit(limit).id().min().toList();
+        List<Map<Object, Object>> maps1 = g.V(LongEncoding.decode("16_17000")).elementMap().toList();
+        List<Map<Object, Object>> maps = g.V().hasLabel("object_qqqun")
+            .has("tid", Text.textContains("3091231")).elementMap().toList();
+        List<Map<Object, Object>> maps2 = g.V(LongEncoding.decode("16_18_000")).both().elementMap().toList();
+        //long minId = Long.parseLong(comparables.get(0).toString());
+        //return minId;
+        return 0;
     }
     /**
      * Runs some traversal queries to get data from the graph.
@@ -454,10 +460,11 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
             openGraph();
 
             // define the schema before loading data
-            /*if (supportsSchema) {
+            if (supportsSchema) {
                 createSchema();
-            }*/
+            }
             printSchema();
+            createElements(qq_qunn,1,1);
            /* for(int i=0;i<10000;i++){
                 qq_qunn=UUID.randomUUID().toString();
                 createElements(qq_qunn,1,1);

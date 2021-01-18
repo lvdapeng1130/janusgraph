@@ -40,13 +40,13 @@ public class VertexIterable implements Iterable<InternalVertex> {
     public Iterator<InternalVertex> iterator() {
         return new Iterator<InternalVertex>() {
 
-            final RecordIterator<Long> iterator = graph.getVertexIDs(tx.getTxHandle());
+            final RecordIterator<String> iterator = graph.getVertexIDs(tx.getTxHandle());
             InternalVertex nextVertex = nextVertex();
 
             private InternalVertex nextVertex() {
                 InternalVertex v = null;
                 while (v == null && iterator.hasNext()) {
-                    final long nextId = iterator.next();
+                    final String nextId = iterator.next();
                     //Filter out invisible vertices
                     if (IDManager.VertexIDType.Invisible.is(nextId)) continue;
 

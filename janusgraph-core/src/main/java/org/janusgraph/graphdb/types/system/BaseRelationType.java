@@ -24,10 +24,10 @@ import org.apache.commons.lang.StringUtils;
 public abstract class BaseRelationType extends EmptyRelationType implements SystemRelationType {
 
     private final String name;
-    private final long id;
+    private final String id;
 
 
-    BaseRelationType(String name, long id, JanusGraphSchemaCategory type) {
+    BaseRelationType(String name, String id, JanusGraphSchemaCategory type) {
         Preconditions.checkArgument(StringUtils.isNotBlank(name));
         this.name = Token.systemETprefix + name;
         this.id = getSystemTypeId(id, type);
@@ -39,7 +39,7 @@ public abstract class BaseRelationType extends EmptyRelationType implements Syst
     }
 
     @Override
-    public long longId() {
+    public String longId() {
         return id;
     }
 
@@ -49,7 +49,7 @@ public abstract class BaseRelationType extends EmptyRelationType implements Syst
     }
 
     @Override
-    public void setId(long id) {
+    public void setId(String id) {
         throw new IllegalStateException("SystemType has already been assigned an id");
     }
 
@@ -64,8 +64,8 @@ public abstract class BaseRelationType extends EmptyRelationType implements Syst
     }
 
 
-    static long getSystemTypeId(long id, JanusGraphSchemaCategory type) {
-        Preconditions.checkArgument(id > 0);
+    static String getSystemTypeId(String id, JanusGraphSchemaCategory type) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(id));
         Preconditions.checkArgument(type.isRelationType());
         switch (type) {
             case EDGELABEL:

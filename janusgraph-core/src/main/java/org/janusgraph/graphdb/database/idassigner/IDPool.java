@@ -16,7 +16,7 @@ package org.janusgraph.graphdb.database.idassigner;
 
 public interface IDPool {
 
-    long nextID();
+    String nextID();
 
     void close();
 

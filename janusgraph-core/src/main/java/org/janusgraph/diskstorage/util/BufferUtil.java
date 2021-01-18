@@ -19,6 +19,7 @@ import org.janusgraph.diskstorage.*;
 import org.janusgraph.graphdb.database.idhandling.VariableLong;
 import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.database.serialize.Serializer;
+import org.janusgraph.graphdb.database.serialize.StandardSerializer;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -29,9 +30,13 @@ import java.util.Map;
  */
 public class BufferUtil {
 
+    public static final Serializer serial = new StandardSerializer();
     public static final int longSize = StaticArrayBuffer.LONG_LEN;
     public static final int intSize = StaticArrayBuffer.INT_LEN;
 
+    public static Serializer getSerializer(){
+        return serial;
+    }
     /* ###############
      * Simple StaticBuffer construction
      * ################

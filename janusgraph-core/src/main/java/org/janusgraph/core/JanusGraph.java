@@ -129,9 +129,9 @@ public interface JanusGraph extends Transaction {
     @Override
     void close() throws JanusGraphException;
 
-    List<MediaData> getMediaDatas(long vertexId);
+    List<MediaData> getMediaDatas(String vertexId);
 
-    List<Note> getNotes(long vertexId);
+    List<Note> getNotes(String vertexId);
 
     String getUniqueInstanceId();
 

@@ -81,7 +81,7 @@ public class VertexProgramScanJob<M> implements VertexScanJob {
     @Override
     public void process(JanusGraphVertex vertex, ScanMetrics metrics) {
         PreloadedVertex v = (PreloadedVertex)vertex;
-        long vertexId = v.longId();
+        String vertexId = v.longId();
         VertexMemoryHandler<M> vh = new VertexMemoryHandler(vertexMemory,v);
         vh.setInExecute(true);
         v.setAccessCheck(PreloadedVertex.OPENSTAR_CHECK);

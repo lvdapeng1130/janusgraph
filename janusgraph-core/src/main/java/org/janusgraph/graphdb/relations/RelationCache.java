@@ -14,11 +14,11 @@
 
 package org.janusgraph.graphdb.relations;
 
-import com.carrotsearch.hppc.LongObjectHashMap;
-import com.carrotsearch.hppc.cursors.LongObjectCursor;
+import com.carrotsearch.hppc.ObjectObjectIdentityHashMap;
+import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 
-import java.util.*;
+import java.util.Iterator;
 
 /**
  * Immutable map from long key ids to objects.
@@ -26,18 +26,18 @@ import java.util.*;
  *
  * @author Matthias Broecheler (me@matthiasb.com)
  */
-public class RelationCache implements Iterable<LongObjectCursor<Object>> {
+public class RelationCache implements Iterable<ObjectObjectCursor<String,Object>> {
 
-    private static final LongObjectHashMap<Object> EMPTY = new LongObjectHashMap<>(0);
+    private static final ObjectObjectIdentityHashMap<String,Object> EMPTY = new ObjectObjectIdentityHashMap<>(0);
 
     public final Direction direction;
-    public final long typeId;
-    public final long relationId;
+    public final String typeId;
+    public final String relationId;
     private final Object other;
-    private final LongObjectHashMap<Object> properties;
+    private final ObjectObjectIdentityHashMap<String,Object> properties;
 
-    public RelationCache(final Direction direction, final long typeId, final long relationId,
-                         final Object other, final LongObjectHashMap<Object> properties) {
+    public RelationCache(final Direction direction, final String typeId, final String relationId,
+                         final Object other, final ObjectObjectIdentityHashMap<String,Object> properties) {
         this.direction = direction;
         this.typeId = typeId;
         this.relationId = relationId;
@@ -45,13 +45,13 @@ public class RelationCache implements Iterable<LongObjectCursor<Object>> {
         this.properties = (properties == null || properties.size() > 0) ? properties : EMPTY;
     }
 
-    public RelationCache(final Direction direction, final long typeId, final long relationId,
+    public RelationCache(final Direction direction, final String typeId, final String relationId,
                          final Object other) {
         this(direction,typeId,relationId,other,null);
     }
 
     @SuppressWarnings("unchecked")
-    public <O> O get(long key) {
+    public <O> O get(String key) {
         return (O) properties.get(key);
     }
 
@@ -67,16 +67,16 @@ public class RelationCache implements Iterable<LongObjectCursor<Object>> {
         return other;
     }
 
-    public Long getOtherVertexId() {
-        return (Long) other;
+    public String getOtherVertexId() {
+        return (String) other;
     }
 
-    public Iterator<LongObjectCursor<Object>> propertyIterator() {
+    public Iterator<ObjectObjectCursor<String,Object>> propertyIterator() {
         return properties.iterator();
     }
 
     @Override
-    public Iterator<LongObjectCursor<Object>> iterator() {
+    public Iterator<ObjectObjectCursor<String,Object>> iterator() {
         return propertyIterator();
     }
 

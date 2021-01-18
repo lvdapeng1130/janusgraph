@@ -17,21 +17,17 @@ package org.janusgraph.graphdb;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.apache.tinkerpop.gremlin.structure.Edge;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.TestCategory;
 import org.janusgraph.core.*;
 import org.janusgraph.core.attribute.Cmp;
-
-
 import org.janusgraph.core.schema.ConsistencyModifier;
 import org.janusgraph.core.schema.JanusGraphIndex;
 import org.janusgraph.diskstorage.util.TestLockerManager;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
-
-import org.apache.tinkerpop.gremlin.structure.Direction;
-import org.apache.tinkerpop.gremlin.structure.Edge;
-import static org.apache.tinkerpop.gremlin.structure.Direction.*;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +35,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
 
+import static org.apache.tinkerpop.gremlin.structure.Direction.IN;
+import static org.apache.tinkerpop.gremlin.structure.Direction.OUT;
 import static org.janusgraph.testutil.JanusGraphAssert.assertCount;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -97,8 +95,8 @@ public abstract class JanusGraphEventualGraphTest extends JanusGraphBaseTest {
         tx1.commit();
 
         // Fetch vertex ids
-        long id1 = getId(v1);
-        long id2 = getId(v2);
+        String id1 = getId(v1);
+        String id2 = getId(v2);
 
         // Transaction 2: Remove "name" property from v1, set "address" property; create
         // an edge v2 -> v1
@@ -297,7 +295,7 @@ public abstract class JanusGraphEventualGraphTest extends JanusGraphBaseTest {
         rs[5]=sign(v.addEdge("emf",u),transactionId);
 
         newTx();
-        long vid = getId(v), uid = getId(u);
+        String vid = getId(v), uid = getId(u);
 
         JanusGraphTransaction tx1 = graph.newTransaction();
         JanusGraphTransaction tx2 = graph.newTransaction();
@@ -347,7 +345,7 @@ public abstract class JanusGraphEventualGraphTest extends JanusGraphBaseTest {
     }
 
 
-    private void processTx(JanusGraphTransaction tx, int transactionId, long vid, long uid) {
+    private void processTx(JanusGraphTransaction tx, int transactionId, String vid, String uid) {
         JanusGraphVertex v = getV(tx,vid);
         JanusGraphVertex u = getV(tx,uid);
         assertEquals(5.0, v.<Double>value("weight"),0.00001);

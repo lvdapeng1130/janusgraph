@@ -70,7 +70,7 @@ public class FulgoraVertexProperty<V> implements JanusGraphVertexProperty<V> {
     }
 
     @Override
-    public long longId() {
+    public String longId() {
         throw new IllegalStateException("An id has not been set for this property");
     }
 

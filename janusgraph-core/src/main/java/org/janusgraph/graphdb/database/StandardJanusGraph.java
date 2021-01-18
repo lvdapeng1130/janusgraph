@@ -14,11 +14,12 @@
 
 package org.janusgraph.graphdb.database;
 
-import com.carrotsearch.hppc.LongArrayList;
+import com.carrotsearch.hppc.ObjectArrayList;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
+import org.apache.commons.lang.StringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.TraversalStrategies;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Graph;
@@ -46,7 +47,6 @@ import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.database.cache.SchemaCache;
 import org.janusgraph.graphdb.database.idassigner.VertexIDAssigner;
 import org.janusgraph.graphdb.database.idhandling.IDHandler;
-import org.janusgraph.graphdb.database.idhandling.VariableLong;
 import org.janusgraph.graphdb.database.leader.RegistryZookeeper;
 import org.janusgraph.graphdb.database.log.LogTxStatus;
 import org.janusgraph.graphdb.database.log.TransactionLogHeader;
@@ -58,7 +58,6 @@ import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.InternalVertex;
-import org.janusgraph.graphdb.internal.InternalVertexLabel;
 import org.janusgraph.graphdb.query.QueryUtil;
 import org.janusgraph.graphdb.query.index.IndexSelectionStrategy;
 import org.janusgraph.graphdb.relations.EdgeDirection;
@@ -397,7 +396,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
     private final SchemaCache.StoreRetrieval typeCacheRetrieval = new SchemaCache.StoreRetrieval() {
 
         @Override
-        public Long retrieveSchemaByName(String typeName) {
+        public String retrieveSchemaByName(String typeName) {
             // Get a consistent tx
             Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
             StandardJanusGraphTx consistentTx = null;
@@ -413,7 +412,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         }
 
         @Override
-        public EntryList retrieveSchemaRelations(final long schemaId, final BaseRelationType type, final Direction dir) {
+        public EntryList retrieveSchemaRelations(final String schemaId, final BaseRelationType type, final Direction dir) {
             SliceQuery query = queryCache.getQuery(type,dir);
             Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
             StandardJanusGraphTx consistentTx = null;
@@ -429,7 +428,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
     };
 
-    public RecordIterator<Long> getVertexIDs(final BackendTransaction tx) {
+    public RecordIterator<String> getVertexIDs(final BackendTransaction tx) {
         Preconditions.checkArgument(backend.getStoreFeatures().hasOrderedScan() ||
                 backend.getStoreFeatures().hasUnorderedScan(),
                 "The configured storage backend does not support global graph operations - use Faunus instead");
@@ -441,7 +440,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             keyIterator = tx.edgeStoreKeys(new KeyRangeQuery(IDHandler.MIN_KEY, IDHandler.MAX_KEY, vertexExistenceQuery));
         }
 
-        return new RecordIterator<Long>() {
+        return new RecordIterator<String>() {
 
             @Override
             public boolean hasNext() {
@@ -449,7 +448,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             }
 
             @Override
-            public Long next() {
+            public String next() {
                 return idManager.getKeyID(keyIterator.next());
             }
 
@@ -465,16 +464,16 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         };
     }
 
-    public EntryList edgeQuery(long vid, SliceQuery query, BackendTransaction tx) {
-        Preconditions.checkArgument(vid > 0);
+    public EntryList edgeQuery(String vid, SliceQuery query, BackendTransaction tx) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(vid));
         return tx.edgeStoreQuery(new KeySliceQuery(idManager.getKey(vid), query));
     }
 
-    public List<EntryList> edgeMultiQuery(LongArrayList vertexIdsAsLongs, SliceQuery query, BackendTransaction tx) {
+    public List<EntryList> edgeMultiQuery(ObjectArrayList<String> vertexIdsAsLongs, SliceQuery query, BackendTransaction tx) {
         Preconditions.checkArgument(vertexIdsAsLongs != null && !vertexIdsAsLongs.isEmpty());
         final List<StaticBuffer> vertexIds = new ArrayList<>(vertexIdsAsLongs.size());
         for (int i = 0; i < vertexIdsAsLongs.size(); i++) {
-            Preconditions.checkArgument(vertexIdsAsLongs.get(i) > 0);
+            Preconditions.checkArgument(StringUtils.isNotBlank(vertexIdsAsLongs.get(i)));
             vertexIds.add(idManager.getKey(vertexIdsAsLongs.get(i)));
         }
         final Map<StaticBuffer,EntryList> result = tx.edgeStoreMultiQuery(vertexIds, query);
@@ -535,10 +534,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
     public static int getTTL(InternalVertex v) {
         assert v.hasId();
-        if (IDManager.VertexIDType.UnmodifiableVertex.is(v.longId())) {
-            assert v.isNew() : "Should not be able to add relations to existing static vertices: " + v;
-            return ((InternalVertexLabel)v.vertexLabel()).getTTL();
-        } else return 0;
+        return 0;
     }
 
     private static class ModificationSummary {
@@ -553,13 +549,13 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
     }
 
     public ModificationSummary prepareCommit(final Collection<InternalRelation> addedRelations,
-                                     final Collection<InternalRelation> deletedRelations,final HashMultimap<Long, MediaData> attachments, final HashMultimap<Long, Note> notes,
+                                     final Collection<InternalRelation> deletedRelations,final HashMultimap<String, MediaData> attachments, final HashMultimap<String, Note> notes,
                                      final Predicate<InternalRelation> filter,
                                      final BackendTransaction mutator, final StandardJanusGraphTx tx,
                                      final boolean acquireLocks) throws BackendException {
 
 
-        ListMultimap<Long, InternalRelation> mutations = ArrayListMultimap.create();
+        ListMultimap<String, InternalRelation> mutations = ArrayListMultimap.create();
         ListMultimap<InternalVertex, InternalRelation> mutatedProperties = ArrayListMultimap.create();
         List<IndexSerializer.IndexUpdate> indexUpdates = Lists.newArrayList();
         //1) Collect deleted edges and their index updates and acquire edge locks
@@ -618,8 +614,8 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         }
 
         //5) Add relation mutations
-        for (Long vertexId : mutations.keySet()) {
-            Preconditions.checkArgument(vertexId > 0, "Vertex has no id: %s", vertexId);
+        for (String vertexId : mutations.keySet()) {
+            Preconditions.checkArgument(StringUtils.isNotBlank(vertexId), "Vertex has no id: %s", vertexId);
             final List<InternalRelation> edges = mutations.get(vertexId);
             final List<Entry> additions = new ArrayList<>(edges.size());
             final List<Entry> deletions = new ArrayList<>(Math.max(10, edges.size() / 10));
@@ -632,7 +628,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                     for (int pos = 0; pos < edge.getArity(); pos++) {
                         if (!type.isUnidirected(Direction.BOTH) && !type.isUnidirected(EdgeDirection.fromPosition(pos)))
                             continue; //Directionality is not covered
-                        if (edge.getVertex(pos).longId()==vertexId) {
+                        if (edge.getVertex(pos).longId().equals(vertexId)) {
                             StaticArrayEntry entry = edgeSerializer.writeRelation(edge, type, pos, tx);
                             if (edge.isRemoved()) {
                                 deletions.add(entry);
@@ -676,7 +672,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         }
         //7) 添加顶点的附件
         if(attachments!=null){
-            for(long rowkey:attachments.keys()){
+            for(String rowkey:attachments.keys()){
                 Set<MediaData> mediaDatas = attachments.get(rowkey);
                 if(mediaDatas!=null&&mediaDatas.size()>0){
                     StaticBuffer key=this.getAttachmentTableRowkey(rowkey);
@@ -691,7 +687,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         }
         //8)添加顶点的注释信息
         if(notes!=null){
-            for(long rowkey:notes.keys()){
+            for(String rowkey:notes.keys()){
                 Set<Note> noteSet = notes.get(rowkey);
                 if(noteSet!=null&&noteSet.size()>0){
                     StaticBuffer key=this.getAttachmentTableRowkey(rowkey);
@@ -708,9 +704,10 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         return new ModificationSummary(!mutations.isEmpty(),has2iMods);
     }
 
-    public StaticBuffer getAttachmentTableRowkey(long vertextID){
+    public StaticBuffer getAttachmentTableRowkey(String vertextID){
         DataOutput out = this.getDataSerializer().getDataOutput(8);
-        VariableLong.writePositive(out, vertextID);
+        //VariableLong.writePositive(out, vertextID);
+        out.writeObjectNotNull(vertextID);
         StaticBuffer key = out.getStaticBuffer();
         return key;
     }
@@ -737,7 +734,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
     private static final Predicate<InternalRelation> NO_FILTER = Predicates.alwaysTrue();
 
     public void commit(final Collection<InternalRelation> addedRelations,
-                       final Collection<InternalRelation> deletedRelations, final HashMultimap<Long, MediaData> attachments, final HashMultimap<Long, Note> notes, final StandardJanusGraphTx tx) {
+                       final Collection<InternalRelation> deletedRelations, final HashMultimap<String, MediaData> attachments, final HashMultimap<String, Note> notes, final StandardJanusGraphTx tx) {
         if (addedRelations.isEmpty() && deletedRelations.isEmpty()&&attachments.isEmpty()&&notes.isEmpty()) return;
         //1. Finalize transaction
         log.debug("Saving transaction. Added {}, removed {}", addedRelations.size(), deletedRelations.size());
@@ -912,7 +909,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
     /***********************************mediaData和note**************************/
     @Override
-    public List<MediaData> getMediaDatas(long vertexId){
+    public List<MediaData> getMediaDatas(String vertexId){
         Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
         StandardJanusGraphTx consistentTx = null;
         try {
@@ -937,7 +934,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         }
     }
     @Override
-    public List<Note> getNotes(long vertexId){
+    public List<Note> getNotes(String vertexId){
         Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
         StandardJanusGraphTx consistentTx = null;
         try {

@@ -23,7 +23,7 @@ import org.janusgraph.core.schema.SchemaStatus;
 */
 public interface CompositeIndexType extends IndexType {
 
-    long getID();
+    String getID();
 
     IndexField[] getFieldKeys();
 

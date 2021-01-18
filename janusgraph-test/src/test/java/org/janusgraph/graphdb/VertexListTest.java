@@ -61,7 +61,7 @@ public class VertexListTest {
             JanusGraphVertex previous = null;
             for (int i = 0; i < num; i++) {
                 JanusGraphVertex next = iterator.next();
-                if (previous!=null) assertTrue(previous.longId()<next.longId());
+                if (previous!=null) assertTrue(previous.longId().compareTo(next.longId())<0);
                 previous = next;
             }
             try {

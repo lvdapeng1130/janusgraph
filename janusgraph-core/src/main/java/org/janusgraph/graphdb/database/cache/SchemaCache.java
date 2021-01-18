@@ -33,17 +33,17 @@ import org.apache.tinkerpop.gremlin.structure.Direction;
  */
 public interface SchemaCache {
 
-    Long getSchemaId(String schemaName);
+    String getSchemaId(String schemaName);
 
-    EntryList getSchemaRelations(long schemaId, BaseRelationType type, final Direction dir);
+    EntryList getSchemaRelations(String schemaId, BaseRelationType type, final Direction dir);
 
-    void expireSchemaElement(final long schemaId);
+    void expireSchemaElement(final String schemaId);
 
     interface StoreRetrieval {
 
-        Long retrieveSchemaByName(final String typeName);
+        String retrieveSchemaByName(final String typeName);
 
-        EntryList retrieveSchemaRelations(final long schemaId, final BaseRelationType type, final Direction dir);
+        EntryList retrieveSchemaRelations(final String schemaId, final BaseRelationType type, final Direction dir);
 
     }
 

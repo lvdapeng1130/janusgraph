@@ -18,14 +18,13 @@ import com.google.common.base.Preconditions;
 import org.janusgraph.core.JanusGraphManagerUtility;
 import org.janusgraph.core.JanusGraphTransaction;
 import org.janusgraph.core.schema.JanusGraphManagement;
-import org.janusgraph.diskstorage.ResourceUnavailableException;
-
-import org.janusgraph.diskstorage.util.time.Timer;
-import org.janusgraph.diskstorage.util.time.TimestampProvider;
 import org.janusgraph.diskstorage.ReadBuffer;
+import org.janusgraph.diskstorage.ResourceUnavailableException;
 import org.janusgraph.diskstorage.log.Log;
 import org.janusgraph.diskstorage.log.Message;
 import org.janusgraph.diskstorage.log.MessageReader;
+import org.janusgraph.diskstorage.util.time.Timer;
+import org.janusgraph.diskstorage.util.time.TimestampProvider;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.database.cache.SchemaCache;
 import org.janusgraph.graphdb.database.idhandling.VariableLong;
@@ -33,18 +32,20 @@ import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.database.serialize.Serializer;
 import org.janusgraph.graphdb.management.JanusGraphManager;
 import org.janusgraph.graphdb.types.vertices.JanusGraphSchemaVertex;
-import static org.janusgraph.graphdb.database.management.GraphCacheEvictionAction.EVICT;
-import static org.janusgraph.graphdb.database.management.GraphCacheEvictionAction.DO_NOT_EVICT;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Iterator;
-import java.util.Set;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.janusgraph.graphdb.database.management.GraphCacheEvictionAction.DO_NOT_EVICT;
+import static org.janusgraph.graphdb.database.management.GraphCacheEvictionAction.EVICT;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -86,10 +87,13 @@ public class ManagementLogger implements MessageReader {
         Preconditions.checkNotNull(logType);
         switch (logType) {
             case CACHED_TYPE_EVICTION: {
-                long evictionId = VariableLong.readPositive(in);
+                //long evictionId = VariableLong.readPositive(in);
+                //long numEvictions = VariableLong.readPositive(in);
+                String evictionId=serializer.readObjectNotNull(in,String.class);
                 long numEvictions = VariableLong.readPositive(in);
                 for (int i = 0; i < numEvictions; i++) {
-                    long typeId = VariableLong.readPositive(in);
+                    //long typeId = VariableLong.readPositive(in);
+                    String typeId = serializer.readObjectNotNull(in,String.class);
                     schemaCache.expireSchemaElement(typeId);
                 }
                 final GraphCacheEvictionAction action = serializer.readObjectNotNull(in, GraphCacheEvictionAction.class);
@@ -128,11 +132,13 @@ public class ManagementLogger implements MessageReader {
         evictionTriggerMap.put(evictionId,new EvictionTrigger(evictionId,updatedTypeTriggers,graph));
         DataOutput out = graph.getDataSerializer().getDataOutput(128);
         out.writeObjectNotNull(MgmtLogType.CACHED_TYPE_EVICTION);
-        VariableLong.writePositive(out,evictionId);
+        //VariableLong.writePositive(out,evictionId);
+        out.writeObjectNotNull(evictionId);
         VariableLong.writePositive(out,updatedTypes.size());
         for (JanusGraphSchemaVertex type : updatedTypes) {
             assert type.hasId();
-            VariableLong.writePositive(out,type.longId());
+            //VariableLong.writePositive(out,type.longId());
+            out.writeObjectNotNull(type.longId());
         }
         if (evictGraphFromCache) {
             out.writeObjectNotNull(EVICT);
@@ -205,13 +211,13 @@ public class ManagementLogger implements MessageReader {
 
     private class SendAckOnTxClose implements Runnable {
 
-        private final long evictionId;
+        private final String evictionId;
         private final Set<? extends JanusGraphTransaction> openTx;
         private final String originId;
         private final GraphCacheEvictionAction action;
         private final String graphName;
 
-        private SendAckOnTxClose(long evictionId,
+        private SendAckOnTxClose(String evictionId,
                                  String originId,
                                  Set<? extends JanusGraphTransaction> openTx,
                                  GraphCacheEvictionAction action,
@@ -250,7 +256,8 @@ public class ManagementLogger implements MessageReader {
                     DataOutput out = graph.getDataSerializer().getDataOutput(64);
                     out.writeObjectNotNull(MgmtLogType.CACHED_TYPE_EVICTION_ACK);
                     out.writeObjectNotNull(originId);
-                    VariableLong.writePositive(out,evictionId);
+                    //VariableLong.writePositive(out,evictionId);
+                    out.writeObjectNotNull(evictionId);
                     if (null != jgm && action.equals(EVICT)) {
                         jgm.removeGraph(graphName);
                         log.debug("Graph {} has been removed from the JanusGraphManager graph cache.", graphName);

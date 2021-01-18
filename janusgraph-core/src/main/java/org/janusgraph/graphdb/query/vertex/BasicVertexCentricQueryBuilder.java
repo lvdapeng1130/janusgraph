@@ -91,7 +91,7 @@ public abstract class BasicVertexCentricQueryBuilder<Q extends BaseVertexQuery<Q
     }
 
     @Override
-    public JanusGraphVertex getVertex(long vertexId) {
+    public JanusGraphVertex getVertex(String vertexId) {
         return tx.getVertex(vertexId);
     }
 
@@ -208,7 +208,7 @@ public abstract class BasicVertexCentricQueryBuilder<Q extends BaseVertexQuery<Q
         assert isImplicitKeyQuery(RelationCategory.PROPERTY);
         if (dir==Direction.IN || limit<1) return ImmutableList.of();
         ImplicitKey key = (ImplicitKey)tx.getRelationType(types[0]);
-        return ImmutableList.of(new StandardVertexProperty(0, key, v, key.computeProperty(v),
+        return ImmutableList.of(new StandardVertexProperty("", key, v, key.computeProperty(v),
                 v.isNew() ? ElementLifeCycle.New : ElementLifeCycle.Loaded));
     }
 

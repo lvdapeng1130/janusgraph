@@ -32,7 +32,7 @@ public class RelationIdentifierUtils {
         if (r.hasId()) {
             return new RelationIdentifier(r.getVertex(0).longId(),
                 r.getType().longId(),
-                r.longId(), (r.isEdge() ? r.getVertex(1).longId() : 0));
+                r.longId(), (r.isEdge() ? r.getVertex(1).longId() : ""));
         } else return null;
     }
 

@@ -17,20 +17,15 @@
 
 package org.janusgraph.graphdb.util;
 
+import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.TreeSet;
+import java.lang.ref.WeakReference;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-import java.lang.ref.WeakReference;
-
-import org.cliffc.high_scale_lib.NonBlockingHashMapLong;
 
 /**
  * A LRU cache implementation based upon ConcurrentHashMap and other techniques to reduce
@@ -53,7 +48,7 @@ import org.cliffc.high_scale_lib.NonBlockingHashMapLong;
 public class ConcurrentLRUCache<V> {
     private static final Logger log = LoggerFactory.getLogger(ConcurrentLRUCache.class);
 
-    private final NonBlockingHashMapLong<CacheEntry<Long, V>> map;
+    private final NonBlockingHashMap<String,CacheEntry<String, V>> map;
     private final int upperWaterMark, lowerWaterMark;
     private final ReentrantLock markAndSweepLock = new ReentrantLock(true);
     private boolean isCleaning = false;  // not volatile... piggybacked on other volatile vars
@@ -71,7 +66,7 @@ public class ConcurrentLRUCache<V> {
         if (upperWaterMark < 1) throw new IllegalArgumentException("upperWaterMark must be > 0");
         if (lowerWaterMark >= upperWaterMark)
             throw new IllegalArgumentException("lowerWaterMark must be  < upperWaterMark");
-        map = new NonBlockingHashMapLong<>(initialSize);
+        map = new NonBlockingHashMap<>(initialSize);
         newThreadForCleanup = runNewThreadForCleanup;
         this.upperWaterMark = upperWaterMark;
         this.lowerWaterMark = lowerWaterMark;
@@ -92,8 +87,8 @@ public class ConcurrentLRUCache<V> {
         isAlive = live;
     }
 
-    public V get(Long key) {
-        CacheEntry<Long, V> e = map.get(key);
+    public V get(String key) {
+        CacheEntry<String, V> e = map.get(key);
         if (e == null) {
             if (isAlive) stats.missCounter.incrementAndGet();
             return null;
@@ -102,12 +97,12 @@ public class ConcurrentLRUCache<V> {
         return e.value;
     }
 
-    public boolean containsKey(Long key) {
+    public boolean containsKey(String key) {
         return map.containsKey(key);
     }
 
-    public V remove(Long key) {
-        CacheEntry<Long, V> cacheEntry = map.remove(key);
+    public V remove(String key) {
+        CacheEntry<String, V> cacheEntry = map.remove(key);
         if (cacheEntry != null) {
             stats.size.decrementAndGet();
             return cacheEntry.value;
@@ -115,12 +110,12 @@ public class ConcurrentLRUCache<V> {
         return null;
     }
 
-    public V putIfAbsent(Long key, V val) {
+    public V putIfAbsent(String key, V val) {
         if (val == null)
             return null;
 
-        final CacheEntry<Long, V> e = new CacheEntry<>(key, val, stats.accessCounter.incrementAndGet());
-        final CacheEntry<Long, V> oldCacheEntry = map.putIfAbsent(key, e);
+        final CacheEntry<String, V> e = new CacheEntry<>(key, val, stats.accessCounter.incrementAndGet());
+        final CacheEntry<String, V> oldCacheEntry = map.putIfAbsent(key, e);
 
         if (oldCacheEntry == null) // only do maintenance if we have put a new item to the map
             doCacheMaintenanceOnPut(oldCacheEntry);
@@ -128,18 +123,18 @@ public class ConcurrentLRUCache<V> {
         return oldCacheEntry == null ? null : oldCacheEntry.value;
     }
 
-    public V put(Long key, V val) {
+    public V put(String key, V val) {
         if (val == null)
             return null;
 
-        final CacheEntry<Long, V> e = new CacheEntry<>(key, val, stats.accessCounter.incrementAndGet());
-        final CacheEntry<Long, V> oldCacheEntry = map.put(key, e);
+        final CacheEntry<String, V> e = new CacheEntry<>(key, val, stats.accessCounter.incrementAndGet());
+        final CacheEntry<String, V> oldCacheEntry = map.put(key, e);
 
         doCacheMaintenanceOnPut(oldCacheEntry);
         return oldCacheEntry == null ? null : oldCacheEntry.value;
     }
 
-    private void doCacheMaintenanceOnPut(CacheEntry<Long, V> oldCacheEntry) {
+    private void doCacheMaintenanceOnPut(CacheEntry<String, V> oldCacheEntry) {
         int currentSize;
         if (oldCacheEntry == null) {
             currentSize = stats.size.incrementAndGet();
@@ -212,13 +207,13 @@ public class ConcurrentLRUCache<V> {
             int wantToRemove = sz - lowerWaterMark;
 
             @SuppressWarnings("unchecked") // generic array's are annoying
-                    CacheEntry<Long, V>[] entrySet = new CacheEntry[sz];
+                    CacheEntry<String, V>[] entrySet = new CacheEntry[sz];
             int eSize = 0;
 
             // System.out.println("newestEntry="+newestEntry + " oldestEntry="+oldestEntry);
             // System.out.println("items removed:" + numRemoved + " numLongept=" + numLongept + " esetSz="+ eSize + " sz-numRemoved=" + (sz-numRemoved));
 
-            for (CacheEntry<Long, V> ce : map.values()) {
+            for (CacheEntry<String, V> ce : map.values()) {
                 // set lastAccessedCopy to avoid more volatile reads
                 ce.lastAccessedCopy = ce.lastAccessed;
                 long thisEntry = ce.lastAccessedCopy;
@@ -264,7 +259,7 @@ public class ConcurrentLRUCache<V> {
 
                 // iterate backward to make it easy to remove items.
                 for (int i = eSize - 1; i >= 0; i--) {
-                    CacheEntry<Long, V> ce = entrySet[i];
+                    CacheEntry<String, V> ce = entrySet[i];
                     long thisEntry = ce.lastAccessedCopy;
 
                     if (thisEntry > newestEntry - wantToLongeep) {
@@ -308,10 +303,10 @@ public class ConcurrentLRUCache<V> {
                 wantToLongeep = lowerWaterMark - numLongept;
                 wantToRemove = sz - lowerWaterMark - numRemoved;
 
-                final PQueue<Long, V> queue = new PQueue<>(wantToRemove);
+                final PQueue<String, V> queue = new PQueue<>(wantToRemove);
 
                 for (int i = eSize - 1; i >= 0; i--) {
-                    CacheEntry<Long, V> ce = entrySet[i];
+                    CacheEntry<String, V> ce = entrySet[i];
                     long thisEntry = ce.lastAccessedCopy;
 
                     if (thisEntry > newestEntry - wantToLongeep) {
@@ -359,7 +354,7 @@ public class ConcurrentLRUCache<V> {
 
                 // Now delete everything in the priority queue.
                 // avoid using pop() since order doesn't matter anymore
-                for (CacheEntry<Long, V> ce : queue.getValues()) {
+                for (CacheEntry<String, V> ce : queue.getValues()) {
                     if (ce == null) continue;
                     evictEntry(ce.key);
                     numRemoved++;
@@ -415,8 +410,8 @@ public class ConcurrentLRUCache<V> {
     }
 
 
-    private void evictEntry(Long key) {
-        CacheEntry<Long, V> o = map.remove(key);
+    private void evictEntry(String key) {
+        CacheEntry<String, V> o = map.remove(key);
         if (o == null) return;
         stats.size.decrementAndGet();
         stats.evictionCounter.incrementAndGet();
@@ -432,15 +427,15 @@ public class ConcurrentLRUCache<V> {
      * @param n the number of oldest items needed
      * @return a LinkedHashMap containing 'n' or less than 'n' entries
      */
-    public Map<Long, V> getOldestAccessedItems(int n) {
-        final Map<Long, V> result = new LinkedHashMap<>();
+    public Map<String, V> getOldestAccessedItems(int n) {
+        final Map<String, V> result = new LinkedHashMap<>();
         if (n <= 0)
             return result;
-        final TreeSet<CacheEntry<Long, V>> tree = new TreeSet<>();
+        final TreeSet<CacheEntry<String, V>> tree = new TreeSet<>();
         markAndSweepLock.lock();
         try {
-            for (Map.Entry<Long, CacheEntry<Long, V>> entry : map.entrySet()) {
-                CacheEntry<Long, V> ce = entry.getValue();
+            for (Map.Entry<String, CacheEntry<String, V>> entry : map.entrySet()) {
+                CacheEntry<String, V> ce = entry.getValue();
                 ce.lastAccessedCopy = ce.lastAccessed;
                 if (tree.size() < n) {
                     tree.add(ce);
@@ -454,22 +449,22 @@ public class ConcurrentLRUCache<V> {
         } finally {
             markAndSweepLock.unlock();
         }
-        for (CacheEntry<Long, V> e : tree) {
+        for (CacheEntry<String, V> e : tree) {
             result.put(e.key, e.value);
         }
         return result;
     }
 
-    public Map<Long, V> getLatestAccessedItems(int n) {
-        final Map<Long, V> result = new LinkedHashMap<>();
+    public Map<String, V> getLatestAccessedItems(int n) {
+        final Map<String, V> result = new LinkedHashMap<>();
         if (n <= 0)
             return result;
-        final TreeSet<CacheEntry<Long, V>> tree = new TreeSet<>();
+        final TreeSet<CacheEntry<String, V>> tree = new TreeSet<>();
         // we need to grab the lock since we are changing lastAccessedCopy
         markAndSweepLock.lock();
         try {
-            for (Map.Entry<Long, CacheEntry<Long, V>> entry : map.entrySet()) {
-                final CacheEntry<Long, V> ce = entry.getValue();
+            for (Map.Entry<String, CacheEntry<String, V>> entry : map.entrySet()) {
+                final CacheEntry<String, V> ce = entry.getValue();
                 ce.lastAccessedCopy = ce.lastAccessed;
                 if (tree.size() < n) {
                     tree.add(ce);
@@ -483,7 +478,7 @@ public class ConcurrentLRUCache<V> {
         } finally {
             markAndSweepLock.unlock();
         }
-        for (CacheEntry<Long, V> e : tree) {
+        for (CacheEntry<String, V> e : tree) {
             result.put(e.key, e.value);
         }
         return result;
@@ -497,7 +492,7 @@ public class ConcurrentLRUCache<V> {
         map.clear();
     }
 
-    public Map<Long, CacheEntry<Long, V>> getMap() {
+    public Map<String, CacheEntry<String, V>> getMap() {
         return map;
     }
 
@@ -603,7 +598,7 @@ public class ConcurrentLRUCache<V> {
     }
 
     public interface EvictionListener<V> {
-        void evictedEntry(Long key, V value);
+        void evictedEntry(String key, V value);
     }
 
     private static class CleanupThread extends Thread {

@@ -9,19 +9,19 @@ import org.janusgraph.kydsj.serialize.MediaData;
  * @jira:
  */
 public class SimpleAddedAttachment {
-    private final HashMultimap<Long, MediaData> attachments = HashMultimap.create();
+    private final HashMultimap<String, MediaData> attachments = HashMultimap.create();
 
-    public boolean add(Long id,MediaData mediaData) {
+    public boolean add(String id,MediaData mediaData) {
         attachments.put(id,mediaData);
         return true;
     }
 
-    public boolean remove(Long id,MediaData mediaData) {
+    public boolean remove(String id,MediaData mediaData) {
         attachments.remove(id,mediaData);
         return true;
     }
 
-    public HashMultimap<Long, MediaData> getAttachments() {
+    public HashMultimap<String, MediaData> getAttachments() {
         return attachments;
     }
 

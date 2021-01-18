@@ -26,24 +26,22 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
  */
 public class ElementUtils {
 
-    public static long getVertexId(Object id) {
-        if (null == id) return 0;
+    public static String getVertexId(Object id) {
+        if (null == id) return "";
 
         if (id instanceof JanusGraphVertex) //allows vertices to be "re-attached" to the current transaction
             return ((JanusGraphVertex) id).longId();
         if (id instanceof Long)
-            return (Long) id;
+            return id.toString();
+        if (id instanceof String)
+            return (String) id;
         if (id instanceof Number)
-            return ((Number) id).longValue();
+            return ((Number) id).longValue()+"";
 
-        try {
-            // handles the case of a user passing a "detached" Vertex (DetachedVertex, StarVertex, etc).
-            if (id instanceof Vertex)
-                return Long.parseLong(((Vertex) id).id().toString());
-            else
-                return Long.valueOf(id.toString());
-        } catch (NumberFormatException e) {
-            return 0;
+        if (id instanceof Vertex) {
+            return ((Vertex) id).id().toString();
+        }else {
+            return id.toString();
         }
     }
 
@@ -54,8 +52,9 @@ public class ElementUtils {
             if (id instanceof JanusGraphEdge) return (RelationIdentifier) ((JanusGraphEdge) id).id();
             else if (id instanceof RelationIdentifier) return (RelationIdentifier) id;
             else if (id instanceof String) return RelationIdentifier.parse((String) id);
-            else if (id instanceof long[]) return RelationIdentifier.get((long[]) id);
-            else if (id instanceof int[]) return RelationIdentifier.get((int[]) id);
+            else if (id instanceof String[]) return RelationIdentifier.get((String[]) id);
+            else if (id instanceof long[]) return RelationIdentifier.get((String[]) id);
+            else if (id instanceof int[]) return RelationIdentifier.get((String[]) id);
         } catch (IllegalArgumentException e) {
             //swallow since null will be returned below
         }

@@ -68,7 +68,7 @@ public class UniqueInstanceIdRetrieverTest {
         when(config.has(GraphDatabaseConfiguration.UNIQUE_INSTANCE_ID_SUFFIX)).thenReturn(true);
         when(config.get(GraphDatabaseConfiguration.UNIQUE_INSTANCE_ID_SUFFIX)).thenReturn(uniqueInstanceIdSuffix);
         String result = uniqueInstanceIdRetriever.getOrGenerateUniqueInstanceId(config);
-        assertTrue(result.endsWith(LongEncoding.encode(uniqueInstanceIdSuffix)));
+        assertTrue(result.endsWith(LongEncoding.encode(uniqueInstanceIdSuffix+"")));
     }
 
     @Test

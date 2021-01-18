@@ -14,11 +14,13 @@
 
 package org.janusgraph.graphdb.query.vertex;
 
-import com.carrotsearch.hppc.LongArrayList;
+import com.carrotsearch.hppc.ObjectArrayList;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
-import org.janusgraph.core.*;
+import com.google.common.collect.Iterables;
+import org.apache.commons.lang.StringUtils;
+import org.janusgraph.core.JanusGraphRelation;
+import org.janusgraph.core.VertexList;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.EntryList;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
@@ -30,7 +32,7 @@ import org.janusgraph.graphdb.transaction.RelationConstructor;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Iterator;
 
 /**
  * This is an optimization of specifically for {@link VertexCentricQuery} that addresses the special but
@@ -95,20 +97,21 @@ public class SimpleVertexQueryProcessor implements Iterable<Entry> {
      * @return
      */
     public VertexList vertexIds() {
-        LongArrayList list = new LongArrayList();
-        long previousId = 0;
-        for (Long id : Iterables.transform(this,new Function<Entry, Long>() {
+        ObjectArrayList<String> list = new ObjectArrayList<>();
+        String previousId = null;
+        for (String id : Iterables.transform(this,new Function<Entry, String>() {
             @Nullable
             @Override
-            public Long apply(@Nullable Entry entry) {
+            public String apply(@Nullable Entry entry) {
                 return edgeSerializer.readRelation(entry,true,tx).getOtherVertexId();
             }
         })) {
             list.add(id);
-            if (id>=previousId && previousId>=0) previousId=id;
-            else previousId=-1;
+            if (StringUtils.isNotBlank(previousId)&&id.compareTo(previousId)>=0){
+                previousId=id;
+            }
         }
-        return new VertexLongList(tx,list,previousId>=0);
+        return new VertexLongList(tx,list,StringUtils.isNotBlank(previousId));
     }
 
     /**

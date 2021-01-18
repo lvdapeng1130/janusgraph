@@ -87,7 +87,7 @@ public class RelationComparator implements Comparator<InternalRelation> {
         if (t1.multiplicity().isUnique(dir1)) return 0;
 
         // 5) Compare sort key values (this is empty and hence skipped if the type multiplicity is constrained)
-        for (long typeId : t1.getSortKey()) {
+        for (String typeId : t1.getSortKey()) {
             int keyCompare = compareOnKey(r1, r2, typeId, t1.getSortOrder());
             if (keyCompare != 0) return keyCompare;
         }
@@ -133,7 +133,7 @@ public class RelationComparator implements Comparator<InternalRelation> {
         }
     }
 
-    private int compareOnKey(JanusGraphRelation r1, JanusGraphRelation r2, long typeId, Order order) {
+    private int compareOnKey(JanusGraphRelation r1, JanusGraphRelation r2, String typeId, Order order) {
         return compareOnKey(r1,r2,tx.getExistingPropertyKey(typeId),order);
     }
 

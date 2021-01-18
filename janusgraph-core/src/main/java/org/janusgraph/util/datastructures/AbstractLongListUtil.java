@@ -14,7 +14,7 @@
 
 package org.janusgraph.util.datastructures;
 
-import com.carrotsearch.hppc.LongArrayList;
+import com.carrotsearch.hppc.ObjectArrayList;
 import com.google.common.base.Preconditions;
 
 /**
@@ -25,49 +25,49 @@ import com.google.common.base.Preconditions;
 public class AbstractLongListUtil {
 
 
-    public static boolean isSorted(LongArrayList l, final boolean unique) {
+    public static boolean isSorted(ObjectArrayList<String> l, final boolean unique) {
         for (int i = 1; i < l.size(); i++) {
-            if (l.get(i) < l.get(i - 1) || (unique && l.get(i) == l.get(i - 1))) return false;
+            if (l.get(i).compareTo(l.get(i - 1))<0 || (unique && l.get(i).equals(l.get(i - 1)))) return false;
         }
         return true;
     }
 
-    public static boolean isSorted(LongArrayList l) {
+    public static boolean isSorted(ObjectArrayList<String> l) {
         return isSorted(l, false);
     }
 
-    public static LongArrayList mergeSort(LongArrayList a, LongArrayList b) {
+    public static ObjectArrayList<String> mergeSort(ObjectArrayList<String> a, ObjectArrayList<String> b) {
         int positionA=0, positionB=0;
-        LongArrayList result = new LongArrayList(a.size()+b.size());
+        ObjectArrayList<String> result = new ObjectArrayList<String>(a.size()+b.size());
         while (positionA<a.size() || positionB<b.size()) {
-            long next;
+            String next;
             if (positionA>=a.size()) {
                 next=b.get(positionB++);
             } else if (positionB>=b.size()) {
                 next=a.get(positionA++);
-            } else if (a.get(positionA)<=b.get(positionB)) {
+            } else if (a.get(positionA).compareTo(b.get(positionB))<=0) {
                 next=a.get(positionA++);
             } else {
                 next=b.get(positionB++);
             }
-            Preconditions.checkArgument(result.isEmpty() || result.get(result.size()-1)<=next,
+            Preconditions.checkArgument(result.isEmpty() || result.get(result.size()-1).compareTo(next)<=0,
                     "The input lists are not sorted");
             result.add(next);
         }
         return result;
     }
 
-    public static LongArrayList mergeJoin(LongArrayList a, LongArrayList b, final boolean unique) {
+    public static ObjectArrayList<String> mergeJoin(ObjectArrayList<String> a, ObjectArrayList<String> b, final boolean unique) {
         assert isSorted(a) : a.toString();
         assert isSorted(b) : b.toString();
         int counterA = 0, counterB = 0;
         int sizeA = a.size();
         int sizeB = b.size();
-        LongArrayList merge = new LongArrayList(Math.min(sizeA, sizeB));
+        ObjectArrayList<String> merge = new ObjectArrayList<String>(Math.min(sizeA, sizeB));
         int resultSize = 0;
         while (counterA < sizeA && counterB < sizeB) {
-            if (a.get(counterA) == b.get(counterB)) {
-                long value = a.get(counterA);
+            if (a.get(counterA).compareTo(b.get(counterB))==0) {
+                String value = a.get(counterA);
                 if (!unique) {
                     merge.add(value);
                     resultSize++;
@@ -79,18 +79,18 @@ public class AbstractLongListUtil {
                 }
                 counterA++;
                 counterB++;
-            } else if (a.get(counterA) < b.get(counterB)) {
+            } else if (a.get(counterA).compareTo(b.get(counterB))<0) {
                 counterA++;
             } else {
-                assert a.get(counterA) > b.get(counterB);
+                assert a.get(counterA).compareTo(b.get(counterB))>0;
                 counterB++;
             }
         }
         return merge;
     }
 
-    public static LongArrayList singleton(long el) {
-        LongArrayList l = new LongArrayList(1);
+    public static ObjectArrayList<String> singleton(String el) {
+        ObjectArrayList<String> l = new ObjectArrayList(1);
         l.add(el);
         return l;
     }

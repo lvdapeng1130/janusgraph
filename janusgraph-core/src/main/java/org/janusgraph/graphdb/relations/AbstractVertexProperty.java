@@ -31,7 +31,7 @@ public abstract class AbstractVertexProperty<V> extends AbstractTypedRelation im
     private InternalVertex vertex;
     private final Object value;
 
-    public AbstractVertexProperty(long id, PropertyKey type, InternalVertex vertex, Object value) {
+    public AbstractVertexProperty(String id, PropertyKey type, InternalVertex vertex, Object value) {
         super(id, type);
         this.vertex = Preconditions.checkNotNull(vertex, "null vertex");
         this.value = Preconditions.checkNotNull(value, "null value for property key %s",type);

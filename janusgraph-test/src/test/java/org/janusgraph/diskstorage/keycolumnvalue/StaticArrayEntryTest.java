@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class StaticArrayEntryTest {
 
-    private static final RelationCache cache = new RelationCache(Direction.OUT,5,105,"Hello");
+    private static final RelationCache cache = new RelationCache(Direction.OUT,"5","105","Hello");
 
     private static final EntryMetaData[] metaSchema = {
         EntryMetaData.TIMESTAMP, EntryMetaData.TTL, EntryMetaData.VISIBILITY

@@ -14,9 +14,16 @@
 
 package org.janusgraph.hadoop.formats.util;
 
-import com.carrotsearch.hppc.cursors.LongObjectCursor;
+import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import com.google.common.base.Preconditions;
-import org.janusgraph.core.*;
+import org.apache.commons.lang.StringUtils;
+import org.apache.tinkerpop.gremlin.structure.*;
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerEdge;
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerVertex;
+import org.janusgraph.core.PropertyKey;
+import org.janusgraph.core.RelationType;
+import org.janusgraph.core.VertexLabel;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.graphdb.database.RelationReader;
@@ -24,16 +31,8 @@ import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.relations.RelationCache;
 import org.janusgraph.graphdb.types.TypeInspector;
-import org.janusgraph.hadoop.formats.util.input.SystemTypeInspector;
 import org.janusgraph.hadoop.formats.util.input.JanusGraphHadoopSetup;
-import org.apache.tinkerpop.gremlin.structure.T;
-import org.apache.tinkerpop.gremlin.structure.Direction;
-import org.apache.tinkerpop.gremlin.structure.Element;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.apache.tinkerpop.gremlin.structure.VertexProperty;
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerEdge;
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerVertex;
+import org.janusgraph.hadoop.formats.util.input.SystemTypeInspector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,8 +76,8 @@ public class JanusGraphVertexDeserializer implements AutoCloseable {
     public TinkerVertex readHadoopVertex(final StaticBuffer key, Iterable<Entry> entries) {
 
         // Convert key to a vertex ID
-        final long vertexId = idManager.getKeyID(key);
-        Preconditions.checkArgument(vertexId > 0);
+        final String vertexId = idManager.getKeyID(key);
+        Preconditions.checkArgument(StringUtils.isNotBlank(vertexId));
 
         // Partitioned vertex handling
         if (idManager.isPartitionedVertex(vertexId)) {
@@ -99,7 +98,7 @@ public class JanusGraphVertexDeserializer implements AutoCloseable {
             final RelationCache relation = relationReader.parseRelation(data, false, typeManager);
             if (systemTypes.isVertexLabelSystemType(relation.typeId)) {
                 // Found vertex Label
-                long vertexLabelId = relation.getOtherVertexId();
+                String vertexLabelId = relation.getOtherVertexId();
                 VertexLabel vl = typeManager.getExistingVertexLabel(vertexLabelId);
                 // Create TinkerVertex with this label
                 tv = getOrCreateVertex(vertexId, vl.name(), tg);
@@ -180,7 +179,7 @@ public class JanusGraphVertexDeserializer implements AutoCloseable {
     private void decodeProperties(final RelationCache relation, final Element element) {
         if (relation.hasProperties()) {
             // Load relation properties
-            for (final LongObjectCursor<Object> next : relation) {
+            for (final ObjectObjectCursor<String,Object> next : relation) {
                 assert next.value != null;
                 RelationType rt = typeManager.getExistingRelationType(next.key);
                 if (rt.isPropertyKey()) {
@@ -192,7 +191,7 @@ public class JanusGraphVertexDeserializer implements AutoCloseable {
         }
     }
 
-    public TinkerVertex getOrCreateVertex(final long vertexId, final String label, final TinkerGraph tg) {
+    public TinkerVertex getOrCreateVertex(final String vertexId, final String label, final TinkerGraph tg) {
         TinkerVertex v;
 
         try {

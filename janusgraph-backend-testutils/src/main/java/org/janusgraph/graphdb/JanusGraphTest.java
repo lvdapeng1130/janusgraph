@@ -14,72 +14,14 @@
 
 package org.janusgraph.graphdb;
 
-import static org.apache.tinkerpop.gremlin.process.traversal.Order.asc;
-import static org.apache.tinkerpop.gremlin.process.traversal.Order.desc;
-import static org.apache.tinkerpop.gremlin.structure.Direction.BOTH;
-import static org.apache.tinkerpop.gremlin.structure.Direction.IN;
-import static org.apache.tinkerpop.gremlin.structure.Direction.OUT;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
-import static org.janusgraph.graphdb.internal.RelationCategory.EDGE;
-import static org.janusgraph.graphdb.internal.RelationCategory.PROPERTY;
-import static org.janusgraph.graphdb.internal.RelationCategory.RELATION;
-import static org.janusgraph.testutil.JanusGraphAssert.assertCount;
-import static org.janusgraph.testutil.JanusGraphAssert.assertEmpty;
-import static org.janusgraph.testutil.JanusGraphAssert.assertNotEmpty;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
-
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import java.io.File;
-import java.nio.file.Path;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-import org.apache.tinkerpop.gremlin.process.traversal.P;
-import org.apache.tinkerpop.gremlin.process.traversal.Step;
-import org.apache.tinkerpop.gremlin.process.traversal.TextP;
-import org.apache.tinkerpop.gremlin.process.traversal.Traversal;
-import org.apache.tinkerpop.gremlin.process.traversal.TraversalStrategies;
-import org.apache.tinkerpop.gremlin.process.traversal.TraversalStrategy;
+import com.google.common.collect.*;
+import org.apache.commons.lang.StringUtils;
+import org.apache.tinkerpop.gremlin.process.traversal.*;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
-import org.apache.tinkerpop.gremlin.process.traversal.step.branch.ChooseStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.branch.LocalStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.branch.OptionalStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.branch.RepeatStep;
-import org.apache.tinkerpop.gremlin.process.traversal.step.branch.UnionStep;
+import org.apache.tinkerpop.gremlin.process.traversal.step.branch.*;
 import org.apache.tinkerpop.gremlin.process.traversal.step.filter.TraversalFilterStep;
 import org.apache.tinkerpop.gremlin.process.traversal.step.map.GraphStep;
 import org.apache.tinkerpop.gremlin.process.traversal.step.map.OrderGlobalStep;
@@ -87,46 +29,16 @@ import org.apache.tinkerpop.gremlin.process.traversal.step.sideEffect.StartStep;
 import org.apache.tinkerpop.gremlin.process.traversal.util.DefaultTraversalStrategies;
 import org.apache.tinkerpop.gremlin.process.traversal.util.Metrics;
 import org.apache.tinkerpop.gremlin.process.traversal.util.TraversalMetrics;
-import org.apache.tinkerpop.gremlin.structure.Direction;
-import org.apache.tinkerpop.gremlin.structure.Edge;
-import org.apache.tinkerpop.gremlin.structure.Property;
-import org.apache.tinkerpop.gremlin.structure.T;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.apache.tinkerpop.gremlin.structure.VertexProperty;
+import org.apache.tinkerpop.gremlin.structure.*;
 import org.janusgraph.TestCategory;
-import org.janusgraph.core.Cardinality;
-import org.janusgraph.core.EdgeLabel;
-import org.janusgraph.core.JanusGraph;
-import org.janusgraph.core.JanusGraphConfigurationException;
-import org.janusgraph.core.JanusGraphEdge;
-import org.janusgraph.core.JanusGraphElement;
-import org.janusgraph.core.JanusGraphException;
-import org.janusgraph.core.JanusGraphFactory;
-import org.janusgraph.core.JanusGraphQuery;
-import org.janusgraph.core.JanusGraphTransaction;
-import org.janusgraph.core.JanusGraphVertex;
-import org.janusgraph.core.JanusGraphVertexProperty;
-import org.janusgraph.core.JanusGraphVertexQuery;
-import org.janusgraph.core.Multiplicity;
-import org.janusgraph.core.PropertyKey;
-import org.janusgraph.core.RelationType;
-import org.janusgraph.core.SchemaViolationException;
-import org.janusgraph.core.VertexLabel;
-import org.janusgraph.core.VertexList;
+import org.janusgraph.core.*;
 import org.janusgraph.core.attribute.Cmp;
 import org.janusgraph.core.attribute.Contain;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.log.Change;
 import org.janusgraph.core.log.LogProcessorFramework;
 import org.janusgraph.core.log.TransactionRecovery;
-import org.janusgraph.core.schema.ConsistencyModifier;
-import org.janusgraph.core.schema.JanusGraphIndex;
-import org.janusgraph.core.schema.JanusGraphManagement;
-import org.janusgraph.core.schema.JanusGraphSchemaType;
-import org.janusgraph.core.schema.Mapping;
-import org.janusgraph.core.schema.RelationTypeIndex;
-import org.janusgraph.core.schema.SchemaAction;
-import org.janusgraph.core.schema.SchemaStatus;
+import org.janusgraph.core.schema.*;
 import org.janusgraph.core.util.ManagementUtil;
 import org.janusgraph.diskstorage.Backend;
 import org.janusgraph.diskstorage.BackendException;
@@ -150,11 +62,8 @@ import org.janusgraph.graphdb.database.log.LogTxStatus;
 import org.janusgraph.graphdb.database.log.TransactionLogHeader;
 import org.janusgraph.graphdb.database.management.ManagementSystem;
 import org.janusgraph.graphdb.database.serialize.Serializer;
-import org.janusgraph.graphdb.internal.ElementCategory;
-import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.Order;
-import org.janusgraph.graphdb.internal.OrderList;
-import org.janusgraph.graphdb.internal.RelationCategory;
+import org.janusgraph.graphdb.internal.*;
 import org.janusgraph.graphdb.log.StandardTransactionLogProcessor;
 import org.janusgraph.graphdb.olap.job.IndexRemoveJob;
 import org.janusgraph.graphdb.olap.job.IndexRepairJob;
@@ -169,11 +78,7 @@ import org.janusgraph.graphdb.schema.SchemaContainer;
 import org.janusgraph.graphdb.schema.VertexLabelDefinition;
 import org.janusgraph.graphdb.serializer.SpecialInt;
 import org.janusgraph.graphdb.serializer.SpecialIntSerializer;
-import org.janusgraph.graphdb.tinkerpop.optimize.AdjacentVertexHasIdOptimizerStrategy;
-import org.janusgraph.graphdb.tinkerpop.optimize.AdjacentVertexIsOptimizerStrategy;
-import org.janusgraph.graphdb.tinkerpop.optimize.JanusGraphPropertiesStep;
-import org.janusgraph.graphdb.tinkerpop.optimize.JanusGraphStep;
-import org.janusgraph.graphdb.tinkerpop.optimize.JanusGraphVertexStep;
+import org.janusgraph.graphdb.tinkerpop.optimize.*;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.graphdb.types.StandardEdgeLabelMaker;
 import org.janusgraph.graphdb.types.StandardPropertyKeyMaker;
@@ -191,7 +96,28 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
+import static org.apache.tinkerpop.gremlin.process.traversal.Order.asc;
+import static org.apache.tinkerpop.gremlin.process.traversal.Order.desc;
+import static org.apache.tinkerpop.gremlin.structure.Direction.*;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
+import static org.janusgraph.graphdb.internal.RelationCategory.*;
+import static org.janusgraph.testutil.JanusGraphAssert.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -243,7 +169,7 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
         uid = tx.getPropertyKey("name");
         n1.property(uid.name(), "abcd");
         clopen();
-        long nid = n1.longId();
+        String nid = n1.longId();
         uid = tx.getPropertyKey("name");
         assertNotNull(getV(tx, nid));
         assertNotNull(getV(tx, uid.longId()));
@@ -433,7 +359,7 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
         }
         newTx();
         //Bulk vertex retrieval
-        long[] vertexIdsOne = new long[noVertices / 10];
+        String[] vertexIdsOne = new String[noVertices / 10];
         System.arraycopy(nodeIds, 0, vertexIdsOne, 0, vertexIdsOne.length);
         //All non-cached
         verifyVerticesRetrieval(vertexIdsOne, Lists.newArrayList(tx.getVertices(vertexIdsOne)));
@@ -441,17 +367,17 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
         //All cached
         verifyVerticesRetrieval(vertexIdsOne, Lists.newArrayList(tx.getVertices(vertexIdsOne)));
 
-        long[] vertexIdsTwo = new long[noVertices / 10 * 2];
+        String[] vertexIdsTwo = new String[noVertices / 10 * 2];
         System.arraycopy(nodeIds, 0, vertexIdsTwo, 0, vertexIdsTwo.length);
         //Partially cached
         verifyVerticesRetrieval(vertexIdsTwo, Lists.newArrayList(tx.getVertices(vertexIdsTwo)));
     }
 
-    private void verifyVerticesRetrieval(long[] vertexIds, List<JanusGraphVertex> vs) {
+    private void verifyVerticesRetrieval(String[] vertexIds, List<JanusGraphVertex> vs) {
         assertEquals(vertexIds.length, vs.size());
-        final Set<Long> vertexIdSet = new HashSet<>(vs.size());
-        vs.forEach(v -> vertexIdSet.add((Long) v.id()));
-        for (final long vertexId : vertexIds) {
+        final Set<String> vertexIdSet = new HashSet<>(vs.size());
+        vs.forEach(v -> vertexIdSet.add((String)(v.id())));
+        for (final String vertexId : vertexIds) {
             assertTrue(vertexIdSet.contains(vertexId));
         }
     }
@@ -498,7 +424,7 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
         VertexLabel tag = mgmt.makeVertexLabel("tag").make();
         VertexLabel tweet = mgmt.makeVertexLabel("tweet").setStatic().make();
 
-        long[] sig;
+        String[] sig;
 
         // ######### INSPECTION & FAILURE ############
 
@@ -1977,7 +1903,7 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
         assertEquals("knows", e.value(LABEL_NAME));
         assertEquals(BaseVertexLabel.DEFAULT_VERTEXLABEL.name(), v.value(LABEL_NAME));
         assertCount(1, v.query().direction(Direction.BOTH).labels("knows").has(ID_NAME, eid).edges());
-        assertCount(0, v.query().direction(Direction.BOTH).labels("knows").has(ID_NAME, RelationIdentifier.get(new long[]{4, 5, 6, 7})).edges());
+        assertCount(0, v.query().direction(Direction.BOTH).labels("knows").has(ID_NAME, RelationIdentifier.get(new String[]{"4", "5", "6", "7"})).edges());
         assertCount(1, v.query().direction(Direction.BOTH).labels("knows").has("~nid", eid.getRelationId()).edges());
         assertCount(0, v.query().direction(Direction.BOTH).labels("knows").has("~nid", 110111).edges());
         //Test edge retrieval
@@ -1985,7 +1911,7 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
         assertEquals(eid, getE(graph, eid).id());
         //Test adjacent constraint
         assertEquals(1, v.query().direction(BOTH).has("~adjacent", u.id()).edgeCount());
-        assertCount(1, v.query().direction(BOTH).has("~adjacent", (int) getId(u)).edges());
+        assertCount(1, v.query().direction(BOTH).has("~adjacent",  getId(u)).edges());
         try {
             //Not a valid vertex
             assertCount(0, v.query().direction(BOTH).has("~adjacent", 110111).edges());
@@ -2094,9 +2020,9 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
         graph.tx().commit();
 
         VertexProperty prop = v1.properties().next();
-        assertTrue(getId(prop) > 0);
+        assertTrue(StringUtils.isNotBlank(getId(prop)));
         prop = (VertexProperty) ((Iterable) graph.multiQuery(v1).properties().values().iterator().next()).iterator().next();
-        assertTrue(getId(prop) > 0);
+        assertTrue(StringUtils.isNotBlank(getId(prop)));
 
         assertEquals(45, e3.<Integer>value("time").intValue());
         assertEquals(5, e1.<Integer>value("time").intValue());
@@ -2165,7 +2091,7 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
         graph.tx().commit();
 
         JanusGraphVertexProperty p = (JanusGraphVertexProperty) cartman.properties().next();
-        assertTrue((p.longId()) > 0);
+        assertTrue(StringUtils.isNotBlank(p.longId()));
         graph.tx().commit();
     }
 
@@ -2585,8 +2511,8 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
         /*
          ==== check fork, no fork behavior
          */
-        long e1id = getId(e1);
-        long e2id = getId(e2);
+        String e1id = getId(e1);
+        String e2id = getId(e2);
         e1 = Iterables.getOnlyElement(v1.query().direction(Direction.OUT).labels("connect").edges());
         assertEquals("e1", e1.value("name"));
         assertEquals(e1id, getId(e1));
@@ -2613,7 +2539,7 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
          === check cross transaction
          */
         final Random random = new Random();
-        final long[] vertexIds = {getId(v1), getId(v2), getId(v3)};
+        final String[] vertexIds = {getId(v1), getId(v2), getId(v3)};
         //1) Index uniqueness
         executeLockConflictingTransactionJobs(graph, new TransactionJob() {
             private int pos = 0;
@@ -2716,7 +2642,7 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
 
         JanusGraphVertex baseV = tx.addVertex("name", "base");
         newTx();
-        final long baseVid = getId(baseV);
+        final String baseVid = getId(baseV);
         final String nameA = "a", nameB = "b";
         final int parallelThreads = 4;
 
@@ -2850,7 +2776,7 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
 
         clopen();
 
-        long[] vertexIdSubset = new long[31 - 3];
+        String[] vertexIdSubset = new String[31 - 3];
         for (int i = 0; i < vertexIdSubset.length; i++) vertexIdSubset[i] = vs[i + 3].longId();
         Arrays.sort(vertexIdSubset);
 
@@ -3905,7 +3831,7 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
 
     private boolean isSortedByID(VertexList vl) {
         for (int i = 1; i < vl.size(); i++) {
-            if (vl.getID(i - 1) > vl.getID(i)) return false;
+            if (vl.getID(i - 1).compareTo(vl.getID(i))>0) return false;
         }
         return true;
     }
@@ -4008,14 +3934,14 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
     public void testRemoveCachedVertexVisibility() {
         // add vertices to hit limit of tx-cache-size
         int cacheSize = graph.getConfiguration().getTxVertexCacheSize();
-        List<Long> vertexIds = new ArrayList<>();
+        List<String> vertexIds = new ArrayList<>();
         for (int i = 0 ; i < cacheSize; i++) {
             JanusGraphVertex vertex = graph.addVertex();
             vertexIds.add(vertex.longId());
         }
 
         // add one more vertex that will be evicted from tx cache on read
-        long vertexIdToBeDeleted = graph.addVertex().longId();
+        String vertexIdToBeDeleted = graph.addVertex().longId();
         graph.tx().commit();
 
         // retrieve the vertex and delete it
@@ -4482,13 +4408,13 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
         JanusGraphVertex v1 = tx2.addVertex("weight", 111.1);
         v1.addEdge("knows", v1);
         tx2.commit();
-        final long v1id = getId(v1);
+        final String v1id = getId(v1);
         txTimes[1] = times.getTime();
         tx2 = graph.buildTransaction().logIdentifier(userLogName).start();
         JanusGraphVertex v2 = tx2.addVertex("weight", 222.2);
         v2.addEdge("knows", getV(tx2, v1id));
         tx2.commit();
-        final long v2id = getId(v2);
+        final String v2id = getId(v2);
         //Only read tx
         tx2 = graph.buildTransaction().logIdentifier(userLogName).start();
         v1 = getV(tx2, v1id);

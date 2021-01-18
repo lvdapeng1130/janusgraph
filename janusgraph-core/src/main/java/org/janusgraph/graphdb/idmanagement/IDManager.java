@@ -16,10 +16,10 @@ package org.janusgraph.graphdb.idmanagement;
 
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
 import org.janusgraph.core.InvalidIDException;
 import org.janusgraph.diskstorage.StaticBuffer;
-import org.janusgraph.diskstorage.util.BufferUtil;
-import org.janusgraph.graphdb.database.idhandling.VariableLong;
+import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 
 /**
  * Handles the allocation of ids based on the type of element
@@ -64,8 +64,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 0L;
+            final String suffix() {
+                //return 0L;
+                return "0";
             } // 0b
 
             @Override
@@ -80,8 +81,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 0L;
+            final String suffix() {
+                //return 0L;
+                return "000";
             } // 000b
 
             @Override
@@ -96,8 +98,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 2L;
+            final String suffix() {
+                //return 2L;
+                return "010";
             } // 010b
 
             @Override
@@ -112,8 +115,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 4L;
+            final String suffix() {
+                //return 4L;
+                return "100";
             } // 100b
 
             @Override
@@ -129,8 +133,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 1L;
+            final String suffix() {
+                //return 1L;
+                return "1";
             } // 1b
 
             @Override
@@ -145,8 +150,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 3L;
+            final String suffix() {
+                //return 3L;
+                return "11";
             } // 11b
 
             @Override
@@ -161,8 +167,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 1L;
+            final String suffix() {
+                //return 1L;
+                return "01";
             } // 01b
 
             @Override
@@ -177,8 +184,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 5L;
+            final String suffix() {
+                //return 5L;
+                return "101";
             } // 101b
 
             @Override
@@ -193,8 +201,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 5L;
+            final String suffix() {
+                //return 5L;
+                return "0101";
             } // 0101b
 
             @Override
@@ -209,8 +218,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 5L;
+            final String suffix() {
+                //return 5L;
+                return "00101";
             }    // 00101b
 
             @Override
@@ -225,8 +235,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 5L;
+            final String suffix() {
+                //return 5L;
+                return "000101";
             }    // 000101b
 
             @Override
@@ -241,8 +252,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 37L;
+            final String suffix() {
+                //return 37L;
+                return "100101";
             }    // 100101b
 
             @Override
@@ -257,8 +269,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 21L;
+            final String suffix() {
+                //return 21L;
+                return "10101";
             } // 10101b
 
             @Override
@@ -273,8 +286,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 21L;
+            final String suffix() {
+                //return 21L;
+                return "010101";
             } // 010101b
 
             @Override
@@ -289,8 +303,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 53L;
+            final String suffix() {
+                //return 53L;
+                return "110101";
             } // 110101b
 
             @Override
@@ -306,8 +321,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 13L;
+            final String suffix() {
+                //return 13L;
+                return "01101";
             }    // 01101b
 
             @Override
@@ -323,8 +339,9 @@ public class IDManager {
             }
 
             @Override
-            final long suffix() {
-                return 9L;
+            final String suffix() {
+                //return 9L;
+                return "1001";
             }    // 1001b
 
             @Override
@@ -335,7 +352,7 @@ public class IDManager {
 
         abstract long offset();
 
-        abstract long suffix();
+        abstract String suffix();
 
         abstract boolean isProper();
 
@@ -345,14 +362,16 @@ public class IDManager {
          * @param count
          * @return
          */
-        public final long addPadding(long count) {
+        public final String addPadding(String count) {
             assert offset()>0;
-            Preconditions.checkArgument(count>0 && count<(1L <<(TOTAL_BITS-offset())),"Count out of range for type [%s]: %s",this,count);
-            return (count << offset()) | suffix();
+            //Preconditions.checkArgument(count>0 && count<(1L <<(TOTAL_BITS-offset())),"Count out of range for type [%s]: %s",this,count);
+            //return (count << offset()) | suffix();
+            return count+suffix();
         }
 
-        public final long removePadding(long id) {
-            return id >>> offset();
+        public final String removePadding(String id) {
+            //return id >>> offset();
+            return id.substring(0,id.length()-(int)offset());
         }
 
         /**
@@ -362,8 +381,12 @@ public class IDManager {
          * @param id
          * @return
          */
-        public final boolean is(long id) {
-            return (id & ((1L << offset()) - 1)) == suffix();
+        public final boolean is(String id) {
+            int start=id.length()-(int)offset();
+            int end=start+(int) offset();
+            String suffix = id.substring(start, end);
+            return suffix().equals(suffix);
+           // return (id & ((1L << offset()) - 1)) == suffix();
         }
 
         public final boolean isSubType(VertexIDType type) {
@@ -461,18 +484,26 @@ public class IDManager {
       *  [ 0 | count | partition | ID padding (if any) ]
      */
 
-    private long constructId(long count, long partition, VertexIDType type) {
-        Preconditions.checkArgument(partition<partitionIDBound && partition>=0,"Invalid partition: %s",partition);
+    private String constructId(String count, long partition, VertexIDType type) {
+        /*Preconditions.checkArgument(partition<partitionIDBound && partition>=0,"Invalid partition: %s",partition);
         Preconditions.checkArgument(count>=0);
         Preconditions.checkArgument(VariableLong.unsignedBitLength(count)+partitionBits+
                 (type==null?0:type.offset())<=TOTAL_BITS);
         Preconditions.checkArgument(type==null || type.isProper());
         long id = (count<<partitionBits)+partition;
         if (type!=null) id = type.addPadding(id);
-        return id;
+        return id;*/
+        String id=count;
+        String newid=id+"_"+partition;
+        if (type!=null){
+            newid=newid+"_";
+            newid = type.addPadding(newid);
+        }
+        return newid;
+
     }
 
-    private static VertexIDType getUserVertexIDType(long vertexId) {
+    private static VertexIDType getUserVertexIDType(String vertexId) {
         VertexIDType type=null;
         if (VertexIDType.NormalVertex.is(vertexId)) type=VertexIDType.NormalVertex;
         else if (VertexIDType.PartitionedVertex.is(vertexId)) type=VertexIDType.PartitionedVertex;
@@ -483,56 +514,63 @@ public class IDManager {
         return type;
     }
 
-    public final boolean isUserVertexId(long vertexId) {
-        return (VertexIDType.NormalVertex.is(vertexId) || VertexIDType.PartitionedVertex.is(vertexId) || VertexIDType.UnmodifiableVertex.is(vertexId))
-                && ((vertexId>>>(partitionBits+USERVERTEX_PADDING_BITWIDTH))>0);
+    public final boolean isUserVertexId(String vertexId) {
+        return (VertexIDType.NormalVertex.is(vertexId) || VertexIDType.PartitionedVertex.is(vertexId) || VertexIDType.UnmodifiableVertex.is(vertexId));
     }
 
-    public long getPartitionId(long vertexId) {
+    public long getPartitionId(String vertexId) {
         if (VertexIDType.Schema.is(vertexId)) return SCHEMA_PARTITION;
-        assert isUserVertexId(vertexId) && getUserVertexIDType(vertexId)!=null;
+        /*assert isUserVertexId(vertexId) && getUserVertexIDType(vertexId)!=null;
         long partition = (vertexId>>>USERVERTEX_PADDING_BITWIDTH) & (partitionIDBound-1);
-        assert partition>=0;
+        assert partition>=0;*/
+        //long partition=Math.abs(vertexId.hashCode())%partitionIDBound;
+        long partition=Math.abs(vertexId.hashCode())%10;
         return partition;
     }
 
-    public StaticBuffer getKey(long vertexId) {
+    public StaticBuffer getKey(String vertexId) {
         if (VertexIDType.Schema.is(vertexId)) {
             //No partition for schema vertices
-            return BufferUtil.getLongBuffer(vertexId);
+            return StaticArrayBuffer.of(vertexId.getBytes());
+            //return BufferUtil.getLongBuffer(vertexId);
         } else {
             assert isUserVertexId(vertexId);
             VertexIDType type = getUserVertexIDType(vertexId);
             assert type.offset()==USERVERTEX_PADDING_BITWIDTH;
-            long partition = getPartitionId(vertexId);
+            /*long partition = getPartitionId(vertexId);
             long count = vertexId>>>(partitionBits+USERVERTEX_PADDING_BITWIDTH);
             assert count>0;
             long keyId = (partition<<partitionOffset) | type.addPadding(count);
-            return BufferUtil.getLongBuffer(keyId);
+            return BufferUtil.getLongBuffer(keyId);*/
+            String newId=vertexId+type.suffix();
+            return StaticArrayBuffer.of(newId.getBytes());
         }
     }
 
-    public long getKeyID(StaticBuffer b) {
-        long value = b.getLong(0);
+    public String getKeyID(StaticBuffer b) {
+        //String value=BufferUtil.getSerializer().readObjectNotNull(b.asReadBuffer(),String.class);
+        String value=new String(b.asByteBuffer().array());
         if (VertexIDType.Schema.is(value)) {
             return value;
         } else {
             VertexIDType type = getUserVertexIDType(value);
-            long partition = partitionOffset<Long.SIZE?value>>>partitionOffset:0;
-            long count = (value>>>USERVERTEX_PADDING_BITWIDTH) & ((1L <<(partitionOffset-USERVERTEX_PADDING_BITWIDTH))-1);
-            return constructId(count,partition,type);
+            //long partition = partitionOffset<Long.SIZE?value>>>partitionOffset:0;
+            //long count = (value>>>USERVERTEX_PADDING_BITWIDTH) & ((1L <<(partitionOffset-USERVERTEX_PADDING_BITWIDTH))-1);
+            long partition =this.getPartitionId(value);
+            return constructId(value,partition,type);
         }
     }
 
-    public long getRelationID(long count, long partition) {
-        Preconditions.checkArgument(count>0 && count< relationCountBound,"Invalid count for bound: %s", relationCountBound);
+    public String getRelationID(String count, long partition) {
+        //Preconditions.checkArgument(count>0 && count< relationCountBound,"Invalid count for bound: %s", relationCountBound);
+        //return constructId(count, partition, null);
         return constructId(count, partition, null);
     }
 
 
-    public long getVertexID(long count, long partition, VertexIDType vertexType) {
+    public String getVertexID(String count, long partition, VertexIDType vertexType) {
         Preconditions.checkArgument(VertexIDType.UserVertex.is(vertexType.suffix()),"Not a user vertex type: %s",vertexType);
-        Preconditions.checkArgument(count>0 && count<vertexCountBound,"Invalid count for bound: %s", vertexCountBound);
+        //Preconditions.checkArgument(count>0 && count<vertexCountBound,"Invalid count for bound: %s", vertexCountBound);
         if (vertexType==VertexIDType.PartitionedVertex) {
             Preconditions.checkArgument(partition==PARTITIONED_VERTEX_PARTITION);
             return getCanonicalVertexIdFromCount(count);
@@ -541,8 +579,8 @@ public class IDManager {
         }
     }
 
-    public long getPartitionHashForId(long id) {
-        Preconditions.checkArgument(id>0);
+    public long getPartitionHashForId(String id) {
+        /*Preconditions.checkArgument(id>0);
         Preconditions.checkState(partitionBits>0, "no partition bits");
         long result = 0;
         int offset = 0;
@@ -551,35 +589,37 @@ public class IDManager {
             offset+=partitionBits;
         }
         assert result>=0 && result<partitionIDBound;
-        return result;
+        return result;*/
+        long partition=Math.abs(id.hashCode())%10;
+        return partition;
     }
 
-    private long getCanonicalVertexIdFromCount(long count) {
+    private String getCanonicalVertexIdFromCount(String count) {
         long partition = getPartitionHashForId(count);
         return constructId(count,partition,VertexIDType.PartitionedVertex);
     }
 
-    public long getCanonicalVertexId(long partitionedVertexId) {
+    public String getCanonicalVertexId(String partitionedVertexId) {
         Preconditions.checkArgument(VertexIDType.PartitionedVertex.is(partitionedVertexId));
-        long count = partitionedVertexId>>>(partitionBits+USERVERTEX_PADDING_BITWIDTH);
-        return getCanonicalVertexIdFromCount(count);
+        //long count = partitionedVertexId>>>(partitionBits+USERVERTEX_PADDING_BITWIDTH);
+        return getCanonicalVertexIdFromCount(partitionedVertexId);
     }
 
-    public boolean isCanonicalVertexId(long partitionVertexId) {
+    public boolean isCanonicalVertexId(String partitionVertexId) {
         return partitionVertexId==getCanonicalVertexId(partitionVertexId);
     }
 
-    public long getPartitionedVertexId(long partitionedVertexId, long otherPartition) {
+    public String getPartitionedVertexId(String partitionedVertexId, long otherPartition) {
         Preconditions.checkArgument(VertexIDType.PartitionedVertex.is(partitionedVertexId));
-        long count = partitionedVertexId>>>(partitionBits+USERVERTEX_PADDING_BITWIDTH);
-        assert count>0;
-        return constructId(count,otherPartition,VertexIDType.PartitionedVertex);
+        //long count = partitionedVertexId>>>(partitionBits+USERVERTEX_PADDING_BITWIDTH);
+        //assert count>0;
+        return constructId(partitionedVertexId,otherPartition,VertexIDType.PartitionedVertex);
     }
 
-    public long[] getPartitionedVertexRepresentatives(long partitionedVertexId) {
+    public String[] getPartitionedVertexRepresentatives(String partitionedVertexId) {
         Preconditions.checkArgument(isPartitionedVertex(partitionedVertexId));
         assert getPartitionBound()<Integer.MAX_VALUE;
-        long[] ids = new long[(int)getPartitionBound()];
+        String[] ids = new String[(int)getPartitionBound()];
         for (int i=0;i<getPartitionBound();i++) {
             ids[i]=getPartitionedVertexId(partitionedVertexId,i);
         }
@@ -590,30 +630,32 @@ public class IDManager {
      * Converts a user provided long id into a JanusGraph vertex id. The id must be positive and less than {@link #getVertexCountBound()}.
      * This method is useful when providing ids during vertex creation via {@link org.apache.tinkerpop.gremlin.structure.Graph#addVertex(Object...)}.
      *
-     * @param id long id
+     * @param id String id
      * @return a corresponding JanusGraph vertex id
-     * @see #fromVertexId(long)
+     * @see #fromVertexId(String)
      */
-    public long toVertexId(long id) {
-        Preconditions.checkArgument(id > 0, "Vertex id must be positive: %s", id);
-        Preconditions.checkArgument(vertexCountBound > id, "Vertex id is too large: %s", id);
-        return id<<(partitionBits+USERVERTEX_PADDING_BITWIDTH);
+    public String toVertexId(String id) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(id), "Vertex id must be positive: %s", id);
+        //Preconditions.checkArgument(vertexCountBound > id, "Vertex id is too large: %s", id);
+        return VertexIDType.NormalVertex.addPadding(id);
+        //return id<<(partitionBits+USERVERTEX_PADDING_BITWIDTH);
     }
 
     /**
-     * Converts a JanusGraph vertex id to the user provided id as the inverse mapping of {@link #toVertexId(long)}.
+     * Converts a JanusGraph vertex id to the user provided id as the inverse mapping of {@link #toVertexId(String)}.
      *
      * @param id JanusGraph vertex id (must be positive)
      * @return original user provided id
-     * @see #toVertexId(long)
+     * @see #toVertexId(String)
      */
-    public long fromVertexId(long id) {
-        Preconditions.checkArgument(id >>> USERVERTEX_PADDING_BITWIDTH+partitionBits > 0
-            && id <= (vertexCountBound-1)<<USERVERTEX_PADDING_BITWIDTH+partitionBits, "Invalid vertex id provided: %s", id);
-        return id>>USERVERTEX_PADDING_BITWIDTH+partitionBits;
+    public String fromVertexId(String id) {
+        /*Preconditions.checkArgument(id >>> USERVERTEX_PADDING_BITWIDTH+partitionBits > 0
+            && id <= (vertexCountBound-1)<<USERVERTEX_PADDING_BITWIDTH+partitionBits, "Invalid vertex id provided: %s", id);*/
+        //return id>>USERVERTEX_PADDING_BITWIDTH+partitionBits;
+        return VertexIDType.NormalVertex.removePadding(id);
     }
 
-    public boolean isPartitionedVertex(long id) {
+    public boolean isPartitionedVertex(String id) {
         return isUserVertexId(id) && VertexIDType.PartitionedVertex.is(id);
     }
 
@@ -631,22 +673,23 @@ public class IDManager {
 
      */
 
-    public static long getTemporaryRelationID(long count) {
+    public static String getTemporaryRelationID(String count) {
         return makeTemporary(count);
     }
 
-    public static long getTemporaryVertexID(VertexIDType type, long count) {
+    public static String getTemporaryVertexID(VertexIDType type, String count) {
         Preconditions.checkArgument(type.isProper(),"Invalid vertex id type: %s",type);
         return makeTemporary(type.addPadding(count));
     }
 
-    private static long makeTemporary(long id) {
-        Preconditions.checkArgument(id>0);
-        return (1L <<63) | id; //make negative but preserve bit pattern
+    private static String makeTemporary(String id) {
+        //Preconditions.checkArgument(id>0);
+       // return (1L <<63) | id; //make negative but preserve bit pattern
+        return id;
     }
 
-    public static boolean isTemporary(long id) {
-        return id<0;
+    public static boolean isTemporary(String id) {
+        return StringUtils.isBlank(id);
     }
 
     /* ########################################################
@@ -659,40 +702,40 @@ public class IDManager {
      */
 
 
-    private static void checkSchemaTypeId(VertexIDType type, long count) {
+    private static void checkSchemaTypeId(VertexIDType type, String count) {
         Preconditions.checkArgument(VertexIDType.Schema.is(type.suffix()),"Expected schema vertex but got: %s",type);
         Preconditions.checkArgument(type.isProper(),"Expected proper type but got: %s",type);
-        Preconditions.checkArgument(count > 0 && count < SCHEMA_COUNT_BOUND,
-                "Invalid id [%s] for type [%s] bound: %s", count, type, SCHEMA_COUNT_BOUND);
+       /* Preconditions.checkArgument(count > 0 && count < SCHEMA_COUNT_BOUND,
+                "Invalid id [%s] for type [%s] bound: %s", count, type, SCHEMA_COUNT_BOUND);*/
     }
 
-    public static long getSchemaId(VertexIDType type, long count) {
+    public static String getSchemaId(VertexIDType type, String count) {
         checkSchemaTypeId(type,count);
         return type.addPadding(count);
     }
 
-    private static boolean isProperRelationType(long id) {
+    private static boolean isProperRelationType(String id) {
         return VertexIDType.UserEdgeLabel.is(id) || VertexIDType.SystemEdgeLabel.is(id)
                 || VertexIDType.UserPropertyKey.is(id) || VertexIDType.SystemPropertyKey.is(id);
     }
 
-    public static long stripEntireRelationTypePadding(long id) {
+    public static String stripEntireRelationTypePadding(String id) {
         Preconditions.checkArgument(isProperRelationType(id));
         return VertexIDType.UserEdgeLabel.removePadding(id);
     }
 
-    public static long stripRelationTypePadding(long id) {
+    public static String stripRelationTypePadding(String id) {
         Preconditions.checkArgument(isProperRelationType(id));
         return VertexIDType.RelationType.removePadding(id);
     }
 
-    public static long addRelationTypePadding(long id) {
-        long typeId = VertexIDType.RelationType.addPadding(id);
+    public static String addRelationTypePadding(String id) {
+        String typeId = VertexIDType.RelationType.addPadding(id);
         Preconditions.checkArgument(isProperRelationType(typeId));
         return typeId;
     }
 
-    public static boolean isSystemRelationTypeId(long id) {
+    public static boolean isSystemRelationTypeId(String id) {
         return VertexIDType.SystemEdgeLabel.is(id) || VertexIDType.SystemPropertyKey.is(id);
     }
 
@@ -702,31 +745,31 @@ public class IDManager {
 
     //ID inspection ------------------------------
 
-    public final boolean isSchemaVertexId(long id) {
+    public final boolean isSchemaVertexId(String id) {
         return isRelationTypeId(id) || isVertexLabelVertexId(id) || isGenericSchemaVertexId(id);
     }
 
-    public final boolean isRelationTypeId(long id) {
+    public final boolean isRelationTypeId(String id) {
         return VertexIDType.RelationType.is(id);
     }
 
-    public final boolean isEdgeLabelId(long id) {
+    public final boolean isEdgeLabelId(String id) {
         return VertexIDType.EdgeLabel.is(id);
     }
 
-    public final boolean isPropertyKeyId(long id) {
+    public final boolean isPropertyKeyId(String id) {
         return VertexIDType.PropertyKey.is(id);
     }
 
-    public boolean isGenericSchemaVertexId(long id) {
+    public boolean isGenericSchemaVertexId(String id) {
         return VertexIDType.GenericSchemaType.is(id);
     }
 
-    public boolean isVertexLabelVertexId(long id) {
+    public boolean isVertexLabelVertexId(String id) {
         return VertexIDType.VertexLabel.is(id);
     }
 
-    public boolean isUnmodifiableVertex(long id) {
+    public boolean isUnmodifiableVertex(String id) {
         return isUserVertexId(id) && VertexIDType.UnmodifiableVertex.is(id);
     }
 

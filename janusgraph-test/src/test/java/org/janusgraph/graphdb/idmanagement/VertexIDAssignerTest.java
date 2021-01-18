@@ -14,34 +14,33 @@
 
 package org.janusgraph.graphdb.idmanagement;
 
-import com.carrotsearch.hppc.LongHashSet;
-import com.carrotsearch.hppc.LongSet;
+import com.carrotsearch.hppc.ObjectHashSet;
+import com.carrotsearch.hppc.ObjectSet;
+import org.apache.commons.lang.StringUtils;
 import org.apache.tinkerpop.gremlin.structure.T;
-import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.core.JanusGraph;
+import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.core.JanusGraphVertex;
-
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
+import org.janusgraph.diskstorage.inmemory.InMemoryStoreManager;
 import org.janusgraph.diskstorage.keycolumnvalue.StandardStoreFeatures;
 import org.janusgraph.diskstorage.keycolumnvalue.StoreFeatures;
-import org.janusgraph.diskstorage.inmemory.InMemoryStoreManager;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.database.idassigner.IDPoolExhaustedException;
 import org.janusgraph.graphdb.database.idassigner.VertexIDAssigner;
 import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.internal.InternalVertex;
-
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -114,8 +113,8 @@ public class VertexIDAssignerTest {
     @ParameterizedTest
     @MethodSource("configs")
     public void testIDAssignment(VertexIDAssigner idAssigner, long maxIDAssignments, int numPartitionsBits) {
-        LongSet vertexIds = new LongHashSet();
-        LongSet relationIds = new LongHashSet();
+        ObjectSet<String> vertexIds = new ObjectHashSet<>();
+        ObjectSet<String> relationIds = new ObjectHashSet<>();
         int totalRelations = 0;
         int totalVertices = 0;
         for (int trial = 0; trial < 10; trial++) {
@@ -152,14 +151,14 @@ public class VertexIDAssignerTest {
                     //Verify that ids are set and unique
                     for (JanusGraphVertex v : vertices) {
                         assertTrue(v.hasId());
-                        long id = v.longId();
-                        assertTrue(id>0 && id<Long.MAX_VALUE);
+                        String id = v.longId();
+                        assertTrue(StringUtils.isNotBlank(id));
                         assertTrue(vertexIds.add(id));
                     }
                     for (InternalRelation r : relations) {
                         assertTrue(r.hasId());
-                        long id = r.longId();
-                        assertTrue(id>0 && id<Long.MAX_VALUE);
+                        String id = r.longId();
+                        assertTrue(StringUtils.isNotBlank(id));
                         assertTrue(relationIds.add(id));
                     }
                 } catch (IDPoolExhaustedException e) {
@@ -183,7 +182,7 @@ public class VertexIDAssignerTest {
         testCustomIdAssignment(idAssigner, CustomIdStrategy.HIGH, numPartitionsBits);
 
         final IDManager idManager = idAssigner.getIDManager();
-        for (final long id : new long[] {0, idManager.getVertexCountBound()}) {
+        for (final String id : new String[] {"0", idManager.getVertexCountBound()+""}) {
             try {
                 idManager.toVertexId(id);
                 fail("Should fail to convert out of range user id to graph vertex id");
@@ -192,7 +191,7 @@ public class VertexIDAssignerTest {
             }
         }
 
-        for (final long vertexId : new long[] {idManager.toVertexId(1)-1, idManager.toVertexId(idManager.getVertexCountBound()-1)+1}) {
+        for (final String vertexId : new String[] {idManager.toVertexId("1"), idManager.toVertexId((idManager.getVertexCountBound()-1)+"")+1}) {
             try {
                 idManager.fromVertexId(vertexId);
                 fail("Should fail to convert out of range vertex id to user id");
@@ -203,7 +202,7 @@ public class VertexIDAssignerTest {
     }
 
     private void testCustomIdAssignment(VertexIDAssigner idAssigner, CustomIdStrategy idStrategy, int numPartitionsBits) {
-        LongSet vertexIds = new LongHashSet();
+        ObjectSet<String> vertexIds = new ObjectHashSet<>();
         final long maxCount = idAssigner.getIDManager().getVertexCountBound();
         long count = 1;
         for (int trial = 0; trial < 10; trial++) {
@@ -223,7 +222,7 @@ public class VertexIDAssignerTest {
                         default:
                             throw new RuntimeException("Unsupported custom id strategy: " + idStrategy);
                     }
-                    final long id = idAssigner.getIDManager().toVertexId(userVertexId);
+                    final String id = idAssigner.getIDManager().toVertexId(userVertexId+"");
                     JanusGraphVertex next = graph.addVertex(T.id, id, "user_id", userVertexId);
                     vertices.add(next);
                 }
@@ -231,8 +230,8 @@ public class VertexIDAssignerTest {
                 //Verify that ids are set, unique and consistent with user id basis
                 for (JanusGraphVertex v : vertices) {
                     assertTrue(v.hasId());
-                    long id = v.longId();
-                    assertTrue(id>0 && id<Long.MAX_VALUE);
+                    String id = v.longId();
+                    assertTrue(StringUtils.isNotBlank(id));
                     assertTrue(vertexIds.add(id));
                     assertEquals((long) v.value("user_id"), idAssigner.getIDManager().fromVertexId(id));
                 }

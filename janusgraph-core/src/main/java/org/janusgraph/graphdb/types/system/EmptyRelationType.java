@@ -32,13 +32,13 @@ public abstract class EmptyRelationType extends EmptyVertex implements InternalR
     }
 
     @Override
-    public long[] getSignature() {
-        return new long[0];
+    public String[] getSignature() {
+        return new String[0];
     }
 
     @Override
-    public long[] getSortKey() {
-        return new long[0];
+    public String[] getSortKey() {
+        return new String[0];
     }
 
     @Override

@@ -22,8 +22,8 @@ import org.janusgraph.graphdb.internal.InternalRelation;
 
 public interface StandardRelation extends InternalRelation {
 
-    long getPreviousID();
+    String getPreviousID();
 
-    void setPreviousID(long previousID);
+    void setPreviousID(String previousID);
 
 }

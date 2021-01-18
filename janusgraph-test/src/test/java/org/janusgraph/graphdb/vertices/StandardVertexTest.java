@@ -45,7 +45,7 @@ public class StandardVertexTest {
 
     @BeforeEach
     public void setup(){
-        standardVertex = spy(new StandardVertex(tx, 1, (byte) 1));
+        standardVertex = spy(new StandardVertex(tx, "1", (byte) 1));
     }
 
     @FlakyTest(minSuccess = 1, invocationCount = 3)

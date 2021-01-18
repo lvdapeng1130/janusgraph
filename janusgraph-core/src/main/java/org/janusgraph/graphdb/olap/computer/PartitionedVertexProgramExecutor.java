@@ -60,12 +60,12 @@ public class PartitionedVertexProgramExecutor<M> {
 
     public void run(int numThreads, ScanMetrics metrics) {
         StandardJanusGraphTx tx=null;
-        Map<Long,EntryList> pVertexAggregates = vertexMemory.retrievePartitionAggregates();
+        Map<String,EntryList> pVertexAggregates = vertexMemory.retrievePartitionAggregates();
         if (pVertexAggregates.isEmpty()) return; //Nothing to do here
 
         try (WorkerPool workers = new WorkerPool(numThreads)) {
             tx = VertexJobConverter.startTransaction(graph);
-            for (Map.Entry<Long,EntryList> partitionedVertices : pVertexAggregates.entrySet()) {
+            for (Map.Entry<String,EntryList> partitionedVertices : pVertexAggregates.entrySet()) {
                 if (partitionedVertices.getValue()==null) {
                     metrics.incrementCustom(GHOST_PARTITION_VERTEX);
                     continue;
@@ -82,12 +82,12 @@ public class PartitionedVertexProgramExecutor<M> {
 
     private class PartitionedVertexProcessor implements Runnable {
 
-        private final long vertexId;
+        private final String vertexId;
         private final EntryList preloaded;
         private final StandardJanusGraphTx tx;
         private final ScanMetrics metrics;
 
-        private PartitionedVertexProcessor(long vertexId, EntryList preloaded, StandardJanusGraphTx tx, ScanMetrics metrics) {
+        private PartitionedVertexProcessor(String vertexId, EntryList preloaded, StandardJanusGraphTx tx, ScanMetrics metrics) {
             Preconditions.checkArgument(idManager.isPartitionedVertex(vertexId) && idManager.isCanonicalVertexId(vertexId));
             assert preloaded!=null;
             this.vertexId = vertexId;

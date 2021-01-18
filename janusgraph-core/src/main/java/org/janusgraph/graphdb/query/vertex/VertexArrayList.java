@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.query.vertex;
 
-import com.carrotsearch.hppc.LongArrayList;
+import com.carrotsearch.hppc.ObjectArrayList;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import org.janusgraph.core.JanusGraphElement;
@@ -23,7 +23,10 @@ import org.janusgraph.core.VertexList;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.util.datastructures.IterablesUtil;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * An implementation of {@link VertexListInternal} that stores the actual vertex references
@@ -33,7 +36,7 @@ import java.util.*;
  */
 public class VertexArrayList implements VertexListInternal {
 
-    public static final Comparator<JanusGraphVertex> VERTEX_ID_COMPARATOR = Comparator.comparingLong(JanusGraphElement::longId);
+    public static final Comparator<JanusGraphVertex> VERTEX_ID_COMPARATOR = Comparator.comparing(JanusGraphElement::longId);
 
     private final StandardJanusGraphTx tx;
     private List<JanusGraphVertex> vertices;
@@ -56,17 +59,17 @@ public class VertexArrayList implements VertexListInternal {
 
     @Override
     public void add(JanusGraphVertex n) {
-        if (!vertices.isEmpty()) sorted = sorted && (vertices.get(vertices.size()-1).longId()<=n.longId());
+        if (!vertices.isEmpty()) sorted = sorted && (vertices.get(vertices.size()-1).longId().compareTo(n.longId())<=0);
         vertices.add(n);
     }
 
     @Override
-    public long getID(int pos) {
+    public String getID(int pos) {
         return vertices.get(pos).longId();
     }
 
     @Override
-    public LongArrayList getIDs() {
+    public ObjectArrayList<String> getIDs() {
         return toLongList(vertices);
     }
 
@@ -112,7 +115,7 @@ public class VertexArrayList implements VertexListInternal {
     }
 
     public VertexLongList toVertexLongList() {
-        LongArrayList list = toLongList(vertices);
+        ObjectArrayList list = toLongList(vertices);
         return new VertexLongList(tx,list,sorted);
     }
 
@@ -127,8 +130,8 @@ public class VertexArrayList implements VertexListInternal {
      * @param vertices
      * @return
      */
-    private static LongArrayList toLongList(List<JanusGraphVertex> vertices) {
-        LongArrayList result = new LongArrayList(vertices.size());
+    private static ObjectArrayList<String> toLongList(List<JanusGraphVertex> vertices) {
+        ObjectArrayList result = new ObjectArrayList(vertices.size());
         for (JanusGraphVertex n : vertices) {
             result.add(n.longId());
         }

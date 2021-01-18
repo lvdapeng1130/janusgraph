@@ -85,7 +85,7 @@ public abstract class StandardRelationTypeMaker implements RelationTypeMaker {
         Preconditions.checkArgument(!hasSortKey() || !multiplicity.isConstrained(),"Cannot define a sort-key on constrained edge labels");
     }
 
-    private long[] checkSortKey(List<PropertyKey> sig) {
+    private String[] checkSortKey(List<PropertyKey> sig) {
         for (PropertyKey key : sig) {
             Preconditions.checkArgument(attributeHandler.isOrderPreservingDatatype(key.dataType()),
                     "Key must have an order-preserving data type to be used as sort key: " + key);
@@ -93,9 +93,9 @@ public abstract class StandardRelationTypeMaker implements RelationTypeMaker {
         return checkSignature(sig);
     }
 
-    private static long[] checkSignature(List<PropertyKey> sig) {
+    private static String[] checkSignature(List<PropertyKey> sig) {
         Preconditions.checkArgument(sig.size() == (new HashSet<>(sig)).size(), "Signature and sort key cannot contain duplicate types");
-        long[] signature = new long[sig.size()];
+        String[] signature = new String[sig.size()];
         for (int i = 0; i < sig.size(); i++) {
             PropertyKey key = sig.get(i);
             Preconditions.checkNotNull(key);
