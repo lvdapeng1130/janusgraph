@@ -3,9 +3,11 @@ package org.janusgraph.kggraph;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.Cardinality;
+import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.core.RelationType;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.schema.JanusGraphManagement;
+import org.janusgraph.diskstorage.BackendException;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +28,13 @@ public class ManageSchemaTest extends AbstractKGgraphTest{
         String printSchemaStr = management.printSchema();
         LOGGER.info(printSchemaStr);
         management.rollback();
+    }
+
+    @Test
+    public void deleteGraph() throws BackendException {
+        if (graph != null) {
+            JanusGraphFactory.drop(getJanusGraph());
+        }
     }
 
     @Test

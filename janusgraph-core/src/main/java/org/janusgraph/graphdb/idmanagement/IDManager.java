@@ -542,8 +542,8 @@ public class IDManager {
             assert count>0;
             long keyId = (partition<<partitionOffset) | type.addPadding(count);
             return BufferUtil.getLongBuffer(keyId);*/
-            String newId=vertexId+type.suffix();
-            return StaticArrayBuffer.of(newId.getBytes());
+            //String newId=vertexId+type.suffix();
+            return StaticArrayBuffer.of(vertexId.getBytes());
         }
     }
 
@@ -553,11 +553,12 @@ public class IDManager {
         if (VertexIDType.Schema.is(value)) {
             return value;
         } else {
-            VertexIDType type = getUserVertexIDType(value);
+            //VertexIDType type = getUserVertexIDType(value);
             //long partition = partitionOffset<Long.SIZE?value>>>partitionOffset:0;
             //long count = (value>>>USERVERTEX_PADDING_BITWIDTH) & ((1L <<(partitionOffset-USERVERTEX_PADDING_BITWIDTH))-1);
-            long partition =this.getPartitionId(value);
-            return constructId(value,partition,type);
+            //long partition =this.getPartitionId(value);
+            //return constructId(value,partition,type);
+            return value;
         }
     }
 

@@ -501,7 +501,7 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
             // delete some graph elements
             //deleteElements();
             // read to see the changes were made
-            //readElements();
+            readElements();
 
             // close the graph
             closeGraph();

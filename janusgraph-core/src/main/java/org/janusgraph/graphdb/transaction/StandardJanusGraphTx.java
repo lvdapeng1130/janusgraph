@@ -527,10 +527,13 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
             log.info("Provided vertex id [{}] is ignored because vertex id setting is not enabled", vertexId);
             vertexId = null;
         }
+        if(StringUtils.isNotBlank(vertexId)){
+            vertexId=IDManager.VertexIDType.NormalVertex.addPadding(vertexId);
+        }
         Preconditions.checkArgument(vertexId != null || !graph.getConfiguration().allowVertexIdSetting(), "Must provide vertex id");
         Preconditions.checkArgument(vertexId == null || IDManager.VertexIDType.NormalVertex.is(vertexId), "Not a valid vertex id: %s", vertexId);
         Preconditions.checkArgument(vertexId == null || ((InternalVertexLabel)label).hasDefaultConfiguration(), "Cannot only use default vertex labels: %s",label);
-        Preconditions.checkArgument(vertexId == null || !config.hasVerifyExternalVertexExistence() || !containsVertex(vertexId), "Vertex with given id already exists: %s", vertexId);
+        //Preconditions.checkArgument(vertexId == null || !config.hasVerifyExternalVertexExistence() || !containsVertex(vertexId), "Vertex with given id already exists: %s", vertexId);
         StandardVertex vertex = new StandardVertex(this, IDManager.getTemporaryVertexID(IDManager.VertexIDType.NormalVertex, temporaryIds.nextID()), ElementLifeCycle.New);
         if (vertexId != null) {
             vertex.setId(vertexId);
@@ -568,7 +571,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         }
         //Filter out all but one PartitionVertex representative
         return Iterables.filter(allVertices,
-            internalVertex -> !isPartitionedVertex(internalVertex) || internalVertex.longId() == idInspector.getCanonicalVertexId(internalVertex.longId()));
+            internalVertex -> !isPartitionedVertex(internalVertex) || internalVertex.longId().equals(idInspector.getCanonicalVertexId(internalVertex.longId())));
     }
 
 
