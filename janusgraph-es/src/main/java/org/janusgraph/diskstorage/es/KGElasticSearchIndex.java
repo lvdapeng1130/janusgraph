@@ -753,13 +753,13 @@ public class KGElasticSearchIndex implements IndexProvider {
                         }
                     }
                     if (mutation.hasAdditions()) {
-                        if (mutation.isNew()) { //Index
+                       /* if (mutation.isNew()) { //Index
                             log.trace("Adding entire document {}", documentId);
                             final Map<String, Object> source = getNewDocument(mutation.getAdditions(),
                                     information.get(storeName));
                             requestByStore.add(ElasticSearchMutation.createIndexRequest(indexStoreName, storeName,
                                     documentId, source));
-                        } else {
+                        } else {*/
                             final Map upsert;
                             if (!mutation.hasDeletions()) {
                                 upsert = getNewDocument(mutation.getAdditions(), information.get(storeName));
@@ -783,7 +783,7 @@ public class KGElasticSearchIndex implements IndexProvider {
                                         documentId, builder, upsert));
                                 log.trace("Adding update {}", doc);
                             }
-                        }
+                       // }
                     }
                 }
                 if (!requestByStore.isEmpty() && ingestPipelines.containsKey(storeName)) {
