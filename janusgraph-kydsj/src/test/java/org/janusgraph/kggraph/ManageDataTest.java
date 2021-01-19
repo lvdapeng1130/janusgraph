@@ -15,6 +15,7 @@ import org.apache.tinkerpop.gremlin.structure.T;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.attribute.Text;
+import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -41,6 +42,8 @@ public class ManageDataTest extends AbstractKGgraphTest{
 
     @Test
     public void insertTidIdData(){
+        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId("tid000001");
+        System.out.println(graphId);
         createElements(false,10,10000);
     }
 

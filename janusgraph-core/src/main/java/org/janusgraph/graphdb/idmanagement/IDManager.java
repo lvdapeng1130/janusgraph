@@ -655,7 +655,8 @@ public class IDManager {
     public String toVertexId(String id) {
         Preconditions.checkArgument(StringUtils.isNotBlank(id), "Vertex id must be positive: %s", id);
         //Preconditions.checkArgument(vertexCountBound > id, "Vertex id is too large: %s", id);
-        return VertexIDType.NormalVertex.addPadding(id);
+        long partition=this.getHashPartition(id.hashCode());
+        return getVertexID(id,partition,IDManager.VertexIDType.NormalVertex);
         //return id<<(partitionBits+USERVERTEX_PADDING_BITWIDTH);
     }
 
@@ -670,7 +671,13 @@ public class IDManager {
         /*Preconditions.checkArgument(id >>> USERVERTEX_PADDING_BITWIDTH+partitionBits > 0
             && id <= (vertexCountBound-1)<<USERVERTEX_PADDING_BITWIDTH+partitionBits, "Invalid vertex id provided: %s", id);*/
         //return id>>USERVERTEX_PADDING_BITWIDTH+partitionBits;
-        return VertexIDType.NormalVertex.removePadding(id);
+        //return VertexIDType.NormalVertex.removePadding(id);
+        String[] strings = id.split("_");
+        if(strings!=null&&strings.length>=1){
+            return strings[0];
+        }else {
+            return VertexIDType.NormalVertex.removePadding(id);
+        }
     }
 
     public boolean isPartitionedVertex(String id) {
