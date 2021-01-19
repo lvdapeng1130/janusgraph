@@ -284,7 +284,7 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
         String[] names = new String[noVertices];
         int[] ids = new int[noVertices];
         JanusGraphVertex[] nodes = new JanusGraphVertex[noVertices];
-        long[] nodeIds = new long[noVertices];
+        String[] nodeIds = new String[noVertices];
         List<Edge>[] nodeEdges = new List[noVertices];
         for (int i = 0; i < noVertices; i++) {
             names[i] = "vertex" + i;
@@ -317,7 +317,7 @@ public abstract class JanusGraphTest extends JanusGraphBaseTest {
         tx = null;
         Set[] nodeEdgeIds = new Set[noVertices];
         for (int i = 0; i < noVertices; i++) {
-            nodeIds[i] = (Long) nodes[i].id();
+            nodeIds[i] = nodes[i].id().toString();
             nodeEdgeIds[i] = new HashSet(10);
             for (Object r : nodeEdges[i]) {
                 nodeEdgeIds[i].add(((JanusGraphEdge) r).longId());

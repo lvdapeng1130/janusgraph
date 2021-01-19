@@ -40,7 +40,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
 
     @Test
     public void insertTidIdData(){
-        createElements(false,10,100000);
+        createElements(false,10,10000);
     }
 
     @Test

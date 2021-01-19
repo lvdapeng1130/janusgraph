@@ -103,22 +103,26 @@ public class EdgeSerializer implements RelationReader {
                 if (multiplicity.isUnique(dir)) {
                     //otherVertexId = VariableLong.readPositive(in);
                     otherVertexId= serializer.readObjectNotNull(in,String.class);
+                    relationId = serializer.readObjectNotNull(in,String.class);
                 } else {
                     //in.movePositionTo(data.getValuePosition());
                     //otherVertexId = VariableLong.readPositiveBackward(in);
                     otherVertexId=serializer.readObjectNotNull(in,String.class);
                     in.movePositionTo(data.getValuePosition());
+                    relationId = serializer.readObjectNotNull(in,String.class);
                 }
                 //relationId = VariableLong.readPositive(in);
-                relationId = serializer.readObjectNotNull(in,String.class);
             } else {
                 //in.movePositionTo(data.getValuePosition());
                 //relationId = VariableLong.readPositiveBackward(in);
                 //otherVertexId = VariableLong.readPositiveBackward(in);
-                endKeyPos = in.getPosition();
                 otherVertexId = serializer.readObjectNotNull(in,String.class);
                 relationId=serializer.readObjectNotNull(in,String.class);
+                endKeyPos = in.getPosition();
                 in.movePositionTo(data.getValuePosition());
+
+                //VariableLong.writePositiveBackward(out, otherVertexId);
+                //VariableLong.writePositiveBackward(out, relationId);
             }
             other = otherVertexId;
         } else {
@@ -271,13 +275,15 @@ public class EdgeSerializer implements RelationReader {
                     valuePosition = out.getPosition();
                     //VariableLong.writePositive(out, otherVertexId);
                     out.writeObjectNotNull(otherVertexId);
+                    out.writeObjectNotNull(relationId);
+
                 } else {
                     //VariableLong.writePositiveBackward(out, otherVertexId);
                     out.writeObjectNotNull(otherVertexId);
                     valuePosition = out.getPosition();
+                    out.writeObjectNotNull(relationId);
                 }
                 //VariableLong.writePositive(out, relationId);
-                out.writeObjectNotNull(relationId);
             } else {
                 //VariableLong.writePositiveBackward(out, otherVertexId);
                 //VariableLong.writePositiveBackward(out, relationId);
