@@ -532,7 +532,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
             vertexId=graph.getIDManager().getVertexID(vertexId,partition,IDManager.VertexIDType.NormalVertex);
             //vertexId=IDManager.VertexIDType.NormalVertex.addPadding(vertexId);
         }
-        Preconditions.checkArgument(vertexId != null || !graph.getConfiguration().allowVertexIdSetting(), "Must provide vertex id");
+        //Preconditions.checkArgument(vertexId != null || !graph.getConfiguration().allowVertexIdSetting(), "Must provide vertex id");
         Preconditions.checkArgument(vertexId == null || IDManager.VertexIDType.NormalVertex.is(vertexId), "Not a valid vertex id: %s", vertexId);
         Preconditions.checkArgument(vertexId == null || ((InternalVertexLabel)label).hasDefaultConfiguration(), "Cannot only use default vertex labels: %s",label);
         //Preconditions.checkArgument(vertexId == null || !config.hasVerifyExternalVertexExistence() || !containsVertex(vertexId), "Vertex with given id already exists: %s", vertexId);
