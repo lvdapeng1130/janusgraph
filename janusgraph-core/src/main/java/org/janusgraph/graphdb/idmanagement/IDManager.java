@@ -524,8 +524,14 @@ public class IDManager {
         long partition = (vertexId>>>USERVERTEX_PADDING_BITWIDTH) & (partitionIDBound-1);
         assert partition>=0;*/
         //long partition=Math.abs(vertexId.hashCode())%partitionIDBound;
-        long partition=Math.abs(vertexId.hashCode())%partitionIDBound;
-        return partition;
+        String[] strings = vertexId.split("_");
+        if(strings!=null&&strings.length>=2){
+            long partition = Long.parseLong(strings[1]);
+            return partition;
+        }else {
+            long partition = Math.abs(vertexId.hashCode()) % partitionIDBound;
+            return partition;
+        }
     }
 
     public StaticBuffer getKey(String vertexId) {
@@ -591,7 +597,18 @@ public class IDManager {
         }
         assert result>=0 && result<partitionIDBound;
         return result;*/
-        long partition=Math.abs(id.hashCode())%partitionIDBound;
+        String[] strings = id.split("_");
+        if(strings!=null&&strings.length>=2){
+            long partition = Long.parseLong(strings[1]);
+            return partition;
+        }else {
+            long partition = Math.abs(id.hashCode()) % partitionIDBound;
+            return partition;
+        }
+    }
+
+    public long getHashPartition(long hash){
+        long partition=Math.abs(hash)%partitionIDBound;
         return partition;
     }
 

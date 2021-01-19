@@ -10,6 +10,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.Builder;
 import lombok.Data;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.structure.T;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.attribute.Geoshape;
@@ -88,7 +89,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
                             .qqqun_num(qqqun_num+"xbbkg123")
                             //.qqqun_num(qq_qunn)
                             //.qqqun_num(RandomStringUtils.randomAlphanumeric(11))
-                            .qqqun_title(String.format("插入的qq群号是%s的QQ群",qqqun_num))
+                            .qqqun_title(String.format("插入的qq群号是%s的QQ群,线程%s",qqqun_num,Thread.currentThread().getName()))
                             .text("我是qq群的说明"+qqqun_num)
                             .build();
                         qqDataList.add(data);
@@ -131,10 +132,9 @@ public class ManageDataTest extends AbstractKGgraphTest{
                 .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
                 //StandardJanusGraphTx threadedTx = (StandardJanusGraphTx)this.getJanusGraph().tx().createThreadedTx();
                 for (QQData qqData : qqDataList) {
-                    Vertex qq = threadedTx.traversal()
+                    GraphTraversal<Vertex, Vertex> qqTraversal = threadedTx.traversal()
                         .addV("object_qq")
-                        .property(T.id,qqData.getQq_num())
-                        .property("tid",qqData.getQq_num())
+                        .property("tid", qqData.getQq_num())
                         .property("name", qqData.getQq_title(),
                             "startDate", new Date(),
                             "endDate", new Date(),
@@ -159,11 +159,13 @@ public class ManageDataTest extends AbstractKGgraphTest{
                             "startDate", new Date(),
                             "endDate", new Date(),
                             "dsr", "程序导入",
-                            "geo", Geoshape.point(22.22, 113.1122))
-                        .next();
-                    Vertex qqqun = threadedTx.traversal().addV("object_qqqun")
-                        .property(T.id,qqData.getQqqun_num())
-                        .property("tid",qqData.getQqqun_num())
+                            "geo", Geoshape.point(22.22, 113.1122));
+                    if(!autoId){
+                        qqTraversal.property(T.id, qqData.getQq_num());
+                    }
+                    Vertex qq = qqTraversal.next();
+                    GraphTraversal<Vertex, Vertex> qqqunTraversal = threadedTx.traversal().addV("object_qqqun")
+                        .property("tid", qqData.getQqqun_num())
                         .property("name", qqData.getQqqun_title(),
                             "startDate", new Date(),
                             "endDate", new Date(),
@@ -183,7 +185,11 @@ public class ManageDataTest extends AbstractKGgraphTest{
                             "startDate", new Date(),
                             "endDate", new Date(),
                             "dsr", "程序导入",
-                            "geo", Geoshape.point(22.22, 113.1122)).next();;
+                            "geo", Geoshape.point(22.22, 113.1122));
+                    if(!autoId){
+                        qqqunTraversal.property(T.id, qqData.getQqqun_num());
+                    }
+                    Vertex qqqun = qqqunTraversal.next();;
                     String uuid = UUID.randomUUID().toString();
                     threadedTx.traversal().V(qq.id()).as("a").V(qqqun.id()).addE("link_simple").property("linktid", uuid).to("a").next();
                 }

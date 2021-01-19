@@ -29,8 +29,7 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
             if (g == null) {
                 return;
             }
-            Vertex next = g.V(LongEncoding.decode("990xbbkg123000")).next();
-            Vertex next1 = g.V(LongEncoding.decode("990xbbkg123000")).next();
+            Vertex next = g.V(LongEncoding.decode("81xbbkg123_23_000")).next();
             Iterable<JanusGraphVertex> vertices = getJanusGraph().query().limit(10).vertices();
             vertices.forEach(janusGraphVertex -> {
                 Iterable<JanusGraphEdge> edgesOut = janusGraphVertex.query().direction(Direction.OUT).edges();
@@ -38,11 +37,11 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
                 System.out.println(Iterables.size(edgesOut));
                 System.out.println(Iterables.size(edgesIn));
             });
-            List<Map<Object, Object>> maps = g.V(LongEncoding.decode("990xbbkg123000")).elementMap().toList();
-            List<Map<Object, Object>> out = g.V(LongEncoding.decode("990xbbkg123000")).out().elementMap().toList();
+            List<Map<Object, Object>> maps = g.V(LongEncoding.decode("214xbbkg123_13_000")).elementMap().toList();
+            List<Map<Object, Object>> out = g.V(LongEncoding.decode("214xbbkg123_13_000")).out().elementMap().toList();
             List<Map<Object, Object>> in = g.V(LongEncoding.decode("990xbbkg123000")).in().elementMap().toList();
             List<Map<Object, Object>> others = g.V(LongEncoding.decode("990xbbkg123000")).both().elementMap().toList();
-            Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
+            Iterator<VertexProperty<Object>> qq_num_properties = next.properties("name");
             while (qq_num_properties.hasNext()){
                 VertexProperty<Object> vertexProperty = qq_num_properties.next();
                 if(vertexProperty.isPresent()){

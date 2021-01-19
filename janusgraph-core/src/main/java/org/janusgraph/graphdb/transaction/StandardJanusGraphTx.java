@@ -528,7 +528,9 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
             vertexId = null;
         }
         if(StringUtils.isNotBlank(vertexId)){
-            vertexId=IDManager.VertexIDType.NormalVertex.addPadding(vertexId);
+            long partition=graph.getIDManager().getHashPartition(vertexId.hashCode());
+            vertexId=graph.getIDManager().getVertexID(vertexId,partition,IDManager.VertexIDType.NormalVertex);
+            //vertexId=IDManager.VertexIDType.NormalVertex.addPadding(vertexId);
         }
         Preconditions.checkArgument(vertexId != null || !graph.getConfiguration().allowVertexIdSetting(), "Must provide vertex id");
         Preconditions.checkArgument(vertexId == null || IDManager.VertexIDType.NormalVertex.is(vertexId), "Not a valid vertex id: %s", vertexId);
