@@ -50,8 +50,8 @@ public class RelationIdentifierUtils {
 
         for (JanusGraphRelation r : relations) {
             //Find current or previous relation
-            if (r.longId() == rId.getRelationId() ||
-                ((r instanceof StandardRelation) && ((StandardRelation) r).getPreviousID() == rId.getRelationId())) return r;
+            if (r.longId().equals(rId.getRelationId()) ||
+                ((r instanceof StandardRelation) && ((StandardRelation) r).getPreviousID() .equals(rId.getRelationId()))) return r;
         }
         return null;
     }

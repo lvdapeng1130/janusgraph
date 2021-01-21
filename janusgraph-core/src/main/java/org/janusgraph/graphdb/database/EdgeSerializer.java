@@ -14,8 +14,12 @@
 
 package org.janusgraph.graphdb.database;
 
-import com.carrotsearch.hppc.*;
+import com.carrotsearch.hppc.ObjectArrayList;
+import com.carrotsearch.hppc.ObjectHashSet;
+import com.carrotsearch.hppc.ObjectObjectIdentityHashMap;
+import com.carrotsearch.hppc.ObjectSet;
 import com.google.common.base.Preconditions;
+import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.core.*;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.EntryMetaData;
@@ -25,26 +29,25 @@ import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.StaticArrayEntry;
 import org.janusgraph.graphdb.database.idhandling.IDHandler;
-import org.janusgraph.graphdb.database.idhandling.VariableLong;
 import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.database.serialize.InternalAttributeUtil;
 import org.janusgraph.graphdb.database.serialize.Serializer;
-import org.janusgraph.graphdb.internal.*;
+import org.janusgraph.graphdb.internal.InternalRelation;
+import org.janusgraph.graphdb.internal.InternalRelationType;
+import org.janusgraph.graphdb.internal.Order;
+import org.janusgraph.graphdb.internal.RelationCategory;
 import org.janusgraph.graphdb.relations.EdgeDirection;
 import org.janusgraph.graphdb.relations.RelationCache;
 import org.janusgraph.graphdb.types.TypeInspector;
 import org.janusgraph.graphdb.types.system.ImplicitKey;
 import org.janusgraph.util.datastructures.Interval;
-import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Map;
 
-import static org.janusgraph.graphdb.database.idhandling.IDHandler.DirectionID;
-import static org.janusgraph.graphdb.database.idhandling.IDHandler.RelationTypeParse;
-import static org.janusgraph.graphdb.database.idhandling.IDHandler.getBounds;
+import static org.janusgraph.graphdb.database.idhandling.IDHandler.*;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -454,8 +457,10 @@ public class EdgeSerializer implements RelationReader {
                 if (interval.isPoints()) {
                     if (propertyKey==ImplicitKey.JANUSGRAPHID || propertyKey==ImplicitKey.ADJACENT_ID) {
                         assert !type.multiplicity().isUnique(dir);
-                        VariableLong.writePositiveBackward(colStart, (Long)interval.getStart());
-                        VariableLong.writePositiveBackward(colEnd, (Long)interval.getEnd());
+                        //VariableLong.writePositiveBackward(colStart, (Long)interval.getStart());
+                       // VariableLong.writePositiveBackward(colEnd, (Long)interval.getEnd());
+                        colStart.writeObjectNotNull(interval.getStart());
+                        colEnd.writeObjectNotNull(interval.getEnd());
                     } else {
                         writeInline(colStart, propertyKey, interval.getStart(), InlineType.KEY);
                         writeInline(colEnd, propertyKey, interval.getEnd(), InlineType.KEY);

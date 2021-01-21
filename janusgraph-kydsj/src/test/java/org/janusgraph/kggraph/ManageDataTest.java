@@ -93,7 +93,8 @@ public class ManageDataTest extends AbstractKGgraphTest{
                             .qqqun_num(qqqun_num+"")
                             //.qqqun_num(qq_qunn)
                             //.qqqun_num(RandomStringUtils.randomAlphanumeric(11))
-                            .qqqun_title(String.format("插入的qq群号是%s的QQ群,线程%s",qqqun_num,Thread.currentThread().getName()))
+                            //.qqqun_title(String.format("插入的qq群号是%s的QQ群,线程%s",qqqun_num,Thread.currentThread().getName()))
+                            .qqqun_title(String.format("插入的qq群号是%s的QQ群",qqqun_num))
                             .text("我是qq群的说明"+qqqun_num)
                             .build();
                         qqDataList.add(data);
@@ -142,7 +143,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
                         .property("name", qqData.getQq_title(),
                             "startDate", new Date(),
                             "endDate", new Date(),
-                            "dsr", "程序导入",
+                            "dsr", String.format("程序导入%s",Thread.currentThread().getName()),
                             "geo", Geoshape.point(22.22, 113.1122))
                         .property("grade", qqData.getQq_dengji(),
                             "startDate", new Date(),
@@ -173,7 +174,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
                         .property("name", qqData.getQqqun_title(),
                             "startDate", new Date(),
                             "endDate", new Date(),
-                            "dsr", "程序导入",
+                            "dsr", String.format("程序导入%s",Thread.currentThread().getName()),
                             "geo", Geoshape.point(22.22, 113.1122))
                         .property("time", qqData.getQqqun_date(),
                             "startDate", new Date(),
