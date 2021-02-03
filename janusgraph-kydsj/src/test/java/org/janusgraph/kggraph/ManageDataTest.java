@@ -54,10 +54,10 @@ public class ManageDataTest extends AbstractKGgraphTest{
             .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
             GraphTraversal<Vertex, Vertex> qqTraversal = threadedTx.traversal()
                 .addV("object_qq")
-                .property("qq_num", "crAdrvnl4WM",
+                .property("name", "SFYmLABST31Ltv8pvVmk7MtyVjhX8C",
                     "startDate", new Date(),
                     "endDate", new Date(),
-                    "dsr", "程序导入2",
+                    "dsr", "程序导入b-s",
                     "geo", Geoshape.point(22.22, 113.1122))
                 .property(T.id, "qq$crAdrvnl4WM");
             Vertex qq = qqTraversal.next();
@@ -71,7 +71,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
             .consistencyChecks(true)
             .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
             GraphTraversal<Vertex, Vertex> qqTraversal = threadedTx.traversal().V("qq$crAdrvnl4WM_18_000")
-                .property("qq_num", "crAdrvnl4WM",
+                .property("name", "SFYmLABST31Ltv8pvVmk7MtyVjhX8C",
                     "startDate", new Date(),
                     "endDate", new Date(),
                     "dsr", "程序导入2-1",

@@ -34,7 +34,7 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
                 System.out.println(Iterables.size(edgesIn));
             });*/
             Vertex next = g.V("qq$crAdrvnl4WM_18_000").next();
-            Iterator<VertexProperty<Object>> qq_num_properties = next.properties("qq_num");
+            Iterator<VertexProperty<Object>> qq_num_properties = next.properties("name");
             while (qq_num_properties.hasNext()){
                 VertexProperty<Object> vertexProperty = qq_num_properties.next();
                 if(vertexProperty.isPresent()){
@@ -45,7 +45,7 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
                         Property<Object> property = properties.next();
                         if(property.isPresent()){
                             Object value1 = property.value();
-                            System.out.println(property.key()+","+value1);
+                            System.out.println(property.key()+"<->"+value1);
                         }
                     }
                 }
