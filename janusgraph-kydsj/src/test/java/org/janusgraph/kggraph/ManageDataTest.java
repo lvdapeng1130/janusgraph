@@ -44,7 +44,41 @@ public class ManageDataTest extends AbstractKGgraphTest{
     public void insertTidIdData(){
         String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId("tid000001");
         System.out.println(graphId);
-        createElements(false,10,10000);
+        createElements(false,10,1);
+    }
+
+    @Test
+    public void uDsr(){
+        try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
+            .consistencyChecks(true)
+            .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
+            GraphTraversal<Vertex, Vertex> qqTraversal = threadedTx.traversal()
+                .addV("object_qq")
+                .property("qq_num", "crAdrvnl4WM",
+                    "startDate", new Date(),
+                    "endDate", new Date(),
+                    "dsr", "程序导入2",
+                    "geo", Geoshape.point(22.22, 113.1122))
+                .property(T.id, "qq$crAdrvnl4WM");
+            Vertex qq = qqTraversal.next();
+            threadedTx.commit();
+        }
+    }
+
+    @Test
+    public void appendDsr(){
+        try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
+            .consistencyChecks(true)
+            .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
+            GraphTraversal<Vertex, Vertex> qqTraversal = threadedTx.traversal().V("qq$crAdrvnl4WM_18_000")
+                .property("qq_num", "crAdrvnl4WM",
+                    "startDate", new Date(),
+                    "endDate", new Date(),
+                    "dsr", "程序导入2-1",
+                    "geo", Geoshape.point(22.22, 113.1122));
+            Vertex qq = qqTraversal.next();
+            threadedTx.commit();
+        }
     }
 
     @Test

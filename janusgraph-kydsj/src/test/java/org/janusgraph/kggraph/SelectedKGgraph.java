@@ -25,7 +25,7 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
             if (g == null) {
                 return;
             }
-            Vertex next = g.V(LongEncoding.decode("qqqun$333_25_000")).next();
+            //Vertex next = g.V(LongEncoding.decode("qqqun$333_25_000")).next();
             /*Iterable<JanusGraphVertex> vertices = getJanusGraph().query().limit(10).vertices();
             vertices.forEach(janusGraphVertex -> {
                 Iterable<JanusGraphEdge> edgesOut = janusGraphVertex.query().direction(Direction.OUT).edges();
@@ -33,11 +33,8 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
                 System.out.println(Iterables.size(edgesOut));
                 System.out.println(Iterables.size(edgesIn));
             });*/
-            List<Map<Object, Object>> maps = g.V(LongEncoding.decode("qqqun$333_25_000")).elementMap().toList();
-            List<Map<Object, Object>> out = g.V("qqqun$333_25_000").out().limit(2).in().elementMap().toList();
-            List<Map<Object, Object>> in = g.V(LongEncoding.decode("990xbbkg123000")).in().elementMap().toList();
-            List<Map<Object, Object>> others = g.V(LongEncoding.decode("990xbbkg123000")).both().elementMap().toList();
-            Iterator<VertexProperty<Object>> qq_num_properties = next.properties("name");
+            Vertex next = g.V("qq$crAdrvnl4WM_18_000").next();
+            Iterator<VertexProperty<Object>> qq_num_properties = next.properties("qq_num");
             while (qq_num_properties.hasNext()){
                 VertexProperty<Object> vertexProperty = qq_num_properties.next();
                 if(vertexProperty.isPresent()){
@@ -53,6 +50,10 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
                     }
                 }
             }
+            List<Map<Object, Object>> maps = g.V(LongEncoding.decode("qqqun$333_25_000")).elementMap().toList();
+            List<Map<Object, Object>> out = g.V("qqqun$333_25_000").out().limit(2).in().elementMap().toList();
+            List<Map<Object, Object>> in = g.V(LongEncoding.decode("990xbbkg123000")).in().elementMap().toList();
+            List<Map<Object, Object>> others = g.V(LongEncoding.decode("990xbbkg123000")).both().elementMap().toList();
             List<Vertex> vertices4 = g.V().hasLabel("object_qqqun").has("qqqun_num", "308").limit(1).toList();
 
         } finally {
