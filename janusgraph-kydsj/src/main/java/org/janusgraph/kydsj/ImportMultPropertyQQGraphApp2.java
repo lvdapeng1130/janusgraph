@@ -473,7 +473,7 @@ public class ImportMultPropertyQQGraphApp2 extends JanusGraphApp {
             //appendOtherDsr();
             // read to see they were made
             //hideVertex();
-            readOneId("32971642");
+            //readOneId("32971642");
             //readId();
             //indexQuery();
 

@@ -4,7 +4,9 @@ import com.google.common.collect.Sets;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.apache.tinkerpop.gremlin.structure.Edge;
+import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.core.*;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.attribute.Text;
@@ -12,10 +14,12 @@ import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.Note;
+import org.janusgraph.util.encoding.LongEncoding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -361,6 +365,23 @@ public class KyGraphApp1 extends JanusGraphApp {
                 return;
             }
             LOGGER.info("reading elements");
+            Vertex next = g.V(LongEncoding.decode("3b4")).next();
+            Iterator<VertexProperty<Object>> qq_num_properties = next.properties("name");
+            while (qq_num_properties.hasNext()){
+                VertexProperty<Object> vertexProperty = qq_num_properties.next();
+                if(vertexProperty.isPresent()){
+                    Object value = vertexProperty.value();
+                    System.out.println(vertexProperty.key()+"->"+value);
+                    Iterator<Property<Object>> properties = vertexProperty.properties();
+                    while (properties.hasNext()){
+                        Property<Object> property = properties.next();
+                        if(property.isPresent()){
+                            Object value1 = property.value();
+                            System.out.println(property.key()+"<->"+value1);
+                        }
+                    }
+                }
+            }
             // look up vertex by name can use a composite index in JanusGraph
             //final List<Map<Object, Object>> v = g.V().hasLabel("person","teacher").has("name","张三").has("age", P.eq(66)).valueMap(true).next(2);
             final List<Map<Object, Object>> v1= g.V().or(
@@ -455,7 +476,6 @@ public class KyGraphApp1 extends JanusGraphApp {
         try {
             // open and initialize the graph
             openGraph();
-            Thread.sleep(1000*1000*3000);
             // define the schema before loading data
            /* if (supportsSchema) {
                 createSchema();
@@ -468,7 +488,7 @@ public class KyGraphApp1 extends JanusGraphApp {
             //appendOtherMediaData();
             // read to see they were made
             //hideVertex();
-            //readElements();
+            readElements();
             //readMediaDataAndNotes();
             //indexQuery();
 
