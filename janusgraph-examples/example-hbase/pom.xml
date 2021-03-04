@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.janusgraph</groupId>
         <artifactId>janusgraph-examples</artifactId>
-        <version>KGYY_R3.01_20210120-hbase1</version>
+        <version>KGYY_R3.01_20210303-hbase2</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>example-hbase</artifactId>
