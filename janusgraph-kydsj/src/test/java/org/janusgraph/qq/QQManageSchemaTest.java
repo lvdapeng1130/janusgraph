@@ -36,7 +36,7 @@ public class QQManageSchemaTest extends AbstractKGgraphTest {
     @Before
     public void startHBase() throws IOException, ConfigurationException {
         LOGGER.info("opening graph");
-        conf = new PropertiesConfiguration("D:\\github\\janusgraph\\janusgraph-kydsj\\src\\test\\resources\\trsgraph-hbase-es-test-qq.properties");
+        conf = new PropertiesConfiguration("D:\\github\\janusgraph\\janusgraph-kydsj\\src\\test\\resources\\trsgraph-hbase-es-test-qq-hbase2.properties");
         graph = JanusGraphFactory.open(conf);
         g = graph.traversal();
     }

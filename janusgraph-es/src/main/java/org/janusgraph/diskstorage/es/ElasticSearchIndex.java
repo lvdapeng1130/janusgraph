@@ -14,18 +14,8 @@
 
 package org.janusgraph.diskstorage.es;
 
-import static org.janusgraph.diskstorage.es.ElasticSearchConstants.*;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_MAX_RESULT_SET_SIZE;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_NAME;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_NS;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
-import org.janusgraph.diskstorage.es.compat.ESCompatUtils;
-import org.janusgraph.diskstorage.es.mapping.IndexMapping;
-import org.janusgraph.diskstorage.es.rest.util.HttpAuthTypes;
-import org.janusgraph.diskstorage.es.script.ESScriptResponse;
-import org.locationtech.spatial4j.shape.Rectangle;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.core.attribute.Cmp;
@@ -34,36 +24,23 @@ import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.attribute.Text;
 import org.janusgraph.core.schema.Mapping;
 import org.janusgraph.core.schema.Parameter;
-import org.janusgraph.diskstorage.BackendException;
-import org.janusgraph.diskstorage.BaseTransaction;
-import org.janusgraph.diskstorage.BaseTransactionConfig;
-import org.janusgraph.diskstorage.BaseTransactionConfigurable;
-import org.janusgraph.diskstorage.PermanentBackendException;
-import org.janusgraph.diskstorage.TemporaryBackendException;
+import org.janusgraph.diskstorage.*;
 import org.janusgraph.diskstorage.configuration.ConfigNamespace;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
-
 import org.janusgraph.diskstorage.es.compat.AbstractESCompat;
-import org.janusgraph.diskstorage.indexing.IndexEntry;
-import org.janusgraph.diskstorage.indexing.IndexFeatures;
-import org.janusgraph.diskstorage.indexing.IndexMutation;
-import org.janusgraph.diskstorage.indexing.IndexProvider;
-import org.janusgraph.diskstorage.indexing.IndexQuery;
-import org.janusgraph.diskstorage.indexing.KeyInformation;
-import org.janusgraph.diskstorage.indexing.RawQuery;
+import org.janusgraph.diskstorage.es.compat.ESCompatUtils;
+import org.janusgraph.diskstorage.es.mapping.IndexMapping;
+import org.janusgraph.diskstorage.es.rest.util.HttpAuthTypes;
+import org.janusgraph.diskstorage.es.script.ESScriptResponse;
+import org.janusgraph.diskstorage.indexing.*;
 import org.janusgraph.diskstorage.util.DefaultTransaction;
 import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
-import static org.janusgraph.diskstorage.configuration.ConfigOption.disallowEmpty;
-
 import org.janusgraph.graphdb.database.serialize.AttributeUtils;
 import org.janusgraph.graphdb.query.JanusGraphPredicate;
-import org.janusgraph.graphdb.query.condition.And;
-import org.janusgraph.graphdb.query.condition.Condition;
-import org.janusgraph.graphdb.query.condition.Not;
-import org.janusgraph.graphdb.query.condition.Or;
-import org.janusgraph.graphdb.query.condition.PredicateCondition;
+import org.janusgraph.graphdb.query.condition.*;
 import org.janusgraph.graphdb.types.ParameterType;
+import org.locationtech.spatial4j.shape.Rectangle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,6 +54,10 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
+import static org.janusgraph.diskstorage.configuration.ConfigOption.disallowEmpty;
+import static org.janusgraph.diskstorage.es.ElasticSearchConstants.*;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -151,6 +132,14 @@ public class ElasticSearchIndex implements IndexProvider {
             "Whether JanusGraph should add an \"all\" field mapping. When enabled field mappings will " +
             "include a \"copy_to\" parameter referencing the \"all\" field. This is supported since Elasticsearch 6.x " +
             " and is required when using wildcard fields starting in Elasticsearch 6.x.", ConfigOption.Type.GLOBAL_OFFLINE, true);
+
+    public static final ConfigOption<Integer> ES_CONNECT_TIMEOUT =
+        new ConfigOption<>(ELASTICSEARCH_NS, "el-cs-connect-timeout",
+            "Controls the amount of time, in milliseconds, before a timeout occurs when trying to connect.", ConfigOption.Type.MASKABLE, 5000);
+
+    public static final ConfigOption<Integer> ES_SOCKET_TIMEOUT =
+        new ConfigOption<>(ELASTICSEARCH_NS, "el-cs-socket-timeout",
+            "Controls the amount of time, in milliseconds, before a timeout occurs when waiting for a response.", ConfigOption.Type.MASKABLE, 60000);
 
     public static final ConfigOption<Integer> ES_SCROLL_KEEP_ALIVE =
             new ConfigOption<>(ELASTICSEARCH_NS, "scroll-keep-alive",
