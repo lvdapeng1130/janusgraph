@@ -941,7 +941,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
     }
 
     @Override
-    public Iterable<Note> getNotes(String vertexId) {
+    public Iterable<Note> getNotes(String vertexId,String ...keys) {
         try {
             StaticBuffer attachmentTableRowkey = this.getAttachmentTableRowkey(vertexId);
             KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
@@ -961,7 +961,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
     }
 
     @Override
-    public Iterable<MediaData> getMediaDatas(String vertexId) {
+    public Iterable<MediaData> getMediaDatas(String vertexId,String ... keys) {
         try {
             StaticBuffer attachmentTableRowkey = this.getAttachmentTableRowkey(vertexId);
             KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));

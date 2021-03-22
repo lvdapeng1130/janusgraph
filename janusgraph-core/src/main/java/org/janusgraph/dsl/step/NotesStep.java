@@ -61,7 +61,7 @@ public class NotesStep extends FlatMapStep<Element, Note> implements AutoCloseab
         Element element = traverser.get();
         if(element instanceof AbstractVertex){
             AbstractVertex vertex=(AbstractVertex)element;
-            Iterator<Note> notes =  vertex.notes();
+            Iterator<Note> notes =  vertex.notes(keys);
             return notes;
         }
         Iterator iterator = EmptyIterator.INSTANCE;

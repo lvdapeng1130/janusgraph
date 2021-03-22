@@ -212,12 +212,12 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
         return (Iterator)query().direction(Direction.OUT).keys(keys).properties().iterator();
     }
 
-    public Iterator<Note> notes() {
+    public Iterator<Note> notes(String ... keys) {
         Iterable<Note> notes = tx().getNotes(longId());
         return notes.iterator();
     }
 
-    public Iterator<MediaData> attachments() {
+    public Iterator<MediaData> attachments(String ... keys) {
         Iterable<MediaData> mediaDatas = tx().getMediaDatas(longId());
         return mediaDatas.iterator();
     }

@@ -80,9 +80,9 @@ public interface JanusGraphTransaction extends Transaction {
 
     Iterable<JanusGraphEdge> getEdges(RelationIdentifier... ids);
 
-    Iterable<Note> getNotes(String vertexId);
+    Iterable<Note> getNotes(String vertexId,String ...keys);
 
-    Iterable<MediaData> getMediaDatas(String vertexId);
+    Iterable<MediaData> getMediaDatas(String vertexId,String ...keys);
 
    /* ---------------------------------------------------------------
     * Closing and admin

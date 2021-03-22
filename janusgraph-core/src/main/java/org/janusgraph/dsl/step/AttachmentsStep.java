@@ -61,7 +61,7 @@ public class AttachmentsStep extends FlatMapStep<Element, MediaData> implements 
         Element element = traverser.get();
         if(element instanceof AbstractVertex){
             AbstractVertex vertex=(AbstractVertex)element;
-            Iterator<MediaData> attachments =  vertex.attachments();
+            Iterator<MediaData> attachments =  vertex.attachments(keys);
             return attachments;
         }
         Iterator iterator = EmptyIterator.INSTANCE;
