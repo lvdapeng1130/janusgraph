@@ -675,7 +675,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             }
         }
         //7) 添加顶点的附件
-        if(attachments!=null){
+        if(attachments!=null&&!attachments.isEmpty()){
             for(String rowkey:attachments.keys()){
                 Set<MediaData> mediaDatas = attachments.get(rowkey);
                 if(mediaDatas!=null&&mediaDatas.size()>0){
@@ -690,7 +690,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             }
         }
         //8)添加顶点的注释信息
-        if(notes!=null){
+        if(notes!=null&&!notes.isEmpty()){
             for(String rowkey:notes.keys()){
                 Set<Note> noteSet = notes.get(rowkey);
                 if(noteSet!=null&&noteSet.size()>0){
@@ -702,6 +702,33 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                     }
                     mutator.mutateNote(key,addList,KCVSCache.NO_DELETIONS);
                 }
+            }
+        }
+        //9) 收集删除附件
+        if(deletedAttachments!=null&&!deletedAttachments.isEmpty()){
+            for(String vertexId:deletedAttachments.keySet()){
+                StaticBuffer key=this.getAttachmentTableRowkey(vertexId);
+                Set<MediaData> mediaDatas = deletedAttachments.get(vertexId);
+                List<Entry> deleteList = Lists.newArrayList();
+                for(MediaData mediaData:mediaDatas){
+                    Entry entry = this.getAttachmentTableEntry(mediaData);
+                    deleteList.add(entry);
+                }
+                mutator.mutateAttachment(key,KCVSCache.NO_ADDITIONS,deleteList);
+            }
+        }
+
+        //10) 收集删除注释
+        if(deletedNotes!=null&&!deletedNotes.isEmpty()){
+            for(String vertexId:deletedNotes.keySet()){
+                StaticBuffer key=this.getAttachmentTableRowkey(vertexId);
+                Set<Note> noteSet = deletedNotes.get(vertexId);
+                List<Entry> deleteList = Lists.newArrayList();
+                for(Note note:noteSet){
+                    Entry entry = this.getAttachmentTableEntry(note);
+                    deleteList.add(entry);
+                }
+                mutator.mutateNote(key,KCVSCache.NO_ADDITIONS,deleteList);
             }
         }
 
@@ -743,7 +770,8 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                        final HashMultimap<String, MediaData> deletedAttachments,
                        final HashMultimap<String, Note> notes,
                        final HashMultimap<String, Note> deletedNotes, final StandardJanusGraphTx tx) {
-        if (addedRelations.isEmpty() && deletedRelations.isEmpty()&&attachments.isEmpty()&&notes.isEmpty()) return;
+        if (addedRelations.isEmpty() && deletedRelations.isEmpty()&&attachments.isEmpty()&&notes.isEmpty()
+            &&deletedAttachments.isEmpty()&&deletedNotes.isEmpty()) return;
         //1. Finalize transaction
         log.debug("Saving transaction. Added {}, removed {}", addedRelations.size(), deletedRelations.size());
         if (!tx.getConfiguration().hasCommitTime()) tx.getConfiguration().setCommitTime(times.getTime());

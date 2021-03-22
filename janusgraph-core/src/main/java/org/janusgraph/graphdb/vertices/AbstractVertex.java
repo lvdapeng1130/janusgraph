@@ -214,12 +214,38 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
 
     public Iterator<Note> notes(String ... keys) {
         Iterable<Note> notes = tx().getNotes(longId(),keys);
-        return notes.iterator();
+        Iterator<Note> iterator = notes.iterator();
+        return new Iterator<Note>() {
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            @Override
+            public Note next() {
+                Note next = iterator.next();
+                next.setVertex(it());
+                return next;
+            }
+        };
     }
 
     public Iterator<MediaData> attachments(String ... keys) {
         Iterable<MediaData> mediaDatas = tx().getMediaDatas(longId(),keys);
-        return mediaDatas.iterator();
+        Iterator<MediaData> iterator = mediaDatas.iterator();
+        return new Iterator<MediaData>() {
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            @Override
+            public MediaData next() {
+                MediaData next = iterator.next();
+                next.setVertex(it());
+                return next;
+            }
+        };
     }
 
     public Iterator<Vertex> vertices(final Direction direction, final String... edgeLabels) {

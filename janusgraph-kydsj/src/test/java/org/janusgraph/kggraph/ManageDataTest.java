@@ -197,7 +197,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
     public void dropNoteByDsl(){
         String tid="tid001";
         String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
-        List<Note> notes = g.V(graphId).notes("我是注释的iddsl").drop().toList();
+        List<Note> notes = g.V(graphId).notes("我是注释的iddsl").dropExpand().toList();
         g.tx().commit();
     }
 

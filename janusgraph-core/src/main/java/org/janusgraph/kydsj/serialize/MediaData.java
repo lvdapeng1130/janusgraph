@@ -5,6 +5,7 @@ package org.janusgraph.kydsj.serialize;
 
 import com.google.common.collect.Sets;
 import lombok.Data;
+import org.janusgraph.graphdb.internal.InternalVertex;
 
 import java.io.Serializable;
 import java.util.Set;
@@ -36,5 +37,7 @@ public class MediaData implements Serializable
 	private String key;
 
 	private String status;
+
+    private transient InternalVertex vertex;
 
 }

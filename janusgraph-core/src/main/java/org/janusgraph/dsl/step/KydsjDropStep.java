@@ -28,6 +28,7 @@ import org.apache.tinkerpop.gremlin.process.traversal.step.util.event.Event;
 import org.apache.tinkerpop.gremlin.process.traversal.step.util.event.ListCallbackRegistry;
 import org.apache.tinkerpop.gremlin.process.traversal.strategy.decoration.EventStrategy;
 import org.apache.tinkerpop.gremlin.structure.*;
+import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.Note;
 
@@ -80,9 +81,13 @@ public class KydsjDropStep<S> extends FilterStep<S> implements Mutating<Event> {
             }
             toRemove.remove();
         }else if(s instanceof Note) {
-            
+            Note note=(Note)s;
+            InternalVertex vertex = note.getVertex();
+            vertex.tx().removeNote(note);
         }else if(s instanceof MediaData) {
-
+            MediaData mediaData=(MediaData)s;
+            InternalVertex vertex = mediaData.getVertex();
+            vertex.tx().removeAttachment(mediaData);
         }else {
             throw new IllegalStateException("The incoming object is not removable: " + s);
         }

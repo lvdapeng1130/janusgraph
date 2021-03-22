@@ -82,7 +82,8 @@ public interface KydsjTraversalDsl<S, E> extends GraphTraversal.Admin<S, E> {
         return this.asAdmin().addStep(new AttachmentsStep(this.asAdmin(),keys));
     }
 
-    public default <E2> GraphTraversal<S, E2> dropExpand() {
+    @AnonymousMethod(returnTypeParameters = {"A", "A"}, methodTypeParameters = {"A"})
+    public default GraphTraversal<S, E> dropExpand() {
         this.asAdmin().getBytecode().addStep(Symbols.dropExpand);
         return this.asAdmin().addStep(new KydsjDropStep<>(this.asAdmin()));
     }

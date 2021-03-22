@@ -2,6 +2,7 @@ package org.janusgraph.kydsj.serialize;
 
 
 import lombok.Data;
+import org.janusgraph.graphdb.internal.InternalVertex;
 
 import java.io.Serializable;
 import java.util.HashSet;
@@ -19,4 +20,5 @@ public class Note implements Serializable
     private String noteTitle;
     private String noteData;
     private String linkType;
+    private transient InternalVertex vertex;
 }

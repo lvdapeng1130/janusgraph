@@ -618,6 +618,18 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         }
     }
 
+    public void removeNote(Note note){
+        if(note.getId()!=null&&note.getVertex()!=null){
+            this.deletedNotes.add(note.getVertex().longId(),note);
+        }
+    }
+
+    public void removeAttachment(MediaData mediaData){
+        if(mediaData!=null&&mediaData.getVertex()!=null){
+            this.deletedAttachments.add(mediaData.getVertex().longId(),mediaData);
+        }
+    }
+
     public void removeRelation(InternalRelation relation) {
         Preconditions.checkArgument(!relation.isRemoved());
         relation = relation.it();
@@ -1646,7 +1658,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
     }
 
     public boolean hasAttachmentAndNotesModifications(){
-        return !addedAttachments.isEmpty()||!addedNotes.isEmpty();
+        return !addedAttachments.isEmpty()||!addedNotes.isEmpty()||!deletedAttachments.isEmpty()||!deletedNotes.isEmpty();
     }
 
 }
