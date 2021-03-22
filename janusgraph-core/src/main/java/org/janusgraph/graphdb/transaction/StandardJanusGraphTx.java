@@ -948,12 +948,22 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
             EntryList entries = this.getTxHandle().noteQuery(keySliceQuery);
             Iterator<Entry> iterator = entries.iterator();
             List<Note> noteList=new ArrayList<>();
+            Set<String> keySet=null;
+            if(keys!=null&&keys.length>0){
+                keySet=Sets.newHashSet(keys);
+            }
             while (iterator.hasNext()){
                 Entry entry = iterator.next();
                 ReadBuffer buffer = entry.asReadBuffer();
                 String col = graph.getDataSerializer().readObjectNotNull(buffer, String.class);
                 Note note = graph.getDataSerializer().readObjectNotNull(buffer, Note.class);
-                noteList.add(note);
+                if(keySet!=null) {
+                    if(keySet.contains(col)) {
+                        noteList.add(note);
+                    }
+                }else{
+                    noteList.add(note);
+                }
             }
             return noteList;
         } finally {
@@ -968,12 +978,22 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
             EntryList entries = this.getTxHandle().attachmentQuery(keySliceQuery);
             Iterator<Entry> iterator = entries.iterator();
             List<MediaData> mediaDataList=new ArrayList<>();
+            Set<String> keySet=null;
+            if(keys!=null&&keys.length>0){
+                keySet=Sets.newHashSet(keys);
+            }
             while (iterator.hasNext()){
                 Entry entry = iterator.next();
                 ReadBuffer buffer = entry.asReadBuffer();
                 String col =  graph.getDataSerializer().readObjectNotNull(buffer, String.class);
                 MediaData mediaData =  graph.getDataSerializer().readObjectNotNull(buffer, MediaData.class);
-                mediaDataList.add(mediaData);
+                if(keySet!=null) {
+                    if(keySet.contains(col)) {
+                        mediaDataList.add(mediaData);
+                    }
+                }else{
+                    mediaDataList.add(mediaData);
+                }
             }
             return mediaDataList;
         } finally {

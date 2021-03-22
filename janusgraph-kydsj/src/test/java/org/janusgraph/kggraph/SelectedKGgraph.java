@@ -95,6 +95,23 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
             }
         }
     }
+    /**
+     * 查询注释by gremlin
+     */
+    @Test
+    public void readNotesByDslKey() {
+        String tid="tid001";
+        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
+        List<Note> notes= g.V(graphId).notes("我是注释的iddsl").toList();
+        LOGGER.info("读取到的注释------------------------------------");
+        if(notes!=null) {
+            LOGGER.info("查询到的注释数量是=>"+notes.size());
+            for (Note note : notes) {
+                LOGGER.info(note.toString());
+                LOGGER.info("--------------------------------------------");
+            }
+        }
+    }
 
 
     /**

@@ -213,12 +213,12 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
     }
 
     public Iterator<Note> notes(String ... keys) {
-        Iterable<Note> notes = tx().getNotes(longId());
+        Iterable<Note> notes = tx().getNotes(longId(),keys);
         return notes.iterator();
     }
 
     public Iterator<MediaData> attachments(String ... keys) {
-        Iterable<MediaData> mediaDatas = tx().getMediaDatas(longId());
+        Iterable<MediaData> mediaDatas = tx().getMediaDatas(longId(),keys);
         return mediaDatas.iterator();
     }
 
