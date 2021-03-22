@@ -32,6 +32,8 @@ import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
 
 import java.util.Iterator;
 
@@ -139,6 +141,22 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
         return tx().query(this);
     }
 
+    /**
+     * 给对象添加注释信息
+     * @param note
+     */
+    public void note(Note note){
+        tx().addNote(it(),note);
+    }
+
+    /**
+     * 给对象添加附件信息
+     * @param mediaData
+     */
+    public void attachment(MediaData mediaData){
+        tx().addAttachment(it(),mediaData);
+    }
+
     @Override
     public <O> O valueOrNull(PropertyKey key) {
         return (O)property(key.name()).orElse(null);
@@ -192,6 +210,16 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
 
     public <V> Iterator<VertexProperty<V>> properties(String... keys) {
         return (Iterator)query().direction(Direction.OUT).keys(keys).properties().iterator();
+    }
+
+    public Iterator<Note> notes() {
+        Iterable<Note> notes = tx().getNotes(longId());
+        return notes.iterator();
+    }
+
+    public Iterator<MediaData> attachments() {
+        Iterable<MediaData> mediaDatas = tx().getMediaDatas(longId());
+        return mediaDatas.iterator();
     }
 
     public Iterator<Vertex> vertices(final Direction direction, final String... edgeLabels) {

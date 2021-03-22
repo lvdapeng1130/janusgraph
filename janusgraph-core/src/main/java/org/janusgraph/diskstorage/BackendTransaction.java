@@ -68,6 +68,7 @@ public class BackendTransaction implements LoggableTransaction {
     private final KCVSCache indexStore;
     private final KCVSCache attachmentStore;
     private final KCVSCache noteStore;
+    private final KCVSCache propertyPopertiesStore;
     private final KCVSCache txLogStore;
 
     private final Duration maxReadTime;
@@ -81,7 +82,7 @@ public class BackendTransaction implements LoggableTransaction {
 
     public BackendTransaction(CacheTransaction storeTx, BaseTransactionConfig txConfig,
                               StoreFeatures features, KCVSCache edgeStore, KCVSCache indexStore,
-                              KCVSCache attachmentStore, KCVSCache noteStore,
+                              KCVSCache attachmentStore, KCVSCache noteStore,KCVSCache propertyPopertiesStore,
                               KCVSCache txLogStore, Duration maxReadTime,
                               Map<String, IndexTransaction> indexTx, Executor threadPool) {
         this.storeTx = storeTx;
@@ -91,6 +92,7 @@ public class BackendTransaction implements LoggableTransaction {
         this.indexStore = indexStore;
         this.attachmentStore=attachmentStore;
         this.noteStore=noteStore;
+        this.propertyPopertiesStore=propertyPopertiesStore;
         this.txLogStore = txLogStore;
         this.maxReadTime = maxReadTime;
         this.indexTx = indexTx;
@@ -230,6 +232,17 @@ public class BackendTransaction implements LoggableTransaction {
      */
     public void mutateNote(StaticBuffer key, List<Entry> additions, List<Entry> deletions) throws BackendException {
         noteStore.mutateEntries(key, additions, deletions, storeTx);
+    }
+
+    /**
+     * 保存属性的多值属性（比如：姓名属性的dsr属性)
+     * @param key
+     * @param additions
+     * @param deletions
+     * @throws BackendException
+     */
+    public void mutatePropertyProperties(StaticBuffer key, List<Entry> additions, List<Entry> deletions) throws BackendException {
+        propertyPopertiesStore.mutateEntries(key, additions, deletions, storeTx);
     }
 
     /**

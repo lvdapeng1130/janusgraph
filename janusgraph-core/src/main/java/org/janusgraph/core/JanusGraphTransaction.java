@@ -15,6 +15,8 @@
 package org.janusgraph.core;
 
 import org.janusgraph.graphdb.relations.RelationIdentifier;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
 
 /**
  * JanusGraphTransaction defines a transactional context for a {@link JanusGraph}. Since JanusGraph is a transactional graph
@@ -77,6 +79,10 @@ public interface JanusGraphTransaction extends Transaction {
     Iterable<JanusGraphVertex> getVertices(String... ids);
 
     Iterable<JanusGraphEdge> getEdges(RelationIdentifier... ids);
+
+    Iterable<Note> getNotes(String vertexId);
+
+    Iterable<MediaData> getMediaDatas(String vertexId);
 
    /* ---------------------------------------------------------------
     * Closing and admin

@@ -30,16 +30,17 @@ import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.janusgraph.core.*;
 import org.janusgraph.core.attribute.Cmp;
 import org.janusgraph.core.schema.*;
-import org.janusgraph.diskstorage.BackendException;
-import org.janusgraph.diskstorage.BackendTransaction;
-import org.janusgraph.diskstorage.EntryList;
+import org.janusgraph.diskstorage.*;
+import org.janusgraph.diskstorage.keycolumnvalue.KeySliceQuery;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
+import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.time.TimestampProvider;
 import org.janusgraph.graphdb.database.EdgeSerializer;
 import org.janusgraph.graphdb.database.IndexSerializer;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.database.idassigner.IDPool;
 import org.janusgraph.graphdb.database.serialize.AttributeHandler;
+import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.internal.*;
 import org.janusgraph.graphdb.query.MetricsQueryExecutor;
@@ -879,6 +880,14 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         return prop;
     }
 
+    public void addAttachment(JanusGraphVertex vertex,MediaData mediaData) {
+        verifyWriteAccess(vertex);
+        vertex = ((InternalVertex) vertex).it();
+        Preconditions.checkArgument(mediaData!=null,"为顶点指定的附件MediaData对象不能为null");
+        Preconditions.checkArgument(StringUtils.isNotBlank(mediaData.getKey()),"为顶点指定的附件MediaData对象的key不能为null或空字符串");
+        addedAttachments.add(vertex.longId(), mediaData);
+    }
+
     public JanusGraphVertexProperty addNote(JanusGraphVertex vertex, PropertyKey key, Object value) {
         return addNote(key.cardinality().convert(), vertex, key, value);
     }
@@ -897,6 +906,14 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         return prop;
     }
 
+    public void addNote(JanusGraphVertex vertex,Note note) {
+        verifyWriteAccess(vertex);
+        vertex = ((InternalVertex) vertex).it();
+        Preconditions.checkArgument(note!=null,"为顶点指定的注释Note对象不能为null");
+        Preconditions.checkArgument(StringUtils.isNotBlank(note.getId()),"为顶点指定的注释Note对象的id不能为null或空字符串");
+        addedNotes.add(vertex.longId(), note);
+    }
+
 
     @Override
     public Iterable<JanusGraphEdge> getEdges(RelationIdentifier... ids) {
@@ -913,6 +930,54 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
             if (edge!=null && !edge.isRemoved()) result.add(edge);
         }
         return result;
+    }
+
+    public StaticBuffer getAttachmentTableRowkey(String vertextID){
+        DataOutput out = graph.getDataSerializer().getDataOutput(8);
+        //VariableLong.writePositive(out, vertextID);
+        out.writeObjectNotNull(vertextID);
+        StaticBuffer key = out.getStaticBuffer();
+        return key;
+    }
+
+    @Override
+    public Iterable<Note> getNotes(String vertexId) {
+        try {
+            StaticBuffer attachmentTableRowkey = this.getAttachmentTableRowkey(vertexId);
+            KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
+            EntryList entries = this.getTxHandle().noteQuery(keySliceQuery);
+            Iterator<Entry> iterator = entries.iterator();
+            List<Note> noteList=new ArrayList<>();
+            while (iterator.hasNext()){
+                Entry entry = iterator.next();
+                ReadBuffer buffer = entry.asReadBuffer();
+                String col = graph.getDataSerializer().readObjectNotNull(buffer, String.class);
+                Note note = graph.getDataSerializer().readObjectNotNull(buffer, Note.class);
+                noteList.add(note);
+            }
+            return noteList;
+        } finally {
+        }
+    }
+
+    @Override
+    public Iterable<MediaData> getMediaDatas(String vertexId) {
+        try {
+            StaticBuffer attachmentTableRowkey = this.getAttachmentTableRowkey(vertexId);
+            KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
+            EntryList entries = this.getTxHandle().attachmentQuery(keySliceQuery);
+            Iterator<Entry> iterator = entries.iterator();
+            List<MediaData> mediaDataList=new ArrayList<>();
+            while (iterator.hasNext()){
+                Entry entry = iterator.next();
+                ReadBuffer buffer = entry.asReadBuffer();
+                String col =  graph.getDataSerializer().readObjectNotNull(buffer, String.class);
+                MediaData mediaData =  graph.getDataSerializer().readObjectNotNull(buffer, MediaData.class);
+                mediaDataList.add(mediaData);
+            }
+            return mediaDataList;
+        } finally {
+        }
     }
 
 
