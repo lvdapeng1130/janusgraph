@@ -4,8 +4,6 @@ import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
-import org.janusgraph.kydsj.serialize.MediaData;
-import org.janusgraph.kydsj.serialize.Note;
 import org.janusgraph.util.encoding.LongEncoding;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -22,112 +20,6 @@ import java.util.Map;
  */
 public class SelectedKGgraph extends AbstractKGgraphTest{
     private static final Logger LOGGER = LoggerFactory.getLogger(SelectedKGgraph.class);
-
-    /**
-     * 根据tid获取对象的附件
-     */
-    @Test
-    public void readMediaData() {
-        String tid="tid001";
-        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
-        List<MediaData> mediaDatas = this.getJanusGraph().getMediaDatas(graphId);
-        LOGGER.info("读取到的附件------------------------------------");
-        if(mediaDatas!=null) {
-            LOGGER.info("查询到的附件数量是=>"+mediaDatas.size());
-            for (MediaData mediaData : mediaDatas) {
-                LOGGER.info(mediaData.toString());
-                LOGGER.info("--------------------------------------------");
-            }
-        }
-    }
-
-    /**
-     * 查询对象的附件by gremlin
-     */
-    @Test
-    public void readMediaDataByDsl() {
-        String tid="tid001";
-        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
-        List<MediaData> mediaDatas =g.V(graphId).attachments().toList();
-        LOGGER.info("读取到的附件------------------------------------");
-        if(mediaDatas!=null) {
-            LOGGER.info("查询到的附件数量是=>"+mediaDatas.size());
-            for (MediaData mediaData : mediaDatas) {
-                LOGGER.info(mediaData.toString());
-                LOGGER.info("--------------------------------------------");
-            }
-        }
-    }
-
-    @Test
-    public void readMediaDataByDslByKey() {
-        String tid="tid001";
-        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
-        List<MediaData> mediaDatas =g.V(graphId).attachments("我是附件的key").toList();
-        LOGGER.info("读取到的附件------------------------------------");
-        if(mediaDatas!=null) {
-            LOGGER.info("查询到的附件数量是=>"+mediaDatas.size());
-            for (MediaData mediaData : mediaDatas) {
-                LOGGER.info(mediaData.toString());
-                LOGGER.info("--------------------------------------------");
-            }
-        }
-    }
-
-
-    /**
-     * 根据tid获取对象的附件
-     */
-    @Test
-    public void readNotes() {
-        String tid="tid001";
-        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
-        List<Note> notes = this.getJanusGraph().getNotes(graphId);
-        LOGGER.info("读取到的注释------------------------------------");
-        if(notes!=null) {
-            LOGGER.info("查询到的注释数量是=>"+notes.size());
-            for (Note note : notes) {
-                LOGGER.info(note.toString());
-                LOGGER.info("--------------------------------------------");
-            }
-        }
-    }
-
-    /**
-     * 查询注释by gremlin
-     */
-    @Test
-    public void readNotesByDsl() {
-        String tid="tid001";
-        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
-        List<Note> notes= g.V(graphId).notes().toList();
-        LOGGER.info("读取到的注释------------------------------------");
-        if(notes!=null) {
-            LOGGER.info("查询到的注释数量是=>"+notes.size());
-            for (Note note : notes) {
-                LOGGER.info(note.toString());
-                LOGGER.info("--------------------------------------------");
-            }
-        }
-    }
-    /**
-     * 查询注释by gremlin
-     */
-    @Test
-    public void readNotesByDslKey() {
-        String tid="tid001";
-        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
-        List<Note> notes= g.V(graphId).notes("我是注释的iddsl").toList();
-        LOGGER.info("读取到的注释------------------------------------");
-        if(notes!=null) {
-            LOGGER.info("查询到的注释数量是=>"+notes.size());
-            for (Note note : notes) {
-                LOGGER.info(note.toString());
-                LOGGER.info("--------------------------------------------");
-            }
-        }
-    }
-
 
     /**
      * 根据tid查询顶点对象

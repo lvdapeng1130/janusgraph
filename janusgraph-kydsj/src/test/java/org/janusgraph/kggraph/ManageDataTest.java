@@ -6,7 +6,6 @@ import com.github.rholder.retry.StopStrategies;
 import com.github.rholder.retry.WaitStrategies;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.Builder;
 import lombok.Data;
@@ -18,9 +17,6 @@ import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.attribute.Text;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
-import org.janusgraph.graphdb.types.system.BaseKey;
-import org.janusgraph.kydsj.serialize.MediaData;
-import org.janusgraph.kydsj.serialize.Note;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,171 +62,6 @@ public class ManageDataTest extends AbstractKGgraphTest{
         String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
         String newTid = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().fromVertexId(graphId);
         assertTrue(tid.equals(newTid),"一致");
-    }
-
-    /**
-     * 给顶点对象插入附件
-     */
-    @Test
-    public void insertMediaData(){
-        String tid="tid001";
-        LOGGER.info("创建一个顶点并添加一个附件");
-        MediaData mediaData=new MediaData();
-        mediaData.setAclId("我是附件的aclID");
-        mediaData.setFilename("文件名");
-        mediaData.setMediaTitle("附件标题");
-        mediaData.setKey("我是附件的key");
-        mediaData.setMediaData("我是附件的内容".getBytes());
-        mediaData.setDsr(Sets.newHashSet("我是附件的一个dsr"));
-        //为顶点添加一个附件
-        final Vertex mediaAndNote=g.addV("object_qq")
-            .property(T.id, tid)
-            .property(BaseKey.VertexAttachment.name(),mediaData)
-            .next();
-        g.tx().commit();
-    }
-
-    @Test
-    public void insertMediaDataByDsl(){
-        String tid="tid001";
-        LOGGER.info("创建一个顶点并添加一个附件");
-        MediaData mediaData=new MediaData();
-        mediaData.setAclId("我是附件的aclID");
-        mediaData.setFilename("文件名");
-        mediaData.setMediaTitle("附件标题");
-        mediaData.setKey("我是附件的key");
-        mediaData.setMediaData("我是附件的内容".getBytes());
-        mediaData.setDsr(Sets.newHashSet("我是附件的一个dsr"));
-        final Vertex mediaAndNote=g.addV("object_qq")
-            .property(T.id, tid).attachment(mediaData)
-            .next();
-        g.tx().commit();
-    }
-
-    /**
-     * 给顶点对象插入附件
-     */
-    @Test
-    public void updateMediaData(){
-        String tid="tid001";
-        LOGGER.info("创建一个顶点并添加一个附件");
-        MediaData mediaData=new MediaData();
-        mediaData.setAclId("我是附件的aclID");
-        mediaData.setFilename("文件名_新");
-        mediaData.setMediaTitle("附件标题_新");
-        mediaData.setKey("我是附件的key");
-        mediaData.setMediaData("我是附件的内容".getBytes());
-        mediaData.setDsr(Sets.newHashSet("我是附件的一个dsr"));
-        //为顶点添加一个附件
-        final Vertex mediaAndNote=g.addV("object_qq")
-            .property(T.id, tid)
-            .property(BaseKey.VertexAttachment.name(),mediaData)
-            .next();
-        g.tx().commit();
-    }
-
-    /**
-     * 给顶点对象插入附件(另一个附件)
-     */
-    @Test
-    public void insertMediaDataOther(){
-        String tid="tid001";
-        LOGGER.info("创建一个顶点并添加一个附件");
-        MediaData mediaData=new MediaData();
-        mediaData.setAclId("我是附件的aclID2");
-        mediaData.setFilename("文件名2");
-        mediaData.setMediaTitle("附件标题2");
-        mediaData.setKey("我是附件的key2");
-        mediaData.setMediaData("我是附件的内容2".getBytes());
-        mediaData.setDsr(Sets.newHashSet("我是附件的一个dsr"));
-        //为顶点添加一个附件
-        final Vertex mediaAndNote=g.addV("object_qq")
-            .property(T.id, tid)
-            .property(BaseKey.VertexAttachment.name(),mediaData)
-            .next();
-        g.tx().commit();
-    }
-
-    /**
-     * 给顶点对象插入注释
-     */
-    @Test
-    public void insertNote(){
-        LOGGER.info("创建一个顶点并添加一个注释");
-        String tid="tid001";
-        Note note=new Note();
-        note.setId("我是注释的id");
-        note.setNoteTitle("我是注释的标题");
-        note.setNoteData("我是注释的内容");
-        note.setDsr(Sets.newHashSet("我是注释的dsr"));
-
-        //为顶点添加一个注释
-        final Vertex mediaAndNote=g.addV("object_qq")
-            .property(T.id, tid)
-            .property(BaseKey.VertexNote.name(),note)
-            .next();
-        g.tx().commit();
-    }
-
-    @Test
-    public void insertNoteByDsl(){
-        LOGGER.info("创建一个顶点并添加一个注释");
-        String tid="tid001";
-        Note note=new Note();
-        note.setId("我是注释的iddsl");
-        note.setNoteTitle("我是注释的标题dsl");
-        note.setNoteData("我是注释的内容dsl");
-        note.setDsr(Sets.newHashSet("我是注释的dsrdsl"));
-        g.V().properties();
-
-        //为顶点添加一个注释
-        final Vertex mediaAndNote=g.addV("object_qq")
-            .property(T.id, tid).note(note)
-            .next();
-        g.tx().commit();
-    }
-
-    /**
-     * 删除指定对象的指定注释
-     */
-    @Test
-    public void dropNoteByDsl(){
-        String tid="tid001";
-        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
-        List<Note> notes = g.V(graphId).notes("我是注释的iddsl").dropExpand().toList();
-        g.tx().commit();
-    }
-    /**
-     * 删除指定对象的指定注释
-     */
-    @Test
-    public void dropMediaDataByDsl(){
-        String tid="tid001";
-        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
-        List<MediaData> mediaDatas = g.V(graphId).attachments("我是附件的key").dropExpand().toList();
-        g.tx().commit();
-    }
-
-
-    /**
-     * 给顶点对象插入注释(另一个注释）
-     */
-    @Test
-    public void insertOtherNote(){
-        LOGGER.info("创建一个顶点并添加一个注释");
-        String tid="tid001";
-        Note note=new Note();
-        note.setId("我是注释的2");
-        note.setNoteTitle("我是注释的标题2");
-        note.setNoteData("我是注释的内容2");
-        note.setDsr(Sets.newHashSet("我是注释的dsr"));
-
-        //为顶点添加一个注释
-        final Vertex mediaAndNote=g.addV("object_qq")
-            .property(T.id, tid)
-            .property(BaseKey.VertexNote.name(),note)
-            .next();
-        g.tx().commit();
     }
 
     @Test
