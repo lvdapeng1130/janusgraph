@@ -18,6 +18,7 @@
  */
 package org.janusgraph.dsl;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.tinkerpop.gremlin.process.remote.RemoteConnection;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.process.traversal.TraversalStrategies;
@@ -27,6 +28,10 @@ import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSo
 import org.apache.tinkerpop.gremlin.process.traversal.step.map.GraphStep;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.janusgraph.graphdb.database.StandardJanusGraph;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * See {@code SocialTraversalDsl} for more information about this DSL.
@@ -43,6 +48,30 @@ public class KydsjTraversalSourceDsl extends GraphTraversalSource {
 
     public KydsjTraversalSourceDsl(final RemoteConnection connection) {
         super(connection);
+    }
+
+    public GraphTraversal<Vertex, Vertex> T(final String ... tids) {
+        final GraphTraversalSource clone = this.clone();
+        if(tids!=null&&tids.length>0) {
+            List<String> graphIds = new ArrayList<>();
+            Graph graph = this.getGraph();
+            if (graph!=null) {
+                for (String tid : tids) {
+                    if (StringUtils.isNotBlank(tid)) {
+                        String graphId = ((StandardJanusGraph) graph).getIDManager().toVertexId(tid);
+                        graphIds.add(graphId);
+                    }
+                }
+            }
+            Object[] graphIdArray = graphIds.toArray();
+            clone.getBytecode().addStep(GraphTraversal.Symbols.V, graphIdArray);
+            final GraphTraversal.Admin<Vertex, Vertex> traversal = new DefaultGraphTraversal<>(clone);
+            return traversal.addStep(new GraphStep<>(traversal, Vertex.class, true, graphIdArray));
+        }else {
+            clone.getBytecode().addStep(GraphTraversal.Symbols.V, tids);
+            final GraphTraversal.Admin<Vertex, Vertex> traversal = new DefaultGraphTraversal<>(clone);
+            return traversal.addStep(new GraphStep<>(traversal, Vertex.class, true, tids));
+        }
     }
 
     /**

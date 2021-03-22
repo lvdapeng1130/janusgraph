@@ -18,15 +18,23 @@
  */
 package org.janusgraph.dsl;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.GremlinDsl;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.GremlinDsl.AnonymousMethod;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
+import org.apache.tinkerpop.gremlin.process.traversal.step.map.GraphStep;
 import org.apache.tinkerpop.gremlin.structure.Element;
+import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.dsl.step.*;
+import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.Note;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * This Social DSL is meant to be used with the TinkerPop "modern" toy graph.
@@ -41,6 +49,32 @@ import org.janusgraph.kydsj.serialize.Note;
  */
 @GremlinDsl(traversalSource = "org.janusgraph.dsl.KydsjTraversalSourceDsl")
 public interface KydsjTraversalDsl<S, E> extends GraphTraversal.Admin<S, E> {
+
+    /**
+     * 根据tid获取对象
+     * @param tids 对象的tid
+     * @return
+     */
+    public default GraphTraversal<S, Vertex> T(final String ... tids) {
+        if(tids!=null&&tids.length>0) {
+            List<String> graphIds=new ArrayList<>();
+            Optional<Graph> graph = this.getGraph();
+            if (graph.isPresent()) {
+                for(String tid:tids) {
+                    if(StringUtils.isNotBlank(tid)) {
+                        String graphId = ((StandardJanusGraph) graph.get()).getIDManager().toVertexId(tid);
+                        graphIds.add(graphId);
+                    }
+                }
+            }
+            this.asAdmin().getBytecode().addStep(GraphTraversal.Symbols.V, graphIds.toArray());
+            return this.asAdmin().addStep(new GraphStep<>(this.asAdmin(), Vertex.class, false, graphIds.toArray()));
+        }else {
+            this.asAdmin().getBytecode().addStep(GraphTraversal.Symbols.V, tids);
+            return this.asAdmin().addStep(new GraphStep<>(this.asAdmin(), Vertex.class, false, tids));
+        }
+    }
+
 
     /**
      * 给对象添加注释信息

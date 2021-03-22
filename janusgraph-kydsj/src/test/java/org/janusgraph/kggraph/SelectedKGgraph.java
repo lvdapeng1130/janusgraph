@@ -25,7 +25,31 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
      * 根据tid查询顶点对象
      */
     @Test
-    public void selectByTid(){
+    public void selectByTid1(){
+        String tid="tid001";
+        Vertex next = g.T(tid).next();
+        Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
+        while (qq_num_properties.hasNext()){
+            VertexProperty<Object> vertexProperty = qq_num_properties.next();
+            if(vertexProperty.isPresent()){
+                Object value = vertexProperty.value();
+                System.out.println(vertexProperty.key()+"->"+value);
+                Iterator<Property<Object>> properties = vertexProperty.properties();
+                while (properties.hasNext()){
+                    Property<Object> property = properties.next();
+                    if(property.isPresent()){
+                        Object value1 = property.value();
+                        System.out.println(property.key()+"<->"+value1);
+                    }
+                }
+            }
+        }
+    }
+    /**
+     * 根据tid查询顶点对象
+     */
+    @Test
+    public void selectByTid2(){
         String tid="tid001";
         String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
         Vertex next = g.V(graphId).next();
