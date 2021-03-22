@@ -59,6 +59,21 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
         }
     }
 
+    @Test
+    public void readMediaDataByDslByKey() {
+        String tid="tid001";
+        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
+        List<MediaData> mediaDatas =g.V(graphId).attachments("我是附件的key").toList();
+        LOGGER.info("读取到的附件------------------------------------");
+        if(mediaDatas!=null) {
+            LOGGER.info("查询到的附件数量是=>"+mediaDatas.size());
+            for (MediaData mediaData : mediaDatas) {
+                LOGGER.info(mediaData.toString());
+                LOGGER.info("--------------------------------------------");
+            }
+        }
+    }
+
 
     /**
      * 根据tid获取对象的附件

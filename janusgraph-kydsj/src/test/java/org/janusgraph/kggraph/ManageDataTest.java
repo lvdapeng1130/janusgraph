@@ -200,6 +200,16 @@ public class ManageDataTest extends AbstractKGgraphTest{
         List<Note> notes = g.V(graphId).notes("我是注释的iddsl").dropExpand().toList();
         g.tx().commit();
     }
+    /**
+     * 删除指定对象的指定注释
+     */
+    @Test
+    public void dropMediaDataByDsl(){
+        String tid="tid001";
+        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
+        List<MediaData> mediaDatas = g.V(graphId).attachments("我是附件的key").dropExpand().toList();
+        g.tx().commit();
+    }
 
 
     /**
