@@ -82,8 +82,8 @@ import org.janusgraph.graphdb.util.VertexCentricEdgeIterable;
 import org.janusgraph.graphdb.vertices.CacheVertex;
 import org.janusgraph.graphdb.vertices.PreloadedVertex;
 import org.janusgraph.graphdb.vertices.StandardVertex;
-import org.janusgraph.kydsj.SimpleAddedAttachment;
-import org.janusgraph.kydsj.SimpleAddedNote;
+import org.janusgraph.kydsj.SimpleAttachment;
+import org.janusgraph.kydsj.SimpleNote;
 import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.Note;
 import org.janusgraph.util.datastructures.Retriever;
@@ -155,11 +155,13 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
     /**
      * 添加保存顶点的附件
      */
-    private volatile SimpleAddedAttachment addedAttachments;
+    private volatile SimpleAttachment addedAttachments;
+    private volatile SimpleAttachment deletedAttachments;
     /**
      * 添加保存顶点的注释
      */
-    private volatile SimpleAddedNote addedNotes;
+    private volatile SimpleNote addedNotes;
+    private volatile SimpleNote deletedNotes;
 
     //######## Index Caches
     /**
@@ -250,8 +252,10 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
             newTypeCache = new NonBlockingHashMap<>();
             newVertexIndexEntries = new ConcurrentIndexCache();
         }
-        addedAttachments=new SimpleAddedAttachment();
-        addedNotes=new SimpleAddedNote();
+        this.addedAttachments=new SimpleAttachment();
+        this.deletedAttachments=new SimpleAttachment();
+        this.addedNotes=new SimpleNote();
+        this.deletedNotes=new SimpleNote();
 
         boolean preloadedData = config.hasPreloadedData();
         externalVertexRetriever = new VertexConstructor(config.hasVerifyExternalVertexExistence(), preloadedData);
@@ -1577,7 +1581,9 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         }
         try {
             if (hasModifications()||hasAttachmentAndNotesModifications()) {
-                graph.commit(addedRelations.getAll(), deletedRelations.values(),addedAttachments.getAttachments(),addedNotes.getNotes(), this);
+                graph.commit(addedRelations.getAll(), deletedRelations.values(),addedAttachments.getAttachments(),
+                    deletedAttachments.getAttachments(),
+                    addedNotes.getNotes(),deletedNotes.getNotes(), this);
             } else {
                 txHandle.commit();
             }

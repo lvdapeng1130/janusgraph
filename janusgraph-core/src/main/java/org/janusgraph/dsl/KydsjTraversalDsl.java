@@ -24,10 +24,7 @@ import org.apache.tinkerpop.gremlin.process.traversal.dsl.GremlinDsl.AnonymousMe
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.structure.Element;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.janusgraph.dsl.step.AddAttachmentStep;
-import org.janusgraph.dsl.step.AddNoteStep;
-import org.janusgraph.dsl.step.AttachmentsStep;
-import org.janusgraph.dsl.step.NotesStep;
+import org.janusgraph.dsl.step.*;
 import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.Note;
 
@@ -85,6 +82,11 @@ public interface KydsjTraversalDsl<S, E> extends GraphTraversal.Admin<S, E> {
         return this.asAdmin().addStep(new AttachmentsStep(this.asAdmin(),keys));
     }
 
+    public default <E2> GraphTraversal<S, E2> dropExpand() {
+        this.asAdmin().getBytecode().addStep(Symbols.dropExpand);
+        return this.asAdmin().addStep(new KydsjDropStep<>(this.asAdmin()));
+    }
+
 
 
     /**
@@ -131,5 +133,6 @@ public interface KydsjTraversalDsl<S, E> extends GraphTraversal.Admin<S, E> {
         public static final String notes = "notes";
         public static final String attachment = "attachment";
         public static final String attachments = "attachments";
+        public static final String dropExpand = "dropExpand";
     }
 }

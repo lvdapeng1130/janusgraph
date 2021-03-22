@@ -8,7 +8,7 @@ import org.janusgraph.kydsj.serialize.MediaData;
  * @time: 2020/7/28 20:22
  * @jira:
  */
-public class SimpleAddedAttachment {
+public class SimpleAttachment {
     private final HashMultimap<String, MediaData> attachments = HashMultimap.create();
 
     public boolean add(String id,MediaData mediaData) {

@@ -8,7 +8,7 @@ import org.janusgraph.kydsj.serialize.Note;
  * @time: 2020/7/28 20:22
  * @jira:
  */
-public class SimpleAddedNote {
+public class SimpleNote {
     private final HashMultimap<String, Note> notes= HashMultimap.create();
 
     public boolean add(String id,Note note) {

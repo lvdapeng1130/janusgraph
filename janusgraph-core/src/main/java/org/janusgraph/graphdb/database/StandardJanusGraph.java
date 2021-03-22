@@ -549,7 +549,11 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
     }
 
     public ModificationSummary prepareCommit(final Collection<InternalRelation> addedRelations,
-                                     final Collection<InternalRelation> deletedRelations,final HashMultimap<String, MediaData> attachments, final HashMultimap<String, Note> notes,
+                                     final Collection<InternalRelation> deletedRelations,
+                                     final HashMultimap<String, MediaData> attachments,
+                                     final HashMultimap<String, MediaData> deletedAttachments,
+                                     final HashMultimap<String, Note> notes,
+                                     final HashMultimap<String, Note> deletedNotes,
                                      final Predicate<InternalRelation> filter,
                                      final BackendTransaction mutator, final StandardJanusGraphTx tx,
                                      final boolean acquireLocks) throws BackendException {
@@ -734,7 +738,11 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
     private static final Predicate<InternalRelation> NO_FILTER = Predicates.alwaysTrue();
 
     public void commit(final Collection<InternalRelation> addedRelations,
-                       final Collection<InternalRelation> deletedRelations, final HashMultimap<String, MediaData> attachments, final HashMultimap<String, Note> notes, final StandardJanusGraphTx tx) {
+                       final Collection<InternalRelation> deletedRelations,
+                       final HashMultimap<String, MediaData> attachments,
+                       final HashMultimap<String, MediaData> deletedAttachments,
+                       final HashMultimap<String, Note> notes,
+                       final HashMultimap<String, Note> deletedNotes, final StandardJanusGraphTx tx) {
         if (addedRelations.isEmpty() && deletedRelations.isEmpty()&&attachments.isEmpty()&&notes.isEmpty()) return;
         //1. Finalize transaction
         log.debug("Saving transaction. Added {}, removed {}", addedRelations.size(), deletedRelations.size());
@@ -783,7 +791,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
                 try {
                     //[FAILURE] If the preparation throws an exception abort directly - nothing persisted since batch-loading cannot be enabled for schema elements
-                    commitSummary = prepareCommit(addedRelations,deletedRelations,attachments,notes, SCHEMA_FILTER, schemaMutator, tx, acquireLocks);
+                    commitSummary = prepareCommit(addedRelations,deletedRelations,attachments,deletedAttachments,notes,deletedNotes, SCHEMA_FILTER, schemaMutator, tx, acquireLocks);
                     assert commitSummary.hasModifications && !commitSummary.has2iModifications;
                 } catch (Throwable e) {
                     //Roll back schema tx and escalate exception
@@ -802,7 +810,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
             //[FAILURE] Exceptions during preparation here cause the entire transaction to fail on transactional systems
             //or just the non-system part on others. Nothing has been persisted unless batch-loading
-            commitSummary = prepareCommit(addedRelations,deletedRelations,attachments,notes, hasTxIsolation? NO_FILTER : NO_SCHEMA_FILTER, mutator, tx, acquireLocks);
+            commitSummary = prepareCommit(addedRelations,deletedRelations,attachments,deletedAttachments,notes,deletedNotes, hasTxIsolation? NO_FILTER : NO_SCHEMA_FILTER, mutator, tx, acquireLocks);
             if (commitSummary.hasModifications) {
                 String logTxIdentifier = tx.getConfiguration().getLogIdentifier();
                 boolean hasSecondaryPersistence = logTxIdentifier!=null || commitSummary.has2iModifications;
