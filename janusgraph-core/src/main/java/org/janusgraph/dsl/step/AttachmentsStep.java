@@ -39,9 +39,11 @@ import java.util.Set;
 public class AttachmentsStep extends FlatMapStep<Element, MediaData> implements AutoCloseable, Configuring {
 
     protected Parameters parameters = new Parameters();
+    private String [] keys;
 
-    public AttachmentsStep(final Traversal.Admin traversal) {
+    public AttachmentsStep(final Traversal.Admin traversal,String [] keys) {
         super(traversal);
+        this.keys=keys;
     }
 
     @Override

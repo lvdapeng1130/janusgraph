@@ -190,6 +190,27 @@ public class ManageDataTest extends AbstractKGgraphTest{
         g.tx().commit();
     }
 
+    /**
+     * 删除指定对象的指定注释
+     */
+    @Test
+    public void dropNoteByDsl(){
+        LOGGER.info("删除某个对象的某一条注释");
+        String tid="tid001";
+        Note note=new Note();
+        note.setId("我是注释的iddsl");
+        note.setNoteTitle("我是注释的标题dsl");
+        note.setNoteData("我是注释的内容dsl");
+        note.setDsr(Sets.newHashSet("我是注释的dsrdsl"));
+        g.V().properties();
+
+        //为顶点添加一个注释
+        final Vertex mediaAndNote=g.addV("object_qq")
+            .property(T.id, tid).note(note)
+            .next();
+        g.tx().commit();
+    }
+
 
     /**
      * 给顶点对象插入注释(另一个注释）

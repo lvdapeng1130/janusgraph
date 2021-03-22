@@ -71,18 +71,18 @@ public interface KydsjTraversalDsl<S, E> extends GraphTraversal.Admin<S, E> {
      * 查询对象的所有注释
      * @return
      */
-    public default GraphTraversal<S,Note> notes() {
-        this.asAdmin().getBytecode().addStep(Symbols.notes);
-        return this.asAdmin().addStep(new NotesStep(this.asAdmin()));
+    public default GraphTraversal<S,Note> notes(final String... keys) {
+        this.asAdmin().getBytecode().addStep(Symbols.notes,keys);
+        return this.asAdmin().addStep(new NotesStep(this.asAdmin(),keys));
     }
 
     /**
      * 查询对象的所有附件
      * @return
      */
-    public default GraphTraversal<S,MediaData> attachments() {
-        this.asAdmin().getBytecode().addStep(Symbols.attachments);
-        return this.asAdmin().addStep(new AttachmentsStep(this.asAdmin()));
+    public default GraphTraversal<S,MediaData> attachments(final String... keys) {
+        this.asAdmin().getBytecode().addStep(Symbols.attachments,keys);
+        return this.asAdmin().addStep(new AttachmentsStep(this.asAdmin(),keys));
     }
 
 

@@ -39,9 +39,11 @@ import java.util.Set;
 public class NotesStep extends FlatMapStep<Element, Note> implements AutoCloseable, Configuring {
 
     protected Parameters parameters = new Parameters();
+    private String [] keys;
 
-    public NotesStep(final Traversal.Admin traversal) {
+    public NotesStep(final Traversal.Admin traversal,String [] keys) {
         super(traversal);
+        this.keys=keys;
     }
 
     @Override
