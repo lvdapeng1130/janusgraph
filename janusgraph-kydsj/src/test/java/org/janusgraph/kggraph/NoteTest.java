@@ -46,7 +46,7 @@ public class NoteTest extends AbstractKGgraphTest{
         String tid="tid002";
         Note note=new Note("我是注释的iddsl");
         note.setId("我是注释的iddsl");
-        note.setNoteTitle("我是注释的标题dsl");
+        note.setNoteTitle("我是注释的标题dsl_xxxx");
         note.setNoteData("我是注释的内容dsl");
         note.setDsr(Sets.newHashSet("我是注释的dsrdsl"));
         g.V().properties();
@@ -105,7 +105,7 @@ public class NoteTest extends AbstractKGgraphTest{
     public void readNotesByDsl() {
         String tid="tid002";
         String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
-        List<Note> notes= g.V(graphId).notes().toList();
+        List<Note> notes= g.T(tid).notes().toList();
         LOGGER.info("读取到的注释------------------------------------");
         if(notes!=null) {
             LOGGER.info("查询到的注释数量是=>"+notes.size());

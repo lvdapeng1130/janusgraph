@@ -69,7 +69,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
         try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
             .consistencyChecks(true)
             .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
-            String tid="tid001";
+            String tid="tid002";
             String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
             GraphTraversal<Vertex, Vertex> qqTraversal = threadedTx.traversal()
                 .addV("object_qq")

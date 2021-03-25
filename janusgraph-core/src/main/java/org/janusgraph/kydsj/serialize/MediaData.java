@@ -147,7 +147,7 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
 
     @Override
     public StandardJanusGraphTx tx() {
-        return null;
+        return vertex.tx();
     }
 
     @Override

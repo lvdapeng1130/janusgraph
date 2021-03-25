@@ -42,7 +42,7 @@ public class MediaDataTest extends AbstractKGgraphTest{
 
     @Test
     public void insertMediaDataByDsl(){
-        String tid="tid001";
+        String tid="tid002";
         LOGGER.info("创建一个顶点并添加一个附件");
         MediaData mediaData=new MediaData("我是附件的key");
         mediaData.setAclId("我是附件的aclID");
@@ -84,7 +84,7 @@ public class MediaDataTest extends AbstractKGgraphTest{
      */
     @Test
     public void insertMediaDataOther(){
-        String tid="tid001";
+        String tid="tid002";
         LOGGER.info("创建一个顶点并添加一个附件");
         MediaData mediaData=new MediaData("我是附件的key2");
         mediaData.setAclId("我是附件的aclID2");

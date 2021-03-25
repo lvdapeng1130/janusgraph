@@ -52,7 +52,7 @@ public class PropertyPropertiesTest extends AbstractKGgraphTest{
             String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
             GraphTraversal<Vertex, Vertex> qqTraversal = threadedTx.traversal()
                 .addV("object_qq")
-                .property("name", "我是测试qq111",
+                .property("name", "我是测试qq",
                     "startDate", new Date(),
                     "endDate", new Date(),
                     "dsr", "程序导入2222_other",
@@ -68,7 +68,7 @@ public class PropertyPropertiesTest extends AbstractKGgraphTest{
      */
     @Test
     public void selectByTid1(){
-        String tid="tid001";
+        String tid="tid002";
         Vertex next = g.T(tid).next();
         Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
         AbstractVertex vertex=(AbstractVertex)next;
@@ -105,6 +105,8 @@ public class PropertyPropertiesTest extends AbstractKGgraphTest{
             }
             LOGGER.info("deleting elements");
             String tid="tid002";
+            String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
+            System.out.println(graphId);
             g.T(tid).drop().toList();
             g.tx().commit();
         } catch (Exception e) {
