@@ -1,6 +1,8 @@
 package org.janusgraph.kydsj.serialize;
 
 
+import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang.builder.ToStringStyle;
 import org.apache.tinkerpop.gremlin.structure.Property;
 import org.janusgraph.core.JanusGraphElement;
 import org.janusgraph.core.PropertyKey;
@@ -119,5 +121,16 @@ public class Note extends AbstractElement implements JanusGraphElement, Serializ
     @Override
     public <V> V valueOrNull(PropertyKey key) {
         return null;
+    }
+
+    @Override
+    public String toString() {
+        return  new ToStringBuilder( this, ToStringStyle.MULTI_LINE_STYLE)
+            .append( "id", id)
+            .append( "dsr", dsr)
+            .append( "noteTitle", noteTitle)
+            .append( "noteData", noteData)
+            .append( "linkType", linkType)
+            .toString();
     }
 }

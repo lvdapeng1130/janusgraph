@@ -4,6 +4,8 @@
 package org.janusgraph.kydsj.serialize;
 
 import com.google.common.collect.Sets;
+import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang.builder.ToStringStyle;
 import org.apache.tinkerpop.gremlin.structure.Property;
 import org.janusgraph.core.JanusGraphElement;
 import org.janusgraph.core.PropertyKey;
@@ -165,7 +167,7 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
 
     @Override
     public String label() {
-        return null;
+        return mediaTitle;
     }
 
     @Override
@@ -177,4 +179,21 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
     public <V> V valueOrNull(PropertyKey key) {
         return null;
     }
+
+    @Override
+    public String toString() {
+        return  new ToStringBuilder( this, ToStringStyle.MULTI_LINE_STYLE)
+            .append( "key", key)
+            .append( "dsr", dsr)
+            .append( "mediaType", mediaType)
+            .append( "linkType", linkType)
+            .append( "mimeType", mimeType)
+            .append( "filename", filename)
+            .append( "aclId", aclId)
+            .append( "mediaTitle", mediaTitle)
+            .append( "mediaData", mediaData)
+            .append( "status", status)
+            .toString();
+    }
+
 }

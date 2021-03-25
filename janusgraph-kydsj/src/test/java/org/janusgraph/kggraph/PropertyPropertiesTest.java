@@ -8,6 +8,8 @@ import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
+import org.janusgraph.graphdb.vertices.AbstractVertex;
+import org.janusgraph.kydsj.serialize.Note;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,9 +68,18 @@ public class PropertyPropertiesTest extends AbstractKGgraphTest{
      */
     @Test
     public void selectByTid1(){
-        String tid="tid002";
+        String tid="tid001";
         Vertex next = g.T(tid).next();
         Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
+        AbstractVertex vertex=(AbstractVertex)next;
+        Iterator<Note> notes = vertex.notes();
+        if(notes!=null) {
+            while (notes.hasNext()){
+                Note note=notes.next();
+                LOGGER.info(note.toString());
+                LOGGER.info("--------------------------------------------");
+            }
+        }
         while (qq_num_properties.hasNext()){
             VertexProperty<Object> vertexProperty = qq_num_properties.next();
             if(vertexProperty.isPresent()){
