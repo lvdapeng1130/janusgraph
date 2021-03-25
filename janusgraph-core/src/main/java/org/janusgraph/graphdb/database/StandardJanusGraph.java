@@ -683,7 +683,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                     StaticBuffer key= tx.getHBaseTableRowkey(rowkey);
                     List<Entry> addList = Lists.newArrayList();
                     for(MediaData mediaData:mediaDatas){
-                        Entry entry = this.getAttachmentTableEntry(mediaData);
+                        Entry entry = this.getMediaDataTableEntry(mediaData);
                         addList.add(entry);
                     }
                     mutator.mutateAttachment(key,addList,KCVSCache.NO_DELETIONS);
@@ -698,7 +698,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                     StaticBuffer key=tx.getHBaseTableRowkey(rowkey);
                     List<Entry> addList = Lists.newArrayList();
                     for(Note note:noteSet){
-                        Entry entry = this.getAttachmentTableEntry(note);
+                        Entry entry = this.getNoteTableEntry(note);
                         addList.add(entry);
                     }
                     mutator.mutateNote(key,addList,KCVSCache.NO_DELETIONS);
@@ -712,7 +712,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                 Set<MediaData> mediaDatas = deletedAttachments.get(vertexId);
                 List<Entry> deleteList = Lists.newArrayList();
                 for(MediaData mediaData:mediaDatas){
-                    Entry entry = this.getAttachmentTableEntry(mediaData);
+                    Entry entry = this.getMediaDataTableEntry(mediaData);
                     deleteList.add(entry);
                 }
                 mutator.mutateAttachment(key,KCVSCache.NO_ADDITIONS,deleteList);
@@ -726,7 +726,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                 Set<Note> noteSet = deletedNotes.get(vertexId);
                 List<Entry> deleteList = Lists.newArrayList();
                 for(Note note:noteSet){
-                    Entry entry = this.getAttachmentTableEntry(note);
+                    Entry entry = this.getNoteTableEntry(note);
                     deleteList.add(entry);
                 }
                 mutator.mutateNote(key,KCVSCache.NO_ADDITIONS,deleteList);
@@ -746,12 +746,12 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                     if (type.getStatus()== SchemaStatus.DISABLED) continue;
                     if(edge.isProperty()&&edge instanceof AbstractVertexProperty){
                         AbstractVertexProperty vertexProperty=(AbstractVertexProperty)edge;
-                        List<StaticArrayEntry> entries = edgeSerializer.writePropertyProperties(vertexProperty, type, tx);
                         if (edge.isRemoved()) {
-                            deletions.addAll(entries);
+                            //deletions.addAll(entries);
                             List<StaticArrayEntry> mutilArrayEntry = edgeSerializer.writeMulitPropertyProperties(vertexProperty, type, tx);
                             deletions.addAll(mutilArrayEntry);
                         } else {
+                            List<StaticArrayEntry> entries = edgeSerializer.writePropertyProperties(vertexProperty, type, tx);
                             additions.addAll(entries);
                         }
                     }
@@ -764,14 +764,14 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         return new ModificationSummary(!mutations.isEmpty(),has2iMods);
     }
 
-    public Entry getAttachmentTableEntry(MediaData mediaData){
+    public Entry getMediaDataTableEntry(MediaData mediaData){
         final DataOutput out = this.getDataSerializer().getDataOutput(10);
         out.writeObjectNotNull(mediaData.getKey());
         final int valuePosition=out.getPosition();
         out.writeObjectNotNull(mediaData);
         return new StaticArrayEntry(out.getStaticBuffer(),valuePosition);
     }
-    public Entry getAttachmentTableEntry(Note note){
+    public Entry getNoteTableEntry(Note note){
         final DataOutput out = this.getDataSerializer().getDataOutput(10);
         out.writeObjectNotNull(note.getId());
         final int valuePosition=out.getPosition();
