@@ -16,6 +16,11 @@ package org.janusgraph.graphdb.vertices;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.apache.tinkerpop.gremlin.structure.Edge;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.structure.VertexProperty;
+import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 import org.janusgraph.core.*;
 import org.janusgraph.graphdb.internal.AbstractElement;
 import org.janusgraph.graphdb.internal.ElementLifeCycle;
@@ -27,11 +32,6 @@ import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.graphdb.types.system.BaseLabel;
 import org.janusgraph.graphdb.types.system.BaseVertexLabel;
 import org.janusgraph.graphdb.util.ElementHelper;
-import org.apache.tinkerpop.gremlin.structure.Direction;
-import org.apache.tinkerpop.gremlin.structure.Edge;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.apache.tinkerpop.gremlin.structure.VertexProperty;
-import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.Note;
 
@@ -112,10 +112,20 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
         for (JanusGraphRelation r : it().query().noPartitionRestriction().system().relations()) {
             r.remove();
         }
+
         //删除附件
         Iterator<MediaData> attachments = this.attachments();
+        while (attachments.hasNext()){
+            MediaData mediaData=attachments.next();
+            mediaData.remove();
+        }
+
         //删除注释
         Iterator<Note> notes = this.notes();
+        while (notes.hasNext()){
+            Note note=notes.next();
+            note.remove();
+        }
     }
 
 	/* ---------------------------------------------------------------

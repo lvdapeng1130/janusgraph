@@ -20,6 +20,7 @@ import com.carrotsearch.hppc.ObjectObjectIdentityHashMap;
 import com.carrotsearch.hppc.ObjectSet;
 import com.google.common.base.Preconditions;
 import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.apache.tinkerpop.gremlin.structure.Property;
 import org.janusgraph.core.*;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.EntryMetaData;
@@ -47,10 +48,7 @@ import org.janusgraph.util.datastructures.Interval;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.janusgraph.graphdb.database.idhandling.IDHandler.*;
 
@@ -357,6 +355,33 @@ public class EdgeSerializer implements RelationReader {
     }
 
 
+    public List<StaticArrayEntry> writeMulitPropertyProperties(StandardVertexProperty standardVertexProperty,
+                                                          InternalRelationType type,
+                                                          StandardJanusGraphTx tx) {
+        Iterator<? extends Property<Object>> properties = standardVertexProperty.properties();
+        List<StaticArrayEntry> entries=new ArrayList<>();
+        String typeId = type.longId();
+        String relationId = standardVertexProperty.longId();
+        String propertyValueMD5 = MD5Util.getMD5(standardVertexProperty.value());
+        while (properties.hasNext()){
+            Property<Object> property=properties.next();
+            String key = property.key();
+            PropertyKey propertyPropertyKey = tx.getPropertyKey(key);
+            if(propertyPropertyKey.isPropertyKey()){
+                Object valueDirect = property.value();
+                DataOutput out = serializer.getDataOutput(DEFAULT_CAPACITY);
+                out.writeObjectNotNull(typeId);
+                out.writeObjectNotNull(propertyValueMD5);
+                out.writeObjectNotNull(propertyPropertyKey.longId());
+                writePropertyValue(out, propertyPropertyKey, valueDirect);
+                final int valuePosition = out.getPosition();
+                out.writeObjectNotNull(relationId);
+                StaticArrayEntry propertyPropertyEntry = new StaticArrayEntry(out.getStaticBuffer(), valuePosition);
+                entries.add(propertyPropertyEntry);
+            }
+        }
+        return entries;
+    }
     /**
      *
      * @param standardVertexProperty 属性

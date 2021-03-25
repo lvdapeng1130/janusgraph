@@ -749,6 +749,8 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                         List<StaticArrayEntry> entries = edgeSerializer.writePropertyProperties(standardVertexProperty, type, tx);
                         if (edge.isRemoved()) {
                             deletions.addAll(entries);
+                            List<StaticArrayEntry> mutilArrayEntry = edgeSerializer.writeMulitPropertyProperties(standardVertexProperty, type, tx);
+                            deletions.addAll(mutilArrayEntry);
                         } else {
                             additions.addAll(entries);
                         }

@@ -155,7 +155,7 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
 
     @Override
     public void remove() {
-
+        tx().removeAttachment(this);
     }
 
     @Override
