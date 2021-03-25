@@ -25,7 +25,7 @@ public class NoteTest extends AbstractKGgraphTest{
     @Test
     public void insertNote(){
         LOGGER.info("创建一个顶点并添加一个注释");
-        String tid="tid001";
+        String tid="tid002";
         Note note=new Note("我是注释的id");
         note.setId("我是注释的id");
         note.setNoteTitle("我是注释的标题");
@@ -138,9 +138,9 @@ public class NoteTest extends AbstractKGgraphTest{
      */
     @Test
     public void dropNoteByDsl(){
-        String tid="tid001";
-        String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
-        List<Note> notes = g.V(graphId).notes("我是注释的iddsl").dropExpand().toList();
+        String tid="tid002";
+        //String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
+        List<Note> notes = g.T(tid).notes("我是注释的iddsl").dropExpand().toList();
         g.tx().commit();
     }
 
