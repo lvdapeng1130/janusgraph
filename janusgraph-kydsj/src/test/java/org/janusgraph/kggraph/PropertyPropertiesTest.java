@@ -63,6 +63,31 @@ public class PropertyPropertiesTest extends AbstractKGgraphTest{
         }
     }
 
+    @Test
+    public void deleteProperty()
+    {
+        try {
+            if (g == null) {
+                return;
+            }
+            LOGGER.info("deleting elements");
+            String tid="tid002";
+            String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
+            System.out.println(graphId);
+            g.T(tid).properties("name").filter(p->{
+                Property<Object> property = p.get();
+                String s = property.value().toString();
+                if(s.equals("我是测试qq111")){
+                    return true;
+                }
+                return false;
+            }).drop().toList();
+            g.tx().commit();
+        } catch (Exception e) {
+            g.tx().rollback();
+        }
+    }
+
     /**
      * 根据tid查询顶点对象
      */
