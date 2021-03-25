@@ -37,9 +37,9 @@ import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.Order;
 import org.janusgraph.graphdb.internal.RelationCategory;
+import org.janusgraph.graphdb.relations.AbstractVertexProperty;
 import org.janusgraph.graphdb.relations.EdgeDirection;
 import org.janusgraph.graphdb.relations.RelationCache;
-import org.janusgraph.graphdb.relations.StandardVertexProperty;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.graphdb.types.TypeInspector;
 import org.janusgraph.graphdb.types.system.ImplicitKey;
@@ -355,19 +355,19 @@ public class EdgeSerializer implements RelationReader {
     }
 
 
-    public List<StaticArrayEntry> writeMulitPropertyProperties(StandardVertexProperty standardVertexProperty,
+    public List<StaticArrayEntry> writeMulitPropertyProperties(AbstractVertexProperty vertexProperty,
                                                           InternalRelationType type,
                                                           StandardJanusGraphTx tx) {
-        Iterator<? extends Property<Object>> properties = standardVertexProperty.properties();
+        Iterator<? extends Property<Object>> properties = vertexProperty.properties();
         List<StaticArrayEntry> entries=new ArrayList<>();
         String typeId = type.longId();
-        String relationId = standardVertexProperty.longId();
-        String propertyValueMD5 = MD5Util.getMD5(standardVertexProperty.value());
+        String relationId = vertexProperty.longId();
+        String propertyValueMD5 = MD5Util.getMD5(vertexProperty.value());
         while (properties.hasNext()){
             Property<Object> property=properties.next();
             String key = property.key();
             PropertyKey propertyPropertyKey = tx.getPropertyKey(key);
-            if(propertyPropertyKey.isPropertyKey()){
+            if(propertyPropertyKey.isPropertyKey()&&propertyPropertyKey.cardinality()==Cardinality.SET){
                 Object valueDirect = property.value();
                 DataOutput out = serializer.getDataOutput(DEFAULT_CAPACITY);
                 out.writeObjectNotNull(typeId);
@@ -384,26 +384,26 @@ public class EdgeSerializer implements RelationReader {
     }
     /**
      *
-     * @param standardVertexProperty 属性
+     * @param vertexProperty 属性
      * @param type 属性类型
      * @param tx
      * @return
      */
-    public List<StaticArrayEntry> writePropertyProperties(StandardVertexProperty standardVertexProperty,
-                                                    InternalRelationType type,
-                                                    StandardJanusGraphTx tx) {
-        assert type==standardVertexProperty.getType() || (type.getBaseType() != null
-            && type.getBaseType().equals(standardVertexProperty.getType()));
+    public List<StaticArrayEntry> writePropertyProperties(AbstractVertexProperty vertexProperty,
+                                                          InternalRelationType type,
+                                                          StandardJanusGraphTx tx) {
+        assert type==vertexProperty.getType() || (type.getBaseType() != null
+            && type.getBaseType().equals(vertexProperty.getType()));
         List<StaticArrayEntry> entries=new ArrayList<>();
-        if (standardVertexProperty.isProperty()) {
+        if (vertexProperty.isProperty()) {
             String typeId = type.longId();
             //Multiplicity multiplicity = type.multiplicity();
-            String relationId = standardVertexProperty.longId();
-            String propertyValueMD5 = MD5Util.getMD5(standardVertexProperty.value());
-            Iterable<PropertyKey> propertyKeysDirect = standardVertexProperty.getPropertyKeysDirect();
+            String relationId = vertexProperty.longId();
+            String propertyValueMD5 = MD5Util.getMD5(vertexProperty.value());
+            Iterable<PropertyKey> propertyKeysDirect = vertexProperty.getPropertyKeysDirect();
             for (PropertyKey propertyPropertyKey : propertyKeysDirect) {
                 if (propertyPropertyKey.cardinality() == Cardinality.SET) {
-                    Object valueDirect = standardVertexProperty.getValueDirect(propertyPropertyKey);
+                    Object valueDirect = vertexProperty.getValueDirect(propertyPropertyKey);
                     DataOutput out = serializer.getDataOutput(DEFAULT_CAPACITY);
                     out.writeObjectNotNull(typeId);
                     out.writeObjectNotNull(propertyValueMD5);

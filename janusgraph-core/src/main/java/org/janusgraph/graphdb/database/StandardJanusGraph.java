@@ -60,8 +60,8 @@ import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.query.QueryUtil;
 import org.janusgraph.graphdb.query.index.IndexSelectionStrategy;
+import org.janusgraph.graphdb.relations.AbstractVertexProperty;
 import org.janusgraph.graphdb.relations.EdgeDirection;
-import org.janusgraph.graphdb.relations.StandardVertexProperty;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphBlueprintsGraph;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphFeatures;
 import org.janusgraph.graphdb.tinkerpop.optimize.*;
@@ -744,12 +744,12 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                 assert baseType.getBaseType()==null;
                 for (InternalRelationType type : baseType.getRelationIndexes()) {
                     if (type.getStatus()== SchemaStatus.DISABLED) continue;
-                    if(edge.isProperty()&&edge instanceof StandardVertexProperty){
-                        StandardVertexProperty standardVertexProperty=(StandardVertexProperty)edge;
-                        List<StaticArrayEntry> entries = edgeSerializer.writePropertyProperties(standardVertexProperty, type, tx);
+                    if(edge.isProperty()&&edge instanceof AbstractVertexProperty){
+                        AbstractVertexProperty vertexProperty=(AbstractVertexProperty)edge;
+                        List<StaticArrayEntry> entries = edgeSerializer.writePropertyProperties(vertexProperty, type, tx);
                         if (edge.isRemoved()) {
                             deletions.addAll(entries);
-                            List<StaticArrayEntry> mutilArrayEntry = edgeSerializer.writeMulitPropertyProperties(standardVertexProperty, type, tx);
+                            List<StaticArrayEntry> mutilArrayEntry = edgeSerializer.writeMulitPropertyProperties(vertexProperty, type, tx);
                             deletions.addAll(mutilArrayEntry);
                         } else {
                             additions.addAll(entries);
