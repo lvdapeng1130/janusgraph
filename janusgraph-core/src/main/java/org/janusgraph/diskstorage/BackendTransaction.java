@@ -503,6 +503,19 @@ public class BackendTransaction implements LoggableTransaction {
             }
         });
     }
+    public EntryList propertyPropertiesQuery(final KeySliceQuery query) {
+        return executeRead(new Callable<EntryList>() {
+            @Override
+            public EntryList call() throws Exception {
+                return cacheEnabled?propertyPopertiesStore.getSlice(query, storeTx):
+                    propertyPopertiesStore.getSliceNoCache(query, storeTx);
+            }
+            @Override
+            public String toString() {
+                return "PropertyPropertiesQuery";
+            }
+        });
+    }
 
     public Stream<RawQuery.Result<String>> rawQuery(final String index, final RawQuery query) {
         final IndexTransaction indexTx = getIndexTransaction(index);

@@ -112,6 +112,10 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
         for (JanusGraphRelation r : it().query().noPartitionRestriction().system().relations()) {
             r.remove();
         }
+        //删除附件
+        Iterator<MediaData> attachments = this.attachments();
+        //删除注释
+        Iterator<Note> notes = this.notes();
     }
 
 	/* ---------------------------------------------------------------
@@ -213,8 +217,7 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
     }
 
     public Iterator<Note> notes(String ... keys) {
-        Iterable<Note> notes = tx().getNotes(longId(),keys);
-        Iterator<Note> iterator = notes.iterator();
+        Iterator<Note> iterator = tx().getNotes(longId(),keys);
         return new Iterator<Note>() {
             @Override
             public boolean hasNext() {
@@ -231,8 +234,7 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
     }
 
     public Iterator<MediaData> attachments(String ... keys) {
-        Iterable<MediaData> mediaDatas = tx().getMediaDatas(longId(),keys);
-        Iterator<MediaData> iterator = mediaDatas.iterator();
+        Iterator<MediaData> iterator = tx().getMediaDatas(longId(),keys);
         return new Iterator<MediaData>() {
             @Override
             public boolean hasNext() {

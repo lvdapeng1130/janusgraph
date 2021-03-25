@@ -344,17 +344,17 @@ public class IndexSerializer {
                                                                MixedIndexType index, IndexUpdate.Type updateType)  {
         IndexEntry indexEntry = new IndexEntry(key2Field(index.getField(key)), value);
         if(p!=null){
-            Property<Object> startDatePrperty = p.property("startDate");
+            Property<Object> startDatePrperty = p.lastProperty("startDate");
             if(startDatePrperty!=null&&!(startDatePrperty instanceof EmptyProperty)){
                 Date startDate = (Date)startDatePrperty.value();
                 indexEntry.setStartDate(startDate);
             }
-            Property<Object> endDateProperty = p.property("endDate");
+            Property<Object> endDateProperty = p.lastProperty("endDate");
             if(endDateProperty!=null&&!(endDateProperty instanceof EmptyProperty)){
                 Date endDate = (Date)endDateProperty.value();
                 indexEntry.setEndDate(endDate);
             }
-            Property<Object> geoProperty = p.property("geo");
+            Property<Object> geoProperty = p.lastProperty("geo");
             if(geoProperty!=null&&!(geoProperty instanceof EmptyProperty)){
                 Geoshape geoshape = (Geoshape)geoProperty.value();
                 if(geoshape!=null&&geoshape.getPoint()!=null){
@@ -362,14 +362,14 @@ public class IndexSerializer {
                     indexEntry.setGeo(new double[]{point.getLongitude(),point.getLatitude()});
                 }
             }
-            Property<Object> dsrProperty = p.property("dsr");
+            Property<Object> dsrProperty = p.lastProperty("dsr");
             if(dsrProperty!=null&&!(dsrProperty instanceof EmptyProperty)){
                 String dsr = (String)dsrProperty.value();
                 if(StringUtils.isNotBlank(dsr)) {
                     indexEntry.setDsr(Sets.newHashSet(dsr));
                 }
             }
-            Property<Object> roleProperty = p.property("role");
+            Property<Object> roleProperty = p.lastProperty("role");
             if(roleProperty!=null&&!(roleProperty instanceof EmptyProperty)){
                 String role = (String)roleProperty.value();
                 indexEntry.setRole(role);

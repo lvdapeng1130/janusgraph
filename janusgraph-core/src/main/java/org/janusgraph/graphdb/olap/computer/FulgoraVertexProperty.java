@@ -64,6 +64,11 @@ public class FulgoraVertexProperty<V> implements JanusGraphVertexProperty<V> {
     }
 
     @Override
+    public Property<V> lastProperty(String key) {
+        return this.property(key);
+    }
+
+    @Override
     public void remove() {
         mixinParent.removeKey(key);
         isRemoved=true;

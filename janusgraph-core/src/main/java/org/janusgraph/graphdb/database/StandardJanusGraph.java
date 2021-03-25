@@ -61,6 +61,7 @@ import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.query.QueryUtil;
 import org.janusgraph.graphdb.query.index.IndexSelectionStrategy;
 import org.janusgraph.graphdb.relations.EdgeDirection;
+import org.janusgraph.graphdb.relations.StandardVertexProperty;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphBlueprintsGraph;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphFeatures;
 import org.janusgraph.graphdb.tinkerpop.optimize.*;
@@ -679,7 +680,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             for(String rowkey:attachments.keys()){
                 Set<MediaData> mediaDatas = attachments.get(rowkey);
                 if(mediaDatas!=null&&mediaDatas.size()>0){
-                    StaticBuffer key=this.getAttachmentTableRowkey(rowkey);
+                    StaticBuffer key= tx.getHBaseTableRowkey(rowkey);
                     List<Entry> addList = Lists.newArrayList();
                     for(MediaData mediaData:mediaDatas){
                         Entry entry = this.getAttachmentTableEntry(mediaData);
@@ -694,7 +695,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             for(String rowkey:notes.keys()){
                 Set<Note> noteSet = notes.get(rowkey);
                 if(noteSet!=null&&noteSet.size()>0){
-                    StaticBuffer key=this.getAttachmentTableRowkey(rowkey);
+                    StaticBuffer key=tx.getHBaseTableRowkey(rowkey);
                     List<Entry> addList = Lists.newArrayList();
                     for(Note note:noteSet){
                         Entry entry = this.getAttachmentTableEntry(note);
@@ -707,7 +708,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         //9) 收集删除附件
         if(deletedAttachments!=null&&!deletedAttachments.isEmpty()){
             for(String vertexId:deletedAttachments.keySet()){
-                StaticBuffer key=this.getAttachmentTableRowkey(vertexId);
+                StaticBuffer key=tx.getHBaseTableRowkey(vertexId);
                 Set<MediaData> mediaDatas = deletedAttachments.get(vertexId);
                 List<Entry> deleteList = Lists.newArrayList();
                 for(MediaData mediaData:mediaDatas){
@@ -721,7 +722,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         //10) 收集删除注释
         if(deletedNotes!=null&&!deletedNotes.isEmpty()){
             for(String vertexId:deletedNotes.keySet()){
-                StaticBuffer key=this.getAttachmentTableRowkey(vertexId);
+                StaticBuffer key=tx.getHBaseTableRowkey(vertexId);
                 Set<Note> noteSet = deletedNotes.get(vertexId);
                 List<Entry> deleteList = Lists.newArrayList();
                 for(Note note:noteSet){
@@ -732,16 +733,35 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             }
         }
 
+        //11) 保存属性的属性多值情况：比如姓名属性的dsr，dsr属性类型定义是Set类型
+        for (String vertexId : mutations.keySet()) {
+            Preconditions.checkArgument(StringUtils.isNotBlank(vertexId), "Vertex has no id: %s", vertexId);
+            final List<InternalRelation> edges = mutations.get(vertexId);
+            final List<Entry> additions = new ArrayList<>(edges.size());
+            final List<Entry> deletions = new ArrayList<>(Math.max(10, edges.size() / 10));
+            for (final InternalRelation edge : edges) {
+                final InternalRelationType baseType = (InternalRelationType) edge.getType();
+                assert baseType.getBaseType()==null;
+                for (InternalRelationType type : baseType.getRelationIndexes()) {
+                    if (type.getStatus()== SchemaStatus.DISABLED) continue;
+                    if(edge.isProperty()&&edge instanceof StandardVertexProperty){
+                        StandardVertexProperty standardVertexProperty=(StandardVertexProperty)edge;
+                        List<StaticArrayEntry> entries = edgeSerializer.writePropertyProperties(standardVertexProperty, type, tx);
+                        if (edge.isRemoved()) {
+                            deletions.addAll(entries);
+                        } else {
+                            additions.addAll(entries);
+                        }
+                    }
+                }
+            }
+            StaticBuffer vertexKey = idManager.getKey(vertexId);
+            mutator.mutatePropertyProperties(vertexKey, additions, deletions);
+        }
+
         return new ModificationSummary(!mutations.isEmpty(),has2iMods);
     }
 
-    public StaticBuffer getAttachmentTableRowkey(String vertextID){
-        DataOutput out = this.getDataSerializer().getDataOutput(8);
-        //VariableLong.writePositive(out, vertextID);
-        out.writeObjectNotNull(vertextID);
-        StaticBuffer key = out.getStaticBuffer();
-        return key;
-    }
     public Entry getAttachmentTableEntry(MediaData mediaData){
         final DataOutput out = this.getDataSerializer().getDataOutput(10);
         out.writeObjectNotNull(mediaData.getKey());
@@ -952,7 +972,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             consistentTx = StandardJanusGraph.this.newTransaction(new StandardTransactionBuilder(getConfiguration(),
                 StandardJanusGraph.this, customTxOptions).groupName(GraphDatabaseConfiguration.METRICS_SCHEMA_PREFIX_DEFAULT));
             consistentTx.getTxHandle().disableCache();
-            StaticBuffer attachmentTableRowkey = this.getAttachmentTableRowkey(vertexId);
+            StaticBuffer attachmentTableRowkey = consistentTx.getHBaseTableRowkey(vertexId);
             KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
             EntryList entries = consistentTx.getTxHandle().attachmentQuery(keySliceQuery);
             Iterator<Entry> iterator = entries.iterator();
@@ -977,7 +997,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             consistentTx = StandardJanusGraph.this.newTransaction(new StandardTransactionBuilder(getConfiguration(),
                 StandardJanusGraph.this, customTxOptions).groupName(GraphDatabaseConfiguration.METRICS_SCHEMA_PREFIX_DEFAULT));
             consistentTx.getTxHandle().disableCache();
-            StaticBuffer attachmentTableRowkey = this.getAttachmentTableRowkey(vertexId);
+            StaticBuffer attachmentTableRowkey = consistentTx.getHBaseTableRowkey(vertexId);
             KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
             EntryList entries = consistentTx.getTxHandle().noteQuery(keySliceQuery);
             Iterator<Entry> iterator = entries.iterator();

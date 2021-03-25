@@ -18,6 +18,8 @@ import org.janusgraph.graphdb.relations.RelationIdentifier;
 import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.Note;
 
+import java.util.Iterator;
+
 /**
  * JanusGraphTransaction defines a transactional context for a {@link JanusGraph}. Since JanusGraph is a transactional graph
  * database, all interactions with the graph are mitigated by a JanusGraphTransaction.
@@ -80,9 +82,9 @@ public interface JanusGraphTransaction extends Transaction {
 
     Iterable<JanusGraphEdge> getEdges(RelationIdentifier... ids);
 
-    Iterable<Note> getNotes(String vertexId,String ...keys);
+    Iterator<Note> getNotes(String vertexId, String ...keys);
 
-    Iterable<MediaData> getMediaDatas(String vertexId,String ...keys);
+    Iterator<MediaData> getMediaDatas(String vertexId, String ...keys);
 
    /* ---------------------------------------------------------------
     * Closing and admin

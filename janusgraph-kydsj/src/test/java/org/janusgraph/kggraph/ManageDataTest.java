@@ -87,6 +87,46 @@ public class ManageDataTest extends AbstractKGgraphTest{
     }
 
     @Test
+    public void insertPropertyProperties(){
+        try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
+            .consistencyChecks(true)
+            .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
+            String tid="tid002";
+            String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
+            GraphTraversal<Vertex, Vertex> qqTraversal = threadedTx.traversal()
+                .addV("object_qq")
+                .property("name", "我是测试qq111",
+                    "startDate", new Date(),
+                    "endDate", new Date(),
+                    "dsr", "程序导入2222",
+                    "geo", Geoshape.point(22.22, 113.1122))
+                .property(T.id, tid);
+            Vertex qq = qqTraversal.next();
+            threadedTx.commit();
+        }
+    }
+
+    @Test
+    public void insertPropertyPropertiesOther(){
+        try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
+            .consistencyChecks(true)
+            .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
+            String tid="tid002";
+            String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
+            GraphTraversal<Vertex, Vertex> qqTraversal = threadedTx.traversal()
+                .addV("object_qq")
+                .property("name", "我是测试qq111",
+                    "startDate", new Date(),
+                    "endDate", new Date(),
+                    "dsr", "程序导入22222",
+                    "geo", Geoshape.point(23.22, 114.1122))
+                .property(T.id, tid);
+            Vertex qq = qqTraversal.next();
+            threadedTx.commit();
+        }
+    }
+
+    @Test
     public void uDsr(){
         try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
             .consistencyChecks(true)

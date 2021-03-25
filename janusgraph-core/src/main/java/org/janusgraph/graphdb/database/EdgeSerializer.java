@@ -38,13 +38,18 @@ import org.janusgraph.graphdb.internal.Order;
 import org.janusgraph.graphdb.internal.RelationCategory;
 import org.janusgraph.graphdb.relations.EdgeDirection;
 import org.janusgraph.graphdb.relations.RelationCache;
+import org.janusgraph.graphdb.relations.StandardVertexProperty;
+import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.graphdb.types.TypeInspector;
 import org.janusgraph.graphdb.types.system.ImplicitKey;
+import org.janusgraph.graphdb.util.MD5Util;
 import org.janusgraph.util.datastructures.Interval;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import static org.janusgraph.graphdb.database.idhandling.IDHandler.*;
@@ -349,6 +354,44 @@ public class EdgeSerializer implements RelationReader {
         return new StaticArrayEntry(type.getSortOrder() == Order.DESC ?
                                     out.getStaticBufferFlipBytes(keyStartPos, keyEndPos) :
                                     out.getStaticBuffer(), valuePosition);
+    }
+
+
+    /**
+     *
+     * @param standardVertexProperty 属性
+     * @param type 属性类型
+     * @param tx
+     * @return
+     */
+    public List<StaticArrayEntry> writePropertyProperties(StandardVertexProperty standardVertexProperty,
+                                                    InternalRelationType type,
+                                                    StandardJanusGraphTx tx) {
+        assert type==standardVertexProperty.getType() || (type.getBaseType() != null
+            && type.getBaseType().equals(standardVertexProperty.getType()));
+        List<StaticArrayEntry> entries=new ArrayList<>();
+        if (standardVertexProperty.isProperty()) {
+            String typeId = type.longId();
+            //Multiplicity multiplicity = type.multiplicity();
+            String relationId = standardVertexProperty.longId();
+            String propertyValueMD5 = MD5Util.getMD5(standardVertexProperty.value());
+            Iterable<PropertyKey> propertyKeysDirect = standardVertexProperty.getPropertyKeysDirect();
+            for (PropertyKey propertyPropertyKey : propertyKeysDirect) {
+                if (propertyPropertyKey.cardinality() == Cardinality.SET) {
+                    Object valueDirect = standardVertexProperty.getValueDirect(propertyPropertyKey);
+                    DataOutput out = serializer.getDataOutput(DEFAULT_CAPACITY);
+                    out.writeObjectNotNull(typeId);
+                    out.writeObjectNotNull(propertyValueMD5);
+                    out.writeObjectNotNull(propertyPropertyKey.longId());
+                    writePropertyValue(out, propertyPropertyKey, valueDirect);
+                    final int valuePosition = out.getPosition();
+                    out.writeObjectNotNull(relationId);
+                    StaticArrayEntry propertyPropertyEntry = new StaticArrayEntry(out.getStaticBuffer(), valuePosition);
+                    entries.add(propertyPropertyEntry);
+                }
+            }
+        }
+        return entries;
     }
 
     private enum InlineType {

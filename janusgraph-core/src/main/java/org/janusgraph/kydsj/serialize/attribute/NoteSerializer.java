@@ -26,7 +26,7 @@ public class NoteSerializer implements AttributeSerializer<Note>, SerializerInje
         String linkType=(String)serializer.readClassAndObject(buffer);
         String noteData=(String)serializer.readClassAndObject(buffer);
         Set<String> dsr=(Set<String>)serializer.readClassAndObject(buffer);
-        Note note=new Note();
+        Note note=new Note(id);
         note.setId(id);
         note.setNoteTitle(noteTitle);
         note.setLinkType(linkType);

@@ -73,7 +73,7 @@ public class SerializerTest extends SerializerTestCommon {
 
     @Test
     public void testWriteAndReadMediaData(){
-        MediaData mediaData=new MediaData();
+        MediaData mediaData=new MediaData("我是标题....");
         mediaData.setKey("微服务好尬弄");
         mediaData.setDsr(Sets.newHashSet("多少人","dxx"));
         mediaData.setMimeType("mmmmmmeewewew ");
@@ -97,7 +97,7 @@ public class SerializerTest extends SerializerTestCommon {
 
     @Test
     public void testWriteAndNote(){
-        Note note=new Note();
+        Note note=new Note("我是id");
         note.setId("我是id");
         note.setNoteData("我是内容");
         note.setLinkType("我是类型");

@@ -122,8 +122,6 @@ public interface KydsjTraversalDsl<S, E> extends GraphTraversal.Admin<S, E> {
         return this.asAdmin().addStep(new KydsjDropStep<>(this.asAdmin()));
     }
 
-
-
     /**
      * From a {@code Vertex} traverse "knows" edges to adjacent "person" vertices and filter those vertices on the
      * "name" property.

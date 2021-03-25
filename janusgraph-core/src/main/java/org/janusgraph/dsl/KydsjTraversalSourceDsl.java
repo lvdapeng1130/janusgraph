@@ -74,6 +74,7 @@ public class KydsjTraversalSourceDsl extends GraphTraversalSource {
         }
     }
 
+
     /**
      * Starts a traversal that finds all vertices with a "person" label and optionally allows filtering of those
      * vertices on the "name" property.

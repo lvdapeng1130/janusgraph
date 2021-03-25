@@ -1,5 +1,6 @@
 package org.janusgraph.dsl.step;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.Traversal;
 import org.apache.tinkerpop.gremlin.process.traversal.Traverser;
 import org.apache.tinkerpop.gremlin.process.traversal.step.Mutating;
@@ -57,13 +58,15 @@ public class AddAttachmentStep<S extends Element> extends SideEffectStep<S>
     @Override
     protected void sideEffect(final Traverser.Admin<S> traverser) {
         List<MediaData> mediaDatas = this.parameters.get(traverser, KEY, () -> {
-            return new MediaData();
+            return new MediaData("");
         });
         final Element element = traverser.get();
         if(element instanceof AbstractVertex){
             AbstractVertex vertex=(AbstractVertex)element;
             for(MediaData mediaData:mediaDatas){
-                vertex.attachment(mediaData);
+                if(mediaData!=null&& StringUtils.isNotBlank(mediaData.getKey())) {
+                    vertex.attachment(mediaData);
+                }
             }
         }
     }

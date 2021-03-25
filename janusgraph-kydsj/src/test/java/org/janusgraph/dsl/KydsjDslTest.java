@@ -42,7 +42,7 @@ public class KydsjDslTest {
     @Test
     public void testNote(){
         String tid="tid001";
-        Note note=new Note();
+        Note note=new Note("我是注释的2");
         note.setId("我是注释的2");
         note.setNoteTitle("我是注释的标题2");
         note.setNoteData("我是注释的内容2");

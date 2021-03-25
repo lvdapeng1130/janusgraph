@@ -1,5 +1,6 @@
 package org.janusgraph.dsl.step;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.Traversal;
 import org.apache.tinkerpop.gremlin.process.traversal.Traverser;
 import org.apache.tinkerpop.gremlin.process.traversal.step.Mutating;
@@ -57,13 +58,15 @@ public class AddNoteStep<S extends Element> extends SideEffectStep<S>
     @Override
     protected void sideEffect(final Traverser.Admin<S> traverser) {
         List<Note> notes = this.parameters.get(traverser, KEY, () -> {
-            return new Note();
+            return new Note("");
         });
         final Element element = traverser.get();
         if(element instanceof AbstractVertex){
             AbstractVertex vertex=(AbstractVertex)element;
             for(Note note:notes){
-                vertex.note(note);
+                if(note!=null&& StringUtils.isNotBlank(note.getId())) {
+                    vertex.note(note);
+                }
             }
         }
     }

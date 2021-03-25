@@ -25,7 +25,7 @@ public class MediaDataTest extends AbstractKGgraphTest{
     public void insertMediaData(){
         String tid="tid001";
         LOGGER.info("创建一个顶点并添加一个附件");
-        MediaData mediaData=new MediaData();
+        MediaData mediaData=new MediaData("我是附件的key");
         mediaData.setAclId("我是附件的aclID");
         mediaData.setFilename("文件名");
         mediaData.setMediaTitle("附件标题");
@@ -44,7 +44,7 @@ public class MediaDataTest extends AbstractKGgraphTest{
     public void insertMediaDataByDsl(){
         String tid="tid001";
         LOGGER.info("创建一个顶点并添加一个附件");
-        MediaData mediaData=new MediaData();
+        MediaData mediaData=new MediaData("我是附件的key");
         mediaData.setAclId("我是附件的aclID");
         mediaData.setFilename("文件名");
         mediaData.setMediaTitle("附件标题");
@@ -64,7 +64,7 @@ public class MediaDataTest extends AbstractKGgraphTest{
     public void updateMediaData(){
         String tid="tid001";
         LOGGER.info("创建一个顶点并添加一个附件");
-        MediaData mediaData=new MediaData();
+        MediaData mediaData=new MediaData("我是附件的key");
         mediaData.setAclId("我是附件的aclID");
         mediaData.setFilename("文件名_新");
         mediaData.setMediaTitle("附件标题_新");
@@ -86,7 +86,7 @@ public class MediaDataTest extends AbstractKGgraphTest{
     public void insertMediaDataOther(){
         String tid="tid001";
         LOGGER.info("创建一个顶点并添加一个附件");
-        MediaData mediaData=new MediaData();
+        MediaData mediaData=new MediaData("我是附件的key2");
         mediaData.setAclId("我是附件的aclID2");
         mediaData.setFilename("文件名2");
         mediaData.setMediaTitle("附件标题2");
