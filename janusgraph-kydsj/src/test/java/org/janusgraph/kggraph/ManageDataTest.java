@@ -76,7 +76,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
                 .property("name", "我是测试qq",
                     "startDate", new Date(),
                     "endDate", new Date(),
-                    "dsr", "程序导入1",
+                    "dsr", "程序导入12",
                     "geo", Geoshape.point(22.22, 113.1122))
                 .property("tid",tid)
                 .property("qq_num","111111","dsr","程序导入")

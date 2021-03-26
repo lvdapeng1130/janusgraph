@@ -106,7 +106,7 @@ public class MediaDataTest extends AbstractKGgraphTest{
      */
     @Test
     public void readMediaData() {
-        String tid="tid001";
+        String tid="tid002";
         String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
         List<MediaData> mediaDatas = this.getJanusGraph().getMediaDatas(graphId);
         LOGGER.info("读取到的附件------------------------------------");
@@ -124,7 +124,7 @@ public class MediaDataTest extends AbstractKGgraphTest{
      */
     @Test
     public void readMediaDataByDsl() {
-        String tid="tid001";
+        String tid="tid002";
         String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
         List<MediaData> mediaDatas =g.V(graphId).attachments().toList();
         LOGGER.info("读取到的附件------------------------------------");
