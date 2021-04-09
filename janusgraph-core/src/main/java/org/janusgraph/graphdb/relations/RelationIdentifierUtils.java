@@ -32,7 +32,7 @@ public class RelationIdentifierUtils {
         if (r.hasId()) {
             return new RelationIdentifier(r.getVertex(0).longId(),
                 r.getType().longId(),
-                r.longId(), (r.isEdge() ? r.getVertex(1).longId() : 0));
+                r.longId(), (r.isEdge() ? r.getVertex(1).longId() : ""));
         } else return null;
     }
 
@@ -50,8 +50,8 @@ public class RelationIdentifierUtils {
 
         for (JanusGraphRelation r : relations) {
             //Find current or previous relation
-            if (r.longId() == rId.getRelationId() ||
-                ((r instanceof StandardRelation) && ((StandardRelation) r).getPreviousID() == rId.getRelationId())) return r;
+            if (r.longId().equals(rId.getRelationId()) ||
+                ((r instanceof StandardRelation) && ((StandardRelation) r).getPreviousID() .equals(rId.getRelationId()))) return r;
         }
         return null;
     }

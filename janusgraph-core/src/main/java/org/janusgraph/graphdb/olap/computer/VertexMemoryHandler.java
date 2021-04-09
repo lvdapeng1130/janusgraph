@@ -48,7 +48,7 @@ class VertexMemoryHandler<M> implements PreloadedVertex.PropertyMixing, Messenge
 
     protected final FulgoraVertexMemory<M> vertexMemory;
     private final PreloadedVertex vertex;
-    protected final long vertexId;
+    protected final String vertexId;
     private boolean inExecute;
 
     VertexMemoryHandler(FulgoraVertexMemory<M> vertexMemory, PreloadedVertex vertex) {
@@ -133,7 +133,7 @@ class VertexMemoryHandler<M> implements PreloadedVertex.PropertyMixing, Messenge
 
             return edges.stream()
                         .flatMap(e -> {
-                            long canonicalId = vertexMemory.getCanonicalId(((JanusGraphEdge) e).otherVertex(vertex).longId());
+                            String canonicalId = vertexMemory.getCanonicalId(((JanusGraphEdge) e).otherVertex(vertex).longId());
                             return vertexMemory.getMessage(canonicalId, localMessageScope)
                                                .map(msg -> msg == null ? null : edgeFct.apply(msg, e));
                         })
@@ -156,9 +156,9 @@ class VertexMemoryHandler<M> implements PreloadedVertex.PropertyMixing, Messenge
             vertexMemory.sendMessage(vertexId, m, messageScope);
         } else {
             ((MessageScope.Global) messageScope).vertices().forEach(v -> {
-                long vertexId;
+                String vertexId;
                 if (v instanceof JanusGraphVertex) vertexId=((JanusGraphVertex)v).longId();
-                else vertexId = (Long)v.id();
+                else vertexId = v.id().toString();
                 vertexMemory.sendMessage(vertexMemory.getCanonicalId(vertexId), m, messageScope);
             });
         }

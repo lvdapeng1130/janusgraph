@@ -41,9 +41,9 @@ public enum TypeDefinitionCategory {
     //Don't change the order because it breaks backward compatibility.
     //Relation Types
     INVISIBLE(Boolean.class),
-    SORT_KEY(long[].class),
+    SORT_KEY(String[].class),
     SORT_ORDER(Order.class),
-    SIGNATURE(long[].class),
+    SIGNATURE(String[].class),
     MULTIPLICITY(Multiplicity.class),
     DATATYPE(Class.class),
     UNIDIRECTIONAL(Direction.class),

@@ -29,7 +29,7 @@ import java.util.concurrent.ExecutionException;
  */
 public class RelationQueryCache implements AutoCloseable {
 
-    private final Cache<Long,CacheEntry> cache;
+    private final Cache<String,CacheEntry> cache;
     private final EdgeSerializer edgeSerializer;
 
     private final EnumMap<RelationCategory,SliceQuery> relationTypes;

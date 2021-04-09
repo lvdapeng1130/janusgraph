@@ -24,7 +24,7 @@ public class VertexLabelDefinition extends SchemaElementDefinition {
     private final boolean isPartitioned;
     private final boolean isStatic;
 
-    public VertexLabelDefinition(String name, long id, boolean isPartitioned, boolean isStatic) {
+    public VertexLabelDefinition(String name, String id, boolean isPartitioned, boolean isStatic) {
         super(name, id);
         this.isPartitioned = isPartitioned;
         this.isStatic = isStatic;

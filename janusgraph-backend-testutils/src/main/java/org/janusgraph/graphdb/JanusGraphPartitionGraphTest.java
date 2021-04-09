@@ -17,31 +17,32 @@ package org.janusgraph.graphdb;
 
 import com.carrotsearch.hppc.IntHashSet;
 import com.carrotsearch.hppc.IntSet;
-import com.carrotsearch.hppc.LongArrayList;
+import com.carrotsearch.hppc.ObjectArrayList;
 import com.google.common.collect.*;
-import org.janusgraph.core.*;
-import org.janusgraph.graphdb.database.idassigner.VertexIDAssigner;
-import org.janusgraph.graphdb.database.idassigner.placement.PropertyPlacementStrategy;
-import org.janusgraph.graphdb.olap.computer.FulgoraGraphComputer;
-import org.janusgraph.diskstorage.configuration.BasicConfiguration;
-import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
-import org.janusgraph.diskstorage.configuration.WriteConfiguration;
-import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
-import org.janusgraph.graphdb.database.idassigner.placement.SimpleBulkPlacementStrategy;
-import org.janusgraph.graphdb.idmanagement.IDManager;
-import org.janusgraph.olap.OLAPTest;
-import org.janusgraph.util.datastructures.AbstractLongListUtil;
+import org.apache.commons.lang.StringUtils;
 import org.apache.tinkerpop.gremlin.process.computer.ComputerResult;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
+import org.janusgraph.core.*;
+import org.janusgraph.diskstorage.configuration.BasicConfiguration;
+import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
+import org.janusgraph.diskstorage.configuration.WriteConfiguration;
+import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
+import org.janusgraph.graphdb.database.idassigner.VertexIDAssigner;
+import org.janusgraph.graphdb.database.idassigner.placement.PropertyPlacementStrategy;
+import org.janusgraph.graphdb.database.idassigner.placement.SimpleBulkPlacementStrategy;
+import org.janusgraph.graphdb.idmanagement.IDManager;
+import org.janusgraph.graphdb.olap.computer.FulgoraGraphComputer;
+import org.janusgraph.olap.OLAPTest;
+import org.janusgraph.util.datastructures.AbstractLongListUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
 import java.util.*;
 
-import static org.janusgraph.testutil.JanusGraphAssert.*;
+import static org.janusgraph.testutil.JanusGraphAssert.assertCount;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -81,9 +82,9 @@ public abstract class JanusGraphPartitionGraphTest extends JanusGraphBaseTest {
     public void testPartitionHashes() {
         assertEquals(8, idManager.getPartitionBound());
         Set<Long> hashes = Sets.newHashSet();
-        for (long i=1;i<idManager.getPartitionBound()*2;i++) hashes.add(idManager.getPartitionHashForId(i));
+        for (long i=1;i<idManager.getPartitionBound()*2;i++) hashes.add(idManager.getPartitionHashForId(i+""));
         assertTrue(hashes.size()>idManager.getPartitionBound()/2);
-        assertNotEquals(idManager.getPartitionHashForId(101),idManager.getPartitionHashForId(102));
+        assertNotEquals(idManager.getPartitionHashForId("101"),idManager.getPartitionHashForId("102"));
     }
 
     @Test
@@ -104,7 +105,7 @@ public abstract class JanusGraphPartitionGraphTest extends JanusGraphBaseTest {
         finishSchema();
         final Set<String> names = ImmutableSet.of("Marko", "Dan", "Stephen", "Daniel", "Josh", "Thad", "Pavel", "Matthias");
         final int numG = 10;
-        final long[] gids = new long[numG];
+        final String[] gids = new String[numG];
 
         for (int i = 0; i < numG; i++) {
             JanusGraphVertex g = tx.addVertex("group");
@@ -117,7 +118,7 @@ public abstract class JanusGraphPartitionGraphTest extends JanusGraphBaseTest {
             assertEquals(0, g.<Integer>value("sig").intValue());
             assertEquals("group", g.label());
             assertCount(names.size(), g.properties("name"));
-            assertTrue(getId(g) > 0);
+            assertTrue(StringUtils.isNotBlank(getId(g)));
             gids[i] = getId(g);
             if (i > 0) {
                 g.addEdge("base", getV(tx, gids[0]));
@@ -143,7 +144,7 @@ public abstract class JanusGraphPartitionGraphTest extends JanusGraphBaseTest {
         newTx();
 
         for (int i = 0; i < numG; i++) {
-            long gId = gids[i];
+            String gId = gids[i];
             assertTrue(idManager.isPartitionedVertex(gId));
             assertEquals(idManager.getCanonicalVertexId(gId), gId);
             JanusGraphVertex g = getV(tx, gId);
@@ -265,11 +266,11 @@ public abstract class JanusGraphPartitionGraphTest extends JanusGraphBaseTest {
             assertEquals(numV / 2, v2.size());
             v1.sort();
             v2.sort();
-            LongArrayList al1 = v1.getIDs();
-            LongArrayList al2 = v2.getIDs();
+            ObjectArrayList<String> al1 = v1.getIDs();
+            ObjectArrayList<String> al2 = v2.getIDs();
             assertTrue(AbstractLongListUtil.isSorted(al1));
             assertTrue(AbstractLongListUtil.isSorted(al2));
-            LongArrayList alr = AbstractLongListUtil.mergeJoin(al1, al2, false);
+            ObjectArrayList<String> alr = AbstractLongListUtil.mergeJoin(al1, al2, false);
             assertEquals(numV / 2, alr.size());
 
             tx2.commit();
@@ -392,7 +393,7 @@ public abstract class JanusGraphPartitionGraphTest extends JanusGraphBaseTest {
 
         int numVertices = setupGroupClusters(groupDegrees,commitMode);
 
-        Map<Long,Integer> degreeMap = new HashMap<>(groupDegrees.length);
+        Map<String,Integer> degreeMap = new HashMap<>(groupDegrees.length);
         for (int i = 0; i < groupDegrees.length; i++) {
             degreeMap.put(getOnlyVertex(tx.query().has("groupid","group"+i)).longId(),groupDegrees[i]);
         }
@@ -408,13 +409,13 @@ public abstract class JanusGraphPartitionGraphTest extends JanusGraphBaseTest {
         ComputerResult result = computer.submit().get();
 
         assertTrue(result.memory().exists(OLAPTest.DegreeMapper.DEGREE_RESULT));
-        Map<Long,Integer> degrees = result.memory().get(OLAPTest.DegreeMapper.DEGREE_RESULT);
+        Map<String,Integer> degrees = result.memory().get(OLAPTest.DegreeMapper.DEGREE_RESULT);
         assertNotNull(degrees);
         assertEquals(numVertices,degrees.size());
         final IDManager idManager = graph.getIDManager();
 
-        for (Map.Entry<Long,Integer> entry : degrees.entrySet()) {
-            long vid = entry.getKey();
+        for (Map.Entry<String,Integer> entry : degrees.entrySet()) {
+            String vid = entry.getKey();
             Integer degree = entry.getValue();
             if (idManager.isPartitionedVertex(vid)) {
 //                System.out.println("Partitioned: " + degree );
@@ -471,7 +472,8 @@ public abstract class JanusGraphPartitionGraphTest extends JanusGraphBaseTest {
     }
 
     public int getPartitionID(JanusGraphRelation relation) {
-        long p = relation.longId() & (idManager.getPartitionBound()-1);
+        //long p = relation.longId() & (idManager.getPartitionBound()-1);
+        long p=idManager.getPartitionId(relation.longId());
         assertTrue(p>=0 && p<idManager.getPartitionBound() && p<Integer.MAX_VALUE);
         return (int)p;
     }

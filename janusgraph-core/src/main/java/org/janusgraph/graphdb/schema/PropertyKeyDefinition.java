@@ -26,11 +26,11 @@ public class PropertyKeyDefinition extends RelationTypeDefinition {
 
     private final Class<?> dataType;
 
-    public PropertyKeyDefinition(String name, long id, Cardinality cardinality, Class dataType) {
+    public PropertyKeyDefinition(String name, String id, Cardinality cardinality, Class dataType) {
         this(name,id,Multiplicity.convert(cardinality),dataType);
     }
 
-    public PropertyKeyDefinition(String name, long id, Multiplicity multiplicity, Class dataType) {
+    public PropertyKeyDefinition(String name, String id, Multiplicity multiplicity, Class dataType) {
         super(name, id, multiplicity);
         this.dataType = dataType;
     }

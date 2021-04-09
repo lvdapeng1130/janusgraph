@@ -14,18 +14,18 @@
 
 package org.janusgraph.graphdb.relations;
 
-import com.carrotsearch.hppc.cursors.LongObjectCursor;
+import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.janusgraph.core.EdgeLabel;
 import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.schema.ConsistencyModifier;
-import org.janusgraph.core.EdgeLabel;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.graphdb.internal.ElementLifeCycle;
 import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.transaction.RelationConstructor;
-import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.graphdb.types.system.ImplicitKey;
 
 import java.util.ArrayList;
@@ -37,7 +37,7 @@ import java.util.List;
 
 public class CacheEdge extends AbstractEdge {
 
-    public CacheEdge(long id, EdgeLabel label, InternalVertex start, InternalVertex end, Entry data) {
+    public CacheEdge(String id, EdgeLabel label, InternalVertex start, InternalVertex end, Entry data) {
         super(id, label, start.it(), end.it());
         assert data != null;
 
@@ -61,7 +61,7 @@ public class CacheEdge extends AbstractEdge {
 
         if (startVertex.hasAddedRelations() && startVertex.hasRemovedRelations()) {
             //Test whether this relation has been replaced
-            final long id = super.longId();
+            final String id = super.longId();
             final Iterable<InternalRelation> previous = startVertex.getAddedRelations(
                 internalRelation -> (internalRelation instanceof StandardEdge) && ((StandardEdge) internalRelation).getPreviousID() == id);
             assert Iterables.size(previous) <= 1 || (isLoop() && Iterables.size(previous) == 2);
@@ -75,7 +75,7 @@ public class CacheEdge extends AbstractEdge {
     }
 
     private void copyProperties(InternalRelation to) {
-        for (LongObjectCursor<Object> entry : getPropertyMap()) {
+        for (ObjectObjectCursor<String,Object> entry : getPropertyMap()) {
             PropertyKey type = tx().getExistingPropertyKey(entry.key);
             if (!(type instanceof ImplicitKey))
                 to.setPropertyDirect(type, entry.value);
@@ -113,7 +113,7 @@ public class CacheEdge extends AbstractEdge {
         RelationCache map = getPropertyMap();
         List<PropertyKey> types = new ArrayList<>(map.numProperties());
 
-        for (LongObjectCursor<Object> entry : map) {
+        for (ObjectObjectCursor<String,Object> entry : map) {
             types.add(tx().getExistingPropertyKey(entry.key));
         }
 

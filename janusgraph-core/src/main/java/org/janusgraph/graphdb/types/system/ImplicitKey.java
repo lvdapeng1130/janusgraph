@@ -65,14 +65,14 @@ public class ImplicitKey extends EmptyRelationType implements SystemRelationType
 
     private final Class<?> datatype;
     private final String name;
-    private final long id;
+    private final String id;
 
     private ImplicitKey(final long id, final String name, final Class<?> datatype) {
         Preconditions.checkArgument(StringUtils.isNotBlank(name) && datatype!=null && id>0);
         assert Token.isSystemName(name);
         this.datatype=datatype;
         this.name=name;
-        this.id= BaseRelationType.getSystemTypeId(id, JanusGraphSchemaCategory.PROPERTYKEY);
+        this.id= BaseRelationType.getSystemTypeId(id+"", JanusGraphSchemaCategory.PROPERTYKEY);
     }
 
 
@@ -162,17 +162,17 @@ public class ImplicitKey extends EmptyRelationType implements SystemRelationType
     }
 
     @Override
-    public long longId() {
+    public String longId() {
         return id;
     }
 
     @Override
     public boolean hasId() {
-        return id>0;
+        return StringUtils.isNotBlank(id);
     }
 
     @Override
-    public void setId(long id) {
+    public void setId(String id) {
         throw new IllegalStateException("SystemType has already been assigned an id");
     }
 

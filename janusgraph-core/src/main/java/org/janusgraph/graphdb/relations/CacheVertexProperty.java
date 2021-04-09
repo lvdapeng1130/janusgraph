@@ -14,10 +14,10 @@
 
 package org.janusgraph.graphdb.relations;
 
-import com.carrotsearch.hppc.cursors.LongObjectCursor;
+import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import com.google.common.collect.Iterables;
-import org.janusgraph.core.schema.ConsistencyModifier;
 import org.janusgraph.core.PropertyKey;
+import org.janusgraph.core.schema.ConsistencyModifier;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.graphdb.internal.ElementLifeCycle;
 import org.janusgraph.graphdb.internal.InternalRelation;
@@ -34,7 +34,7 @@ import java.util.List;
 
 public class CacheVertexProperty extends AbstractVertexProperty {
 
-    public CacheVertexProperty(long id, PropertyKey key, InternalVertex start, Object value, Entry data) {
+    public CacheVertexProperty(String id, PropertyKey key, InternalVertex start, Object value, Entry data) {
         super(id, key, start.it(), value);
         this.data = data;
     }
@@ -50,7 +50,7 @@ public class CacheVertexProperty extends AbstractVertexProperty {
 
         if (startVertex.hasAddedRelations() && startVertex.hasRemovedRelations()) {
             //Test whether this relation has been replaced
-            final long id = longId();
+            final String id = longId();
             it = Iterables.getOnlyElement(startVertex.getAddedRelations(
                 internalRelation -> (internalRelation instanceof StandardVertexProperty) && ((StandardVertexProperty) internalRelation).getPreviousID() == id), null);
         }
@@ -59,7 +59,7 @@ public class CacheVertexProperty extends AbstractVertexProperty {
     }
 
     private void copyProperties(InternalRelation to) {
-        for (LongObjectCursor<Object> entry : getPropertyMap()) {
+        for (ObjectObjectCursor<String,Object> entry : getPropertyMap()) {
             PropertyKey type = tx().getExistingPropertyKey(entry.key);
             if (!(type instanceof ImplicitKey))
                 to.setPropertyDirect(type, entry.value);
@@ -96,7 +96,7 @@ public class CacheVertexProperty extends AbstractVertexProperty {
         RelationCache map = getPropertyMap();
         List<PropertyKey> types = new ArrayList<>(map.numProperties());
 
-        for (LongObjectCursor<Object> entry : map) {
+        for (ObjectObjectCursor<String,Object> entry : map) {
             types.add(tx().getExistingPropertyKey(entry.key));
         }
         return types;

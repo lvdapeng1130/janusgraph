@@ -90,8 +90,8 @@ public enum ElementCategory {
         Preconditions.checkArgument(elementId!=null,"Must provide elementId");
         switch (this) {
             case VERTEX:
-                Preconditions.checkArgument(elementId instanceof Long);
-                return tx.getVertex((Long) elementId);
+                Preconditions.checkArgument(elementId instanceof String);
+                return tx.getVertex(elementId.toString());
             case EDGE:
                 Preconditions.checkArgument(elementId instanceof RelationIdentifier);
                 return RelationIdentifierUtils.findEdge(((RelationIdentifier)elementId), tx);

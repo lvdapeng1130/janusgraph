@@ -267,10 +267,10 @@ public class StandardTransactionLogProcessor implements TransactionRecovery {
     private static class IndexRestore {
 
         private final Object elementId;
-        private final long indexId;
+        private final String indexId;
         private final ElementCategory elementCategory;
 
-        private IndexRestore(Object elementId, ElementCategory category, long indexId) {
+        private IndexRestore(Object elementId, ElementCategory category, String indexId) {
             this.elementId = elementId;
             this.indexId = indexId;
             this.elementCategory = category;
@@ -295,7 +295,7 @@ public class StandardTransactionLogProcessor implements TransactionRecovery {
 
     }
 
-    private static long getIndexId(IndexType index) {
+    private static String getIndexId(IndexType index) {
         SchemaSource base = ((IndexTypeWrapper)index).getSchemaBase();
         assert base instanceof JanusGraphSchemaVertex;
         return base.longId();

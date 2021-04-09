@@ -28,18 +28,27 @@ public class RelationIdentifierGraphBinarySerializer extends JanusGraphTypeSeria
 
     @Override
     public RelationIdentifier readNonNullableValue(Buffer buffer, GraphBinaryReader context) throws IOException {
-        final long outVertexId = buffer.readLong();
+       /* final long outVertexId = buffer.readLong();
         final long typeId = buffer.readLong();
         final long relationId = buffer.readLong();
-        final long inVertexId = buffer.readLong();
+        final long inVertexId = buffer.readLong();*/
+        byte [] ids=new byte[buffer.readableBytes()];
+        buffer.readBytes(ids);
+        String idstr=new String(ids);
+        String[] split = idstr.split(RelationIdentifier.TOSTRING_DELIMITER);
+        final String outVertexId = split[0];
+        final String typeId = split[1];
+        final String relationId = split[2];
+        final String inVertexId = split[3];
         return new RelationIdentifier(outVertexId, typeId, relationId, inVertexId);
     }
 
     @Override
     protected void writeNonNullableValue(RelationIdentifier value, Buffer buffer, GraphBinaryWriter context) throws IOException {
-        buffer.writeLong(value.getOutVertexId());
+       /* buffer.writeLong(value.getOutVertexId());
         buffer.writeLong(value.getTypeId());
         buffer.writeLong(value.getRelationId());
-        buffer.writeLong(value.getInVertexId());
+        buffer.writeLong(value.getInVertexId());*/
+        buffer.writeBytes(value.toString().getBytes());
     }
 }

@@ -32,7 +32,7 @@ public class MediaDataSerializer implements AttributeSerializer<MediaData>, Seri
         String status = (String)serializer.readClassAndObject(buffer);
         String mediaTitle = (String)serializer.readClassAndObject(buffer);
         String mimeType = (String)serializer.readClassAndObject(buffer);
-        MediaData media=new MediaData();
+        MediaData media=new MediaData(key);
         media.setKey(key);
         media.setMediaTitle(mediaTitle);
         media.setMediaData(mediaData);

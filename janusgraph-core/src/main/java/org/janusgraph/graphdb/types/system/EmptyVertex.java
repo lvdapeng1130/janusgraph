@@ -24,6 +24,8 @@ import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.query.vertex.VertexCentricQueryBuilder;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
 import org.janusgraph.util.datastructures.Retriever;
 import org.apache.tinkerpop.gremlin.structure.*;
 
@@ -135,13 +137,23 @@ public class EmptyVertex implements InternalVertex {
         throw new UnsupportedOperationException(errorName + " do not support incident edges");
     }
 
-	/* ---------------------------------------------------------------
+    @Override
+    public void note(Note note) {
+        throw new UnsupportedOperationException(errorName + " do not support incident note");
+    }
+
+    @Override
+    public void attachment(MediaData mediaData) {
+        throw new UnsupportedOperationException(errorName + " do not support incident attachment");
+    }
+
+    /* ---------------------------------------------------------------
 	 * In Memory JanusGraphElement
 	 * ---------------------------------------------------------------
 	 */
 
     @Override
-    public long longId() {
+    public String longId() {
         throw new UnsupportedOperationException(errorName + " don't have an ID");
     }
 
@@ -166,7 +178,7 @@ public class EmptyVertex implements InternalVertex {
     }
 
     @Override
-    public void setId(long id) {
+    public void setId(String id) {
         throw new UnsupportedOperationException(errorName + " don't have an id");
     }
 

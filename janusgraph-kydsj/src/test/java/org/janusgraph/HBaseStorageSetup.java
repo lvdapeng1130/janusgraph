@@ -101,8 +101,8 @@ public class HBaseStorageSetup {
         config.set(GraphDatabaseConfiguration.TIMESTAMP_PROVIDER, HBaseStoreManager.PREFERRED_TIMESTAMPS);
         config.set(SimpleBulkPlacementStrategy.CONCURRENT_PARTITIONS, 1);
         config.set(GraphDatabaseConfiguration.DROP_ON_CLEAR, false);
-        config.set(HBaseStoreManager.SHORT_CF_NAMES,false);
-       // config.set(HBaseStoreManager.REGION_COUNT,10);
+        //config.set(HBaseStoreManager.SHORT_CF_NAMES,false);
+        //config.set(HBaseStoreManager.REGION_COUNT,10);
         config.set(GraphDatabaseConfiguration.STORAGE_HOSTS,new String[]{"192.168.1.47,192.168.1.48,192.168.1.49"});
         config.set(GraphDatabaseConfiguration.STORAGE_PORT,2181);
         //config.set(GraphDatabaseConfiguration.ALLOW_SETTING_VERTEX_ID,true);

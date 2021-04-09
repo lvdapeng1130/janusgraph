@@ -20,7 +20,9 @@ import org.janusgraph.graphdb.internal.InternalVertex;
 import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -31,7 +33,7 @@ public abstract class AbstractVertexProperty<V> extends AbstractTypedRelation im
     private InternalVertex vertex;
     private final Object value;
 
-    public AbstractVertexProperty(long id, PropertyKey type, InternalVertex vertex, Object value) {
+    public AbstractVertexProperty(String id, PropertyKey type, InternalVertex vertex, Object value) {
         super(id, type);
         this.vertex = Preconditions.checkNotNull(vertex, "null vertex");
         this.value = Preconditions.checkNotNull(value, "null value for property key %s",type);
@@ -59,8 +61,34 @@ public abstract class AbstractVertexProperty<V> extends AbstractTypedRelation im
     }
 
     @Override
+    public Property<V> lastProperty(final String key){
+        final Iterator<? extends Property<V>> iterator = super.properties(key);
+        return iterator.hasNext() ? iterator.next() : Property.<V>empty();
+    }
+
+    @Override
     public <U> Iterator<Property<U>> properties(final String... propertyKeys) {
-        return super.properties(propertyKeys);
+        if(type.isPropertyKey()) {
+            Set<Property<U>> propertySet=new HashSet<>();
+            PropertyKey key=(PropertyKey)type;
+            if (key.cardinality() == org.janusgraph.core.Cardinality.SET) {
+                InternalVertex vertex = this.getVertex(0);
+                Iterable<SimpleJanusGraphProperty> propertyProperties = tx().getPropertyProperties(this, this.value(),propertyKeys);
+                for(SimpleJanusGraphProperty pp:propertyProperties){
+                    propertySet.add(pp);
+                }
+            }
+            Iterator<Property<U>> properties = super.properties(propertyKeys);
+            if(properties!=null){
+                while (properties.hasNext()){
+                    Property<U> pp = properties.next();
+                    propertySet.add(pp);
+                }
+            }
+            return propertySet.iterator();
+        }else {
+            return super.properties(propertyKeys);
+        }
     }
 
     @Override

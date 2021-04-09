@@ -229,7 +229,7 @@ public class ManagementSystem implements JanusGraphManagement {
     Type Indexes
      --------------- */
 
-    public JanusGraphSchemaElement getSchemaElement(long id) {
+    public JanusGraphSchemaElement getSchemaElement(String id) {
         JanusGraphVertex v = transaction.getVertex(id);
         if (v == null) return null;
         if (v instanceof RelationType) {
@@ -299,9 +299,9 @@ public class ManagementSystem implements JanusGraphManagement {
         maker.sortOrder(sortOrder);
 
         //Compose signature
-        long[] typeSig = ((InternalRelationType) type).getSignature();
+        String[] typeSig = ((InternalRelationType) type).getSignature();
         Set<PropertyKey> signature = new HashSet<>(typeSig.length);
-        for (long typeId : typeSig) {
+        for (String typeId : typeSig) {
             signature.add(transaction.getExistingPropertyKey(typeId));
         }
         for (RelationType sortType : sortKeys) {
@@ -999,9 +999,9 @@ public class ManagementSystem implements JanusGraphManagement {
                 LoggerFactory.getLogger(UpdateStatusTrigger.class);
 
         private final StandardJanusGraph graph;
-        private final long schemaVertexId;
+        private final String schemaVertexId;
         private final SchemaStatus newStatus;
-        private final Set<Long> propertyKeys;
+        private final Set<String> propertyKeys;
 
         private UpdateStatusTrigger(StandardJanusGraph graph, JanusGraphSchemaVertex vertex, SchemaStatus newStatus, Iterable<PropertyKeyVertex> keys) {
             this.graph = graph;
@@ -1020,7 +1020,7 @@ public class ManagementSystem implements JanusGraphManagement {
                 Preconditions.checkArgument(vertex != null && vertex instanceof JanusGraphSchemaVertex);
                 JanusGraphSchemaVertex schemaVertex = (JanusGraphSchemaVertex) vertex;
                 Set<PropertyKeyVertex> keys = new HashSet<>(propertyKeys.size());
-                for (Long keyId : propertyKeys) {
+                for (String keyId : propertyKeys) {
                     keys.add((PropertyKeyVertex) management.transaction.getVertex(keyId));
                 }
                 management.setStatus(schemaVertex, newStatus, keys);
@@ -1054,7 +1054,7 @@ public class ManagementSystem implements JanusGraphManagement {
 
         @Override
         public int hashCode() {
-            return Long.hashCode(schemaVertexId);
+            return schemaVertexId.hashCode();
         }
 
         @Override

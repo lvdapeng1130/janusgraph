@@ -32,7 +32,7 @@ public abstract class AbstractEdge extends AbstractTypedRelation implements Janu
     private InternalVertex start;
     private InternalVertex end;
 
-    public AbstractEdge(long id, EdgeLabel label, InternalVertex start, InternalVertex end) {
+    public AbstractEdge(String id, EdgeLabel label, InternalVertex start, InternalVertex end) {
         super(id, label);
 
         assert start != null && end != null;

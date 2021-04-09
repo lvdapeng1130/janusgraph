@@ -22,7 +22,10 @@ import org.janusgraph.graphdb.internal.RelationCategory;
 import org.janusgraph.graphdb.query.BackendQueryHolder;
 import org.janusgraph.graphdb.query.QueryProcessor;
 import org.janusgraph.graphdb.query.profile.QueryProfiler;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
 
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -112,6 +115,16 @@ public class VertexCentricQueryBuilder extends BasicVertexCentricQueryBuilder<Ve
     @Override
     public Iterable<JanusGraphVertex> vertices() {
         return execute(RelationCategory.EDGE,new VertexConstructor());
+    }
+
+    @Override
+    public Iterator<Note> getNotes() {
+        return tx.getNotes(vertex.longId());
+    }
+
+    @Override
+    public Iterator<MediaData> getMediaDatas() {
+        return tx.getMediaDatas(vertex.longId());
     }
 
     @Override

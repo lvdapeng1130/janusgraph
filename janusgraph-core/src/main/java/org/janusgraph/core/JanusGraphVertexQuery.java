@@ -19,6 +19,10 @@ import org.janusgraph.graphdb.query.JanusGraphPredicate;
 import org.apache.tinkerpop.gremlin.process.traversal.Order;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
+
+import java.util.Iterator;
 
 /**
  * A JanusGraphVertexQuery is a VertexQuery executed for a single vertex.
@@ -95,6 +99,18 @@ public interface JanusGraphVertexQuery<Q extends JanusGraphVertexQuery<Q>> exten
 
 
     Iterable<JanusGraphVertex> vertices();
+
+    /**
+     * 获取对象的注释
+     * @return
+     */
+    Iterator<Note> getNotes();
+
+    /**
+     * 获取对象的附件
+     * @return
+     */
+    Iterator<MediaData> getMediaDatas();
 
     /**
      * Returns an iterable over all incident properties that match this query

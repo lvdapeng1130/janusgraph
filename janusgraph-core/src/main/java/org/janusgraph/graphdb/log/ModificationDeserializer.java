@@ -14,7 +14,8 @@
 
 package org.janusgraph.graphdb.log;
 
-import com.carrotsearch.hppc.cursors.LongObjectCursor;
+import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
+import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.core.EdgeLabel;
 import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.log.Change;
@@ -26,7 +27,6 @@ import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.relations.*;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
-import org.apache.tinkerpop.gremlin.structure.Direction;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -37,7 +37,7 @@ public class ModificationDeserializer {
     public static InternalRelation parseRelation(TransactionLogHeader.Modification modification, StandardJanusGraphTx tx) {
         Change state = modification.state;
         assert state.isProper();
-        long outVertexId = modification.outVertexId;
+        String outVertexId = modification.outVertexId;
         Entry relEntry = modification.relationEntry;
         InternalVertex outVertex = tx.getInternalVertex(outVertexId);
         //Special relation parsing, compare to {@link RelationConstructor}
@@ -62,7 +62,7 @@ public class ModificationDeserializer {
             }
         }
         if (state==Change.REMOVED && relCache.hasProperties()) { //copy over properties
-            for (LongObjectCursor<Object> entry : relCache) {
+            for (ObjectObjectCursor<String,Object> entry : relCache) {
                 rel.setPropertyDirect(tx.getExistingPropertyKey(entry.key),entry.value);
             }
         }

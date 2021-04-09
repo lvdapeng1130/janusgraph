@@ -71,7 +71,7 @@ public class BaseKey extends BaseRelationType implements PropertyKey {
     private final Cardinality cardinality;
 
     private BaseKey(String name, Class<?> dataType, int id, Index index, Cardinality cardinality) {
-        super(name, id, JanusGraphSchemaCategory.PROPERTYKEY);
+        super(name, id+"", JanusGraphSchemaCategory.PROPERTYKEY);
         Preconditions.checkArgument(index!=null && cardinality!=null);
         this.dataType = dataType;
         this.index = index;
@@ -125,7 +125,7 @@ public class BaseKey extends BaseRelationType implements PropertyKey {
         }
 
         @Override
-        public long getID() {
+        public String getID() {
             return BaseKey.this.longId();
         }
 

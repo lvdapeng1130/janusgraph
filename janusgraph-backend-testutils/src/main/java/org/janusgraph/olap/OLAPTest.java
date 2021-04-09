@@ -17,6 +17,7 @@ package org.janusgraph.olap;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.commons.lang.StringUtils;
 import org.apache.tinkerpop.gremlin.process.computer.*;
 import org.apache.tinkerpop.gremlin.process.computer.traversal.step.map.ConnectedComponent;
 import org.apache.tinkerpop.gremlin.process.computer.traversal.step.map.ShortestPath;
@@ -206,9 +207,9 @@ public abstract class OLAPTest extends JanusGraphBaseTest {
         v2.addEdge("knows",v3);
         v1.addEdge("knows",v2);
         newTx();
-        long v3id = getId(v3);
-        long v1id = getId(v1);
-        assertTrue(v3id>0);
+        String v3id = getId(v3);
+        String v1id = getId(v1);
+        assertTrue(StringUtils.isNotBlank(v3id));
 
         v3 = getV(tx, v3id);
         assertNotNull(v3);

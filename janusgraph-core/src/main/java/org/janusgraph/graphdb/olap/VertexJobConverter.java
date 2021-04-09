@@ -121,7 +121,7 @@ public class VertexJobConverter implements ScanJob {
 
     @Override
     public void process(StaticBuffer key, Map<SliceQuery, EntryList> entries, ScanMetrics metrics) {
-        long vertexId = getVertexId(key);
+        String vertexId = getVertexId(key);
         assert entries.get(VERTEX_EXISTS_QUERY)!=null;
         if (isGhostVertex(vertexId, entries.get(VERTEX_EXISTS_QUERY))) {
             metrics.incrementCustom(GHOST_VERTEX_COUNT);
@@ -142,12 +142,12 @@ public class VertexJobConverter implements ScanJob {
         job.process(v, metrics);
     }
 
-    protected boolean isGhostVertex(long vertexId, EntryList firstEntries) {
+    protected boolean isGhostVertex(String vertexId, EntryList firstEntries) {
         if (idManager.isPartitionedVertex(vertexId) && !idManager.isCanonicalVertexId(vertexId)) return false;
 
         RelationCache relCache = tx.getEdgeSerializer().parseRelation(
                 firstEntries.get(0),true,tx);
-        return relCache.typeId != BaseKey.VertexExists.longId();
+        return !relCache.typeId.equals(BaseKey.VertexExists.longId());
     }
 
     @Override
@@ -176,7 +176,7 @@ public class VertexJobConverter implements ScanJob {
         return new VertexJobConverter(this);
     }
 
-    protected long getVertexId(StaticBuffer key) {
+    protected String getVertexId(StaticBuffer key) {
         return idManager.getKeyID(key);
     }
 

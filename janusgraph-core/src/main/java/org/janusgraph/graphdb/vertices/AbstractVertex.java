@@ -16,6 +16,11 @@ package org.janusgraph.graphdb.vertices;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.apache.tinkerpop.gremlin.structure.Edge;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.structure.VertexProperty;
+import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 import org.janusgraph.core.*;
 import org.janusgraph.graphdb.internal.AbstractElement;
 import org.janusgraph.graphdb.internal.ElementLifeCycle;
@@ -27,11 +32,8 @@ import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.graphdb.types.system.BaseLabel;
 import org.janusgraph.graphdb.types.system.BaseVertexLabel;
 import org.janusgraph.graphdb.util.ElementHelper;
-import org.apache.tinkerpop.gremlin.structure.Direction;
-import org.apache.tinkerpop.gremlin.structure.Edge;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.apache.tinkerpop.gremlin.structure.VertexProperty;
-import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
 
 import java.util.Iterator;
 
@@ -40,7 +42,7 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
     private final StandardJanusGraphTx tx;
 
 
-    protected AbstractVertex(StandardJanusGraphTx tx, long id) {
+    protected AbstractVertex(StandardJanusGraphTx tx, String id) {
         super(id);
         assert tx != null;
         this.tx = tx;
@@ -66,7 +68,7 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
     }
 
     @Override
-    public long getCompareId() {
+    public String getCompareId() {
         if (tx.isPartitionedVertex(this)) return tx.getIdInspector().getCanonicalVertexId(longId());
         else return longId();
     }
@@ -110,6 +112,20 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
         for (JanusGraphRelation r : it().query().noPartitionRestriction().system().relations()) {
             r.remove();
         }
+
+        //删除附件
+        Iterator<MediaData> attachments = this.attachments();
+        while (attachments.hasNext()){
+            MediaData mediaData=attachments.next();
+            mediaData.remove();
+        }
+
+        //删除注释
+        Iterator<Note> notes = this.notes();
+        while (notes.hasNext()){
+            Note note=notes.next();
+            note.remove();
+        }
     }
 
 	/* ---------------------------------------------------------------
@@ -137,6 +153,22 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
     public VertexCentricQueryBuilder query() {
         verifyAccess();
         return tx().query(this);
+    }
+
+    /**
+     * 给对象添加注释信息
+     * @param note
+     */
+    public void note(Note note){
+        tx().addNote(it(),note);
+    }
+
+    /**
+     * 给对象添加附件信息
+     * @param mediaData
+     */
+    public void attachment(MediaData mediaData){
+        tx().addAttachment(it(),mediaData);
     }
 
     @Override
@@ -192,6 +224,40 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
 
     public <V> Iterator<VertexProperty<V>> properties(String... keys) {
         return (Iterator)query().direction(Direction.OUT).keys(keys).properties().iterator();
+    }
+
+    public Iterator<Note> notes(String ... keys) {
+        Iterator<Note> iterator = tx().getNotes(longId(),keys);
+        return new Iterator<Note>() {
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            @Override
+            public Note next() {
+                Note next = iterator.next();
+                next.setVertex(it());
+                return next;
+            }
+        };
+    }
+
+    public Iterator<MediaData> attachments(String ... keys) {
+        Iterator<MediaData> iterator = tx().getMediaDatas(longId(),keys);
+        return new Iterator<MediaData>() {
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            @Override
+            public MediaData next() {
+                MediaData next = iterator.next();
+                next.setVertex(it());
+                return next;
+            }
+        };
     }
 
     public Iterator<Vertex> vertices(final Direction direction, final String... edgeLabels) {

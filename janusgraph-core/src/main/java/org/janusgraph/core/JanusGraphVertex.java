@@ -18,6 +18,8 @@ package org.janusgraph.core;
 
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
 
 /**
  * JanusGraphVertex is the basic unit of a {@link JanusGraph}.
@@ -52,6 +54,18 @@ public interface JanusGraphVertex extends JanusGraphElement, Vertex {
      */
     @Override
     JanusGraphEdge addEdge(String label, Vertex vertex, Object... keyValues);
+
+    /**
+     * 给对象添加注释信息
+     * @param note
+     */
+    void note(Note note);
+
+    /**
+     * 给对象添加附件信息
+     * @param mediaData
+     */
+    void attachment(MediaData mediaData);
 
     /**
      * Creates a new property for this vertex and given key with the specified value.

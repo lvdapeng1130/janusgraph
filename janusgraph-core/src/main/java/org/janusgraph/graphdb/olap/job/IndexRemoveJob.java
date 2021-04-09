@@ -15,6 +15,7 @@
 package org.janusgraph.graphdb.olap.job;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.core.JanusGraph;
 import org.janusgraph.core.schema.RelationTypeIndex;
@@ -58,7 +59,7 @@ public class IndexRemoveJob extends IndexUpdateJob implements ScanJob {
     public static final String DELETED_RECORDS_COUNT = "deletes";
 
     private IndexSerializer indexSerializer;
-    private long graphIndexId;
+    private String graphIndexId;
     private IDManager idManager;
 
     public IndexRemoveJob() {
@@ -167,7 +168,7 @@ public class IndexRemoveJob extends IndexUpdateJob implements ScanJob {
     @Override
     public Predicate<StaticBuffer> getKeyFilter() {
         if (isGlobalGraphIndex()) {
-            assert graphIndexId>0;
+            assert StringUtils.isNotBlank(graphIndexId);
             return (k -> {
                 try {
                     return indexSerializer.getIndexIdFromKey(k) == graphIndexId;

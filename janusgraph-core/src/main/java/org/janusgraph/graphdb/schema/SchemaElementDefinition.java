@@ -23,10 +23,10 @@ import org.apache.commons.lang.StringUtils;
 public class SchemaElementDefinition {
 
     private final String name;
-    private final long id;
+    private final String id;
 
 
-    public SchemaElementDefinition(String name, long id) {
+    public SchemaElementDefinition(String name, String id) {
         Preconditions.checkArgument(StringUtils.isNotBlank(name));
         this.name = name;
         this.id = id;
@@ -36,7 +36,7 @@ public class SchemaElementDefinition {
         return name;
     }
 
-    public long getLongId() {
+    public String getLongId() {
         return id;
     }
 

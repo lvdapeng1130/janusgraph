@@ -25,7 +25,7 @@ public class EdgeLabelDefinition extends RelationTypeDefinition {
 
     private final boolean unidirected;
 
-    public EdgeLabelDefinition(String name, long id, Multiplicity multiplicity, boolean unidirected) {
+    public EdgeLabelDefinition(String name, String id, Multiplicity multiplicity, boolean unidirected) {
         super(name, id, multiplicity);
         this.unidirected = unidirected;
     }

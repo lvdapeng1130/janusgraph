@@ -14,11 +14,12 @@
 
 package org.janusgraph.graphdb.database;
 
-import com.carrotsearch.hppc.LongArrayList;
+import com.carrotsearch.hppc.ObjectArrayList;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
+import org.apache.commons.lang.StringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.TraversalStrategies;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Graph;
@@ -46,7 +47,6 @@ import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.database.cache.SchemaCache;
 import org.janusgraph.graphdb.database.idassigner.VertexIDAssigner;
 import org.janusgraph.graphdb.database.idhandling.IDHandler;
-import org.janusgraph.graphdb.database.idhandling.VariableLong;
 import org.janusgraph.graphdb.database.leader.RegistryZookeeper;
 import org.janusgraph.graphdb.database.log.LogTxStatus;
 import org.janusgraph.graphdb.database.log.TransactionLogHeader;
@@ -58,9 +58,9 @@ import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.InternalVertex;
-import org.janusgraph.graphdb.internal.InternalVertexLabel;
 import org.janusgraph.graphdb.query.QueryUtil;
 import org.janusgraph.graphdb.query.index.IndexSelectionStrategy;
+import org.janusgraph.graphdb.relations.AbstractVertexProperty;
 import org.janusgraph.graphdb.relations.EdgeDirection;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphBlueprintsGraph;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphFeatures;
@@ -397,7 +397,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
     private final SchemaCache.StoreRetrieval typeCacheRetrieval = new SchemaCache.StoreRetrieval() {
 
         @Override
-        public Long retrieveSchemaByName(String typeName) {
+        public String retrieveSchemaByName(String typeName) {
             // Get a consistent tx
             Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
             StandardJanusGraphTx consistentTx = null;
@@ -413,7 +413,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         }
 
         @Override
-        public EntryList retrieveSchemaRelations(final long schemaId, final BaseRelationType type, final Direction dir) {
+        public EntryList retrieveSchemaRelations(final String schemaId, final BaseRelationType type, final Direction dir) {
             SliceQuery query = queryCache.getQuery(type,dir);
             Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
             StandardJanusGraphTx consistentTx = null;
@@ -429,7 +429,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
     };
 
-    public RecordIterator<Long> getVertexIDs(final BackendTransaction tx) {
+    public RecordIterator<String> getVertexIDs(final BackendTransaction tx) {
         Preconditions.checkArgument(backend.getStoreFeatures().hasOrderedScan() ||
                 backend.getStoreFeatures().hasUnorderedScan(),
                 "The configured storage backend does not support global graph operations - use Faunus instead");
@@ -441,7 +441,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             keyIterator = tx.edgeStoreKeys(new KeyRangeQuery(IDHandler.MIN_KEY, IDHandler.MAX_KEY, vertexExistenceQuery));
         }
 
-        return new RecordIterator<Long>() {
+        return new RecordIterator<String>() {
 
             @Override
             public boolean hasNext() {
@@ -449,7 +449,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             }
 
             @Override
-            public Long next() {
+            public String next() {
                 return idManager.getKeyID(keyIterator.next());
             }
 
@@ -465,16 +465,16 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         };
     }
 
-    public EntryList edgeQuery(long vid, SliceQuery query, BackendTransaction tx) {
-        Preconditions.checkArgument(vid > 0);
+    public EntryList edgeQuery(String vid, SliceQuery query, BackendTransaction tx) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(vid));
         return tx.edgeStoreQuery(new KeySliceQuery(idManager.getKey(vid), query));
     }
 
-    public List<EntryList> edgeMultiQuery(LongArrayList vertexIdsAsLongs, SliceQuery query, BackendTransaction tx) {
+    public List<EntryList> edgeMultiQuery(ObjectArrayList<String> vertexIdsAsLongs, SliceQuery query, BackendTransaction tx) {
         Preconditions.checkArgument(vertexIdsAsLongs != null && !vertexIdsAsLongs.isEmpty());
         final List<StaticBuffer> vertexIds = new ArrayList<>(vertexIdsAsLongs.size());
         for (int i = 0; i < vertexIdsAsLongs.size(); i++) {
-            Preconditions.checkArgument(vertexIdsAsLongs.get(i) > 0);
+            Preconditions.checkArgument(StringUtils.isNotBlank(vertexIdsAsLongs.get(i)));
             vertexIds.add(idManager.getKey(vertexIdsAsLongs.get(i)));
         }
         final Map<StaticBuffer,EntryList> result = tx.edgeStoreMultiQuery(vertexIds, query);
@@ -535,10 +535,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
     public static int getTTL(InternalVertex v) {
         assert v.hasId();
-        if (IDManager.VertexIDType.UnmodifiableVertex.is(v.longId())) {
-            assert v.isNew() : "Should not be able to add relations to existing static vertices: " + v;
-            return ((InternalVertexLabel)v.vertexLabel()).getTTL();
-        } else return 0;
+        return 0;
     }
 
     private static class ModificationSummary {
@@ -553,13 +550,17 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
     }
 
     public ModificationSummary prepareCommit(final Collection<InternalRelation> addedRelations,
-                                     final Collection<InternalRelation> deletedRelations,final HashMultimap<Long, MediaData> attachments, final HashMultimap<Long, Note> notes,
+                                     final Collection<InternalRelation> deletedRelations,
+                                     final HashMultimap<String, MediaData> attachments,
+                                     final HashMultimap<String, MediaData> deletedAttachments,
+                                     final HashMultimap<String, Note> notes,
+                                     final HashMultimap<String, Note> deletedNotes,
                                      final Predicate<InternalRelation> filter,
                                      final BackendTransaction mutator, final StandardJanusGraphTx tx,
                                      final boolean acquireLocks) throws BackendException {
 
 
-        ListMultimap<Long, InternalRelation> mutations = ArrayListMultimap.create();
+        ListMultimap<String, InternalRelation> mutations = ArrayListMultimap.create();
         ListMultimap<InternalVertex, InternalRelation> mutatedProperties = ArrayListMultimap.create();
         List<IndexSerializer.IndexUpdate> indexUpdates = Lists.newArrayList();
         //1) Collect deleted edges and their index updates and acquire edge locks
@@ -618,8 +619,8 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         }
 
         //5) Add relation mutations
-        for (Long vertexId : mutations.keySet()) {
-            Preconditions.checkArgument(vertexId > 0, "Vertex has no id: %s", vertexId);
+        for (String vertexId : mutations.keySet()) {
+            Preconditions.checkArgument(StringUtils.isNotBlank(vertexId), "Vertex has no id: %s", vertexId);
             final List<InternalRelation> edges = mutations.get(vertexId);
             final List<Entry> additions = new ArrayList<>(edges.size());
             final List<Entry> deletions = new ArrayList<>(Math.max(10, edges.size() / 10));
@@ -632,7 +633,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                     for (int pos = 0; pos < edge.getArity(); pos++) {
                         if (!type.isUnidirected(Direction.BOTH) && !type.isUnidirected(EdgeDirection.fromPosition(pos)))
                             continue; //Directionality is not covered
-                        if (edge.getVertex(pos).longId()==vertexId) {
+                        if (edge.getVertex(pos).longId().equals(vertexId)) {
                             StaticArrayEntry entry = edgeSerializer.writeRelation(edge, type, pos, tx);
                             if (edge.isRemoved()) {
                                 deletions.add(entry);
@@ -675,14 +676,14 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             }
         }
         //7) 添加顶点的附件
-        if(attachments!=null){
-            for(long rowkey:attachments.keys()){
+        if(attachments!=null&&!attachments.isEmpty()){
+            for(String rowkey:attachments.keys()){
                 Set<MediaData> mediaDatas = attachments.get(rowkey);
                 if(mediaDatas!=null&&mediaDatas.size()>0){
-                    StaticBuffer key=this.getAttachmentTableRowkey(rowkey);
+                    StaticBuffer key= tx.getHBaseTableRowkey(rowkey);
                     List<Entry> addList = Lists.newArrayList();
                     for(MediaData mediaData:mediaDatas){
-                        Entry entry = this.getAttachmentTableEntry(mediaData);
+                        Entry entry = this.getMediaDataTableEntry(mediaData);
                         addList.add(entry);
                     }
                     mutator.mutateAttachment(key,addList,KCVSCache.NO_DELETIONS);
@@ -690,38 +691,87 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             }
         }
         //8)添加顶点的注释信息
-        if(notes!=null){
-            for(long rowkey:notes.keys()){
+        if(notes!=null&&!notes.isEmpty()){
+            for(String rowkey:notes.keys()){
                 Set<Note> noteSet = notes.get(rowkey);
                 if(noteSet!=null&&noteSet.size()>0){
-                    StaticBuffer key=this.getAttachmentTableRowkey(rowkey);
+                    StaticBuffer key=tx.getHBaseTableRowkey(rowkey);
                     List<Entry> addList = Lists.newArrayList();
                     for(Note note:noteSet){
-                        Entry entry = this.getAttachmentTableEntry(note);
+                        Entry entry = this.getNoteTableEntry(note);
                         addList.add(entry);
                     }
                     mutator.mutateNote(key,addList,KCVSCache.NO_DELETIONS);
                 }
             }
         }
+        //9) 收集删除附件
+        if(deletedAttachments!=null&&!deletedAttachments.isEmpty()){
+            for(String vertexId:deletedAttachments.keySet()){
+                StaticBuffer key=tx.getHBaseTableRowkey(vertexId);
+                Set<MediaData> mediaDatas = deletedAttachments.get(vertexId);
+                List<Entry> deleteList = Lists.newArrayList();
+                for(MediaData mediaData:mediaDatas){
+                    Entry entry = this.getMediaDataTableEntry(mediaData);
+                    deleteList.add(entry);
+                }
+                mutator.mutateAttachment(key,KCVSCache.NO_ADDITIONS,deleteList);
+            }
+        }
+
+        //10) 收集删除注释
+        if(deletedNotes!=null&&!deletedNotes.isEmpty()){
+            for(String vertexId:deletedNotes.keySet()){
+                StaticBuffer key=tx.getHBaseTableRowkey(vertexId);
+                Set<Note> noteSet = deletedNotes.get(vertexId);
+                List<Entry> deleteList = Lists.newArrayList();
+                for(Note note:noteSet){
+                    Entry entry = this.getNoteTableEntry(note);
+                    deleteList.add(entry);
+                }
+                mutator.mutateNote(key,KCVSCache.NO_ADDITIONS,deleteList);
+            }
+        }
+
+        //11) 保存属性的属性多值情况：比如姓名属性的dsr，dsr属性类型定义是Set类型
+        for (String vertexId : mutations.keySet()) {
+            Preconditions.checkArgument(StringUtils.isNotBlank(vertexId), "Vertex has no id: %s", vertexId);
+            final List<InternalRelation> edges = mutations.get(vertexId);
+            final List<Entry> additions = new ArrayList<>(edges.size());
+            final List<Entry> deletions = new ArrayList<>(Math.max(10, edges.size() / 10));
+            for (final InternalRelation edge : edges) {
+                final InternalRelationType baseType = (InternalRelationType) edge.getType();
+                assert baseType.getBaseType()==null;
+                for (InternalRelationType type : baseType.getRelationIndexes()) {
+                    if (type.getStatus()== SchemaStatus.DISABLED) continue;
+                    if(edge.isProperty()&&edge instanceof AbstractVertexProperty){
+                        AbstractVertexProperty vertexProperty=(AbstractVertexProperty)edge;
+                        if (edge.isRemoved()) {
+                            //deletions.addAll(entries);
+                            List<StaticArrayEntry> mutilArrayEntry = edgeSerializer.writeMulitPropertyProperties(vertexProperty, type, tx);
+                            deletions.addAll(mutilArrayEntry);
+                        } else {
+                            List<StaticArrayEntry> entries = edgeSerializer.writePropertyProperties(vertexProperty, type, tx);
+                            additions.addAll(entries);
+                        }
+                    }
+                }
+            }
+            StaticBuffer vertexKey = idManager.getKey(vertexId);
+            mutator.mutatePropertyProperties(vertexKey, additions, deletions);
+        }
 
         return new ModificationSummary(!mutations.isEmpty(),has2iMods);
     }
 
-    public StaticBuffer getAttachmentTableRowkey(long vertextID){
-        DataOutput out = this.getDataSerializer().getDataOutput(8);
-        VariableLong.writePositive(out, vertextID);
-        StaticBuffer key = out.getStaticBuffer();
-        return key;
-    }
-    public Entry getAttachmentTableEntry(MediaData mediaData){
+    public Entry getMediaDataTableEntry(MediaData mediaData){
         final DataOutput out = this.getDataSerializer().getDataOutput(10);
         out.writeObjectNotNull(mediaData.getKey());
         final int valuePosition=out.getPosition();
         out.writeObjectNotNull(mediaData);
         return new StaticArrayEntry(out.getStaticBuffer(),valuePosition);
     }
-    public Entry getAttachmentTableEntry(Note note){
+    public Entry getNoteTableEntry(Note note){
         final DataOutput out = this.getDataSerializer().getDataOutput(10);
         out.writeObjectNotNull(note.getId());
         final int valuePosition=out.getPosition();
@@ -737,8 +787,13 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
     private static final Predicate<InternalRelation> NO_FILTER = Predicates.alwaysTrue();
 
     public void commit(final Collection<InternalRelation> addedRelations,
-                       final Collection<InternalRelation> deletedRelations, final HashMultimap<Long, MediaData> attachments, final HashMultimap<Long, Note> notes, final StandardJanusGraphTx tx) {
-        if (addedRelations.isEmpty() && deletedRelations.isEmpty()&&attachments.isEmpty()&&notes.isEmpty()) return;
+                       final Collection<InternalRelation> deletedRelations,
+                       final HashMultimap<String, MediaData> attachments,
+                       final HashMultimap<String, MediaData> deletedAttachments,
+                       final HashMultimap<String, Note> notes,
+                       final HashMultimap<String, Note> deletedNotes, final StandardJanusGraphTx tx) {
+        if (addedRelations.isEmpty() && deletedRelations.isEmpty()&&attachments.isEmpty()&&notes.isEmpty()
+            &&deletedAttachments.isEmpty()&&deletedNotes.isEmpty()) return;
         //1. Finalize transaction
         log.debug("Saving transaction. Added {}, removed {}", addedRelations.size(), deletedRelations.size());
         if (!tx.getConfiguration().hasCommitTime()) tx.getConfiguration().setCommitTime(times.getTime());
@@ -786,7 +841,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
                 try {
                     //[FAILURE] If the preparation throws an exception abort directly - nothing persisted since batch-loading cannot be enabled for schema elements
-                    commitSummary = prepareCommit(addedRelations,deletedRelations,attachments,notes, SCHEMA_FILTER, schemaMutator, tx, acquireLocks);
+                    commitSummary = prepareCommit(addedRelations,deletedRelations,attachments,deletedAttachments,notes,deletedNotes, SCHEMA_FILTER, schemaMutator, tx, acquireLocks);
                     assert commitSummary.hasModifications && !commitSummary.has2iModifications;
                 } catch (Throwable e) {
                     //Roll back schema tx and escalate exception
@@ -805,7 +860,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
             //[FAILURE] Exceptions during preparation here cause the entire transaction to fail on transactional systems
             //or just the non-system part on others. Nothing has been persisted unless batch-loading
-            commitSummary = prepareCommit(addedRelations,deletedRelations,attachments,notes, hasTxIsolation? NO_FILTER : NO_SCHEMA_FILTER, mutator, tx, acquireLocks);
+            commitSummary = prepareCommit(addedRelations,deletedRelations,attachments,deletedAttachments,notes,deletedNotes, hasTxIsolation? NO_FILTER : NO_SCHEMA_FILTER, mutator, tx, acquireLocks);
             if (commitSummary.hasModifications) {
                 String logTxIdentifier = tx.getConfiguration().getLogIdentifier();
                 boolean hasSecondaryPersistence = logTxIdentifier!=null || commitSummary.has2iModifications;
@@ -912,14 +967,14 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
     /***********************************mediaData和note**************************/
     @Override
-    public List<MediaData> getMediaDatas(long vertexId){
+    public List<MediaData> getMediaDatas(String vertexId){
         Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
         StandardJanusGraphTx consistentTx = null;
         try {
             consistentTx = StandardJanusGraph.this.newTransaction(new StandardTransactionBuilder(getConfiguration(),
                 StandardJanusGraph.this, customTxOptions).groupName(GraphDatabaseConfiguration.METRICS_SCHEMA_PREFIX_DEFAULT));
             consistentTx.getTxHandle().disableCache();
-            StaticBuffer attachmentTableRowkey = this.getAttachmentTableRowkey(vertexId);
+            StaticBuffer attachmentTableRowkey = consistentTx.getHBaseTableRowkey(vertexId);
             KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
             EntryList entries = consistentTx.getTxHandle().attachmentQuery(keySliceQuery);
             Iterator<Entry> iterator = entries.iterator();
@@ -937,14 +992,14 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         }
     }
     @Override
-    public List<Note> getNotes(long vertexId){
+    public List<Note> getNotes(String vertexId){
         Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
         StandardJanusGraphTx consistentTx = null;
         try {
             consistentTx = StandardJanusGraph.this.newTransaction(new StandardTransactionBuilder(getConfiguration(),
                 StandardJanusGraph.this, customTxOptions).groupName(GraphDatabaseConfiguration.METRICS_SCHEMA_PREFIX_DEFAULT));
             consistentTx.getTxHandle().disableCache();
-            StaticBuffer attachmentTableRowkey = this.getAttachmentTableRowkey(vertexId);
+            StaticBuffer attachmentTableRowkey = consistentTx.getHBaseTableRowkey(vertexId);
             KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
             EntryList entries = consistentTx.getTxHandle().noteQuery(keySliceQuery);
             Iterator<Entry> iterator = entries.iterator();

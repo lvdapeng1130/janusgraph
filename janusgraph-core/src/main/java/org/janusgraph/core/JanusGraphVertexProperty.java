@@ -15,6 +15,7 @@
 
 package org.janusgraph.core;
 
+import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 
 /**
@@ -34,6 +35,15 @@ public interface JanusGraphVertexProperty<V> extends JanusGraphRelation, VertexP
      */
     @Override
     JanusGraphVertex element();
+
+    /**
+     * 针对属性多值时只获取最后一个值(写索引时需要）。
+     * @param key
+     * @param <V>
+     * @return
+     */
+    Property<V> lastProperty(final String key);
+
 
     @Override
     default JanusGraphTransaction graph() {

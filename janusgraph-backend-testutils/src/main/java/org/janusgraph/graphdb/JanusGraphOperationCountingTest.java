@@ -20,42 +20,40 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.apache.tinkerpop.gremlin.structure.Edge;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.structure.VertexProperty;
+import org.janusgraph.TestCategory;
 import org.janusgraph.core.*;
 import org.janusgraph.core.attribute.Cmp;
 import org.janusgraph.core.schema.ConsistencyModifier;
 import org.janusgraph.core.schema.JanusGraphIndex;
-import static org.janusgraph.diskstorage.Backend.*;
 import org.janusgraph.diskstorage.configuration.BasicConfiguration;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 import org.janusgraph.diskstorage.configuration.WriteConfiguration;
 import org.janusgraph.diskstorage.util.CacheMetricsAction;
 import org.janusgraph.diskstorage.util.MetricInstrumentedStore;
-import static org.janusgraph.diskstorage.util.MetricInstrumentedStore.*;
-
-
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
-import static org.janusgraph.graphdb.database.cache.MetricInstrumentedSchemaCache.*;
-import static org.janusgraph.testutil.JanusGraphAssert.assertCount;
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.janusgraph.graphdb.internal.ElementCategory;
 import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.InternalVertexLabel;
 import org.janusgraph.graphdb.types.CompositeIndexType;
 import org.janusgraph.graphdb.types.IndexType;
-import org.janusgraph.TestCategory;
 import org.janusgraph.util.stats.MetricManager;
-import org.apache.tinkerpop.gremlin.structure.Direction;
-import org.apache.tinkerpop.gremlin.structure.Edge;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.janusgraph.diskstorage.Backend.*;
+import static org.janusgraph.diskstorage.util.MetricInstrumentedStore.*;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
+import static org.janusgraph.graphdb.database.cache.MetricInstrumentedSchemaCache.*;
+import static org.janusgraph.testutil.JanusGraphAssert.assertCount;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -481,7 +479,7 @@ public abstract class JanusGraphOperationCountingTest extends JanusGraphBaseTest
         finishSchema();
 
         final int numV = 100;
-        final long[] vertexIds = new long[numV];
+        final String[] vertexIds = new String[numV];
         for (int i=0;i<numV;i++) {
             JanusGraphVertex v = graph.addVertex(prop,0);
             graph.tx().commit();
@@ -506,7 +504,7 @@ public abstract class JanusGraphOperationCountingTest extends JanusGraphBaseTest
             int reads = 0;
             while (reads<numReads) {
                 final int pos = random.nextInt(vertexIds.length);
-                final long vid = vertexIds[pos];
+                final String vid = vertexIds[pos];
                 JanusGraphVertex v = getV(graph,vid);
                 assertNotNull(v);
                 boolean postCommit = postcommit[pos].get();
@@ -593,7 +591,7 @@ public abstract class JanusGraphOperationCountingTest extends JanusGraphBaseTest
             previous = v;
         }
         graph.tx().commit();
-        long vertexId = getId(previous);
+        String vertexId = getId(previous);
         assertCount(numV, graph.query().vertices());
 
         clopen(newConfig);
@@ -637,7 +635,7 @@ public abstract class JanusGraphOperationCountingTest extends JanusGraphBaseTest
         //assertTrue(timeWarmGlobal + " vs " + timeHotGlobal, timeWarmGlobal>timeHotGlobal); Sometimes, this is not true
     }
 
-    private double testAllVertices(long vid, int numV) {
+    private double testAllVertices(String vid, int numV) {
         long start = System.nanoTime();
         JanusGraphVertex v = getV(graph,vid);
         for (int i=1; i<numV; i++) {

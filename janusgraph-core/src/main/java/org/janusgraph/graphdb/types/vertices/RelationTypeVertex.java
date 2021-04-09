@@ -37,13 +37,13 @@ import java.util.stream.StreamSupport;
  */
 public abstract class RelationTypeVertex extends JanusGraphSchemaVertex implements InternalRelationType {
 
-    public RelationTypeVertex(StandardJanusGraphTx tx, long id, byte lifecycle) {
+    public RelationTypeVertex(StandardJanusGraphTx tx, String id, byte lifecycle) {
         super(tx, id, lifecycle);
     }
 
     @Override
-    public long[] getSortKey() {
-        return getDefinition().getValue(TypeDefinitionCategory.SORT_KEY, long[].class);
+    public String[] getSortKey() {
+        return getDefinition().getValue(TypeDefinitionCategory.SORT_KEY, String[].class);
     }
 
     @Override
@@ -52,8 +52,8 @@ public abstract class RelationTypeVertex extends JanusGraphSchemaVertex implemen
     }
 
     @Override
-    public long[] getSignature() {
-        return getDefinition().getValue(TypeDefinitionCategory.SIGNATURE, long[].class);
+    public String[] getSignature() {
+        return getDefinition().getValue(TypeDefinitionCategory.SIGNATURE, String[].class);
     }
 
     @Override

@@ -220,14 +220,14 @@ public class KyGraphApp1 extends JanusGraphApp {
     public void createElementsMediaDataAndNote() {
         try {
             LOGGER.info("创建一个顶点并添加一个附件和注释");
-            MediaData mediaData=new MediaData();
+            MediaData mediaData=new MediaData("我是附件的key");
             mediaData.setAclId("我是附件的aclID");
             mediaData.setFilename("文件名");
             mediaData.setMediaTitle("附件标题");
             mediaData.setKey("我是附件的key");
             mediaData.setMediaData("我是附件的内容".getBytes());
             mediaData.setDsr(Sets.newHashSet("我是附件的一个dsr"));
-            Note note=new Note();
+            Note note=new Note("我是注释的id");
             note.setId("我是注释的id");
             note.setNoteTitle("我是注释的标题");
             note.setNoteData("我是注释的内容");
@@ -297,7 +297,7 @@ public class KyGraphApp1 extends JanusGraphApp {
     public void appendOtherMediaData() {
         try {
             LOGGER.info("给图库顶点添加附件");
-            MediaData mediaData=new MediaData();
+            MediaData mediaData=new MediaData("列一份附件的key332222222222222");
             mediaData.setAclId("我是附件ewwew的aclID");
             mediaData.setFilename("文件eweew名");
             mediaData.setMediaTitle("附件标题4444444444444444444444444444");
@@ -430,7 +430,7 @@ public class KyGraphApp1 extends JanusGraphApp {
             //final List<Map<Object, Object>> v = g.V().hasLabel("person","teacher").has("name","张三").has("age", P.eq(66)).valueMap(true).next(2);
             Vertex next = g.V().hasLabel("person").has("name",
                 Text.textContains("测试附件和注释")).next();
-            long vertexId =Long.parseLong(next.id().toString());
+            String vertexId =next.id().toString();
             List<MediaData> mediaDatas = this.getJanusGraph().getMediaDatas(vertexId);
             List<Note> notes = this.getJanusGraph().getNotes(vertexId);
             // numerical range query can use a mixed index in JanusGraph

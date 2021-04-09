@@ -14,6 +14,7 @@
 
 package org.janusgraph.graphdb.internal;
 
+import org.apache.commons.lang3.StringUtils;
 import org.janusgraph.core.*;
 import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.relations.RelationIdentifier;
@@ -35,9 +36,9 @@ import org.apache.tinkerpop.gremlin.structure.VertexProperty;
  */
 public abstract class AbstractElement implements InternalElement, Comparable<JanusGraphElement> {
 
-    private long id;
+    private String id;
 
-    public AbstractElement(long id) {
+    public AbstractElement(String id) {
         this.id = id;
     }
 
@@ -47,7 +48,7 @@ public abstract class AbstractElement implements InternalElement, Comparable<Jan
 
     @Override
     public int hashCode() {
-        return Long.hashCode(getCompareId());
+        return getCompareId().hashCode();
     }
 
     @Override
@@ -68,8 +69,11 @@ public abstract class AbstractElement implements InternalElement, Comparable<Jan
             return ((JanusGraphElement) other).hasId() && getCompareId()==((JanusGraphElement)other).longId();
         } else {
             Object otherId = ((Element)other).id();
-            if (otherId instanceof RelationIdentifier) return ((RelationIdentifier) otherId).getRelationId()==getCompareId();
-            else return otherId.equals(getCompareId());
+            if (otherId instanceof RelationIdentifier) {
+                return ((RelationIdentifier) otherId).getRelationId() == getCompareId();
+            } else {
+                return otherId.equals(getCompareId());
+            }
         }
     }
 
@@ -80,9 +84,9 @@ public abstract class AbstractElement implements InternalElement, Comparable<Jan
     }
 
     public static int compare(JanusGraphElement e1, JanusGraphElement e2) {
-        long e1id = (e1 instanceof AbstractElement)?((AbstractElement)e1).getCompareId():e1.longId();
-        long e2id = (e2 instanceof AbstractElement)?((AbstractElement)e2).getCompareId():e2.longId();
-        return Long.compare(e1id,e2id);
+        String e1id = (e1 instanceof AbstractElement)?((AbstractElement)e1).getCompareId():e1.longId();
+        String e2id = (e2 instanceof AbstractElement)?((AbstractElement)e2).getCompareId():e2.longId();
+        return StringUtils.compare(e1id,e2id);
     }
 
     @Override
@@ -101,22 +105,23 @@ public abstract class AbstractElement implements InternalElement, Comparable<Jan
      * this method should be overwritten to return an id that can be used for comparison.
      * @return
      */
-    protected long getCompareId() {
+    protected String getCompareId() {
         return longId();
     }
 
     @Override
-    public long longId() {
+    public String longId() {
         return id;
     }
 
     public boolean hasId() {
-        return !isTemporaryId(longId());
+        //return !isTemporaryId(longId());
+        return StringUtils.isNotBlank(id);
     }
 
     @Override
-    public void setId(long id) {
-        assert id > 0;
+    public void setId(String id) {
+        assert StringUtils.isNotBlank(id);
         this.id=id;
     }
 

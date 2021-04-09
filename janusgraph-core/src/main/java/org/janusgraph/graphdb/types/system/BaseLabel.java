@@ -37,14 +37,14 @@ public class BaseLabel extends BaseRelationType implements EdgeLabel {
     private final Multiplicity multiplicity;
 
     private BaseLabel(String name, int id, Direction uniDirectionality, Multiplicity multiplicity) {
-        super(name, id, JanusGraphSchemaCategory.EDGELABEL);
+        super(name, id+"", JanusGraphSchemaCategory.EDGELABEL);
         this.directionality = uniDirectionality;
         this.multiplicity = multiplicity;
     }
 
     @Override
-    public long[] getSignature() {
-        return new long[]{BaseKey.SchemaDefinitionDesc.longId()};
+    public String[] getSignature() {
+        return new String[]{BaseKey.SchemaDefinitionDesc.longId()};
     }
 
     @Override

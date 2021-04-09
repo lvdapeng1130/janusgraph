@@ -45,9 +45,9 @@ public class RelationIdentifierGraphBinarySerializerTest {
 
     private static Stream<RelationIdentifier> relationIdentifierProvider() {
         return Stream.of(
-            new RelationIdentifier(1000, 1000, 8000, 8000),
-            new RelationIdentifier(2000, 1000, 2000, 1000),
-            new RelationIdentifier(1000, 4000, 1000, 4000)
+            new RelationIdentifier("1000", "1000", "8000", "8000"),
+            new RelationIdentifier("2000", "1000", "2000", "1000"),
+            new RelationIdentifier("1000", "4000", "1000", "4000")
         );
     }
 

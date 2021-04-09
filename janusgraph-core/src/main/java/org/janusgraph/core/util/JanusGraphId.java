@@ -15,6 +15,7 @@
 package org.janusgraph.core.util;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
 import org.janusgraph.core.JanusGraphVertex;
 import org.janusgraph.graphdb.idmanagement.IDManager;
 
@@ -43,9 +44,9 @@ public class JanusGraphId {
      * @return a corresponding JanusGraph vertex id
      * @deprecated Use {@link org.janusgraph.graphdb.idmanagement.IDManager#toVertexId(long)}.
      */
-    public static long toVertexId(long id) {
-        Preconditions.checkArgument(id > 0, "Vertex id must be positive: %s", id);
-        Preconditions.checkArgument(IDManager.VertexIDType.NormalVertex.removePadding(Long.MAX_VALUE) >= id, "Vertex id is too large: %s", id);
+    public static String toVertexId(String id) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(id ), "Vertex id must be positive: %s", id);
+        //Preconditions.checkArgument(IDManager.VertexIDType.NormalVertex.removePadding(Long.MAX_VALUE) >= id, "Vertex id is too large: %s", id);
         return IDManager.VertexIDType.NormalVertex.addPadding(id);
     }
 
@@ -56,8 +57,8 @@ public class JanusGraphId {
      * @return original user provided id
      * @deprecated Use {@link org.janusgraph.graphdb.idmanagement.IDManager#fromVertexId(long)}
      */
-    public static long fromVertexId(long id) {
-        Preconditions.checkArgument(id > 0, "Invalid vertex id provided: %s", id);
+    public static String fromVertexId(String id) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(id), "Invalid vertex id provided: %s", id);
         return IDManager.VertexIDType.NormalVertex.removePadding(id);
     }
 
@@ -68,7 +69,7 @@ public class JanusGraphId {
      * @return original user provided id
      * @deprecated Use {@link org.janusgraph.graphdb.idmanagement.IDManager#fromVertexId(long)}
      */
-    public static long fromVertexID(JanusGraphVertex v) {
+    public static String fromVertexID(JanusGraphVertex v) {
         Preconditions.checkArgument(v.hasId(), "Invalid vertex provided: %s", v);
         return fromVertexId(v.longId());
     }

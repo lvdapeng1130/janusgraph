@@ -88,27 +88,27 @@ public class KGJanusGraphHadoopSetupImpl implements JanusGraphHadoopSetup {
     public SystemTypeInspector getSystemTypeInspector() {
         return new SystemTypeInspector() {
             @Override
-            public boolean isSystemType(long typeId) {
+            public boolean isSystemType(String typeId) {
                 return IDManager.isSystemRelationTypeId(typeId);
             }
 
             @Override
-            public boolean isVertexExistsSystemType(long typeId) {
-                return typeId == BaseKey.VertexExists.longId();
+            public boolean isVertexExistsSystemType(String typeId) {
+                return typeId.equals(BaseKey.VertexExists.longId());
             }
 
             @Override
-            public boolean isVertexLabelSystemType(long typeId) {
-                return typeId == BaseLabel.VertexLabelEdge.longId();
+            public boolean isVertexLabelSystemType(String typeId) {
+                return typeId.equals(BaseLabel.VertexLabelEdge.longId());
             }
 
             @Override
-            public boolean isTypeSystemType(long typeId) {
-                return typeId == BaseKey.SchemaCategory.longId() ||
-                        typeId == BaseKey.SchemaDefinitionProperty.longId() ||
-                        typeId == BaseKey.SchemaDefinitionDesc.longId() ||
-                        typeId == BaseKey.SchemaName.longId() ||
-                        typeId == BaseLabel.SchemaDefinitionEdge.longId();
+            public boolean isTypeSystemType(String typeId) {
+                return typeId.equals(BaseKey.SchemaCategory.longId()) ||
+                        typeId.equals(BaseKey.SchemaDefinitionProperty.longId()) ||
+                        typeId.equals(BaseKey.SchemaDefinitionDesc.longId()) ||
+                        typeId.equals(BaseKey.SchemaName.longId()) ||
+                        typeId.equals(BaseLabel.SchemaDefinitionEdge.longId());
             }
         };
     }

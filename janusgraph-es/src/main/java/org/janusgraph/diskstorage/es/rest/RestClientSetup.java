@@ -14,15 +14,7 @@
 
 package org.janusgraph.diskstorage.es.rest;
 
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_HOSTS;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_PORT;
-
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.client.config.RequestConfig;
@@ -35,16 +27,21 @@ import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.es.ElasticSearchClient;
 import org.janusgraph.diskstorage.es.ElasticSearchIndex;
-import org.janusgraph.diskstorage.es.rest.util.BasicAuthHttpClientConfigCallback;
-import org.janusgraph.diskstorage.es.rest.util.HttpAuthTypes;
-import org.janusgraph.diskstorage.es.rest.util.RestClientAuthenticator;
-import org.janusgraph.diskstorage.es.rest.util.SSLConfigurationCallback;
+import org.janusgraph.diskstorage.es.rest.util.*;
 import org.janusgraph.diskstorage.es.rest.util.SSLConfigurationCallback.Builder;
-import org.janusgraph.diskstorage.es.rest.util.ConnectionKeepAliveConfigCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_HOSTS;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_PORT;
 
 /**
  * Create an instance of Elasticsearch REST {@link org.elasticsearch.client.RestClient} from a JanusGraph
@@ -86,7 +83,19 @@ public class RestClientSetup {
 
     protected RestClient getRestClient(HttpHost[] hosts, Configuration config) {
         final RestClientBuilder restClientBuilder = getRestClientBuilder(hosts);
-
+        Integer retryTimeOut = config.get(ElasticSearchIndex.EL_RETRY_TIMEOUT);
+        Class<? extends RestClientBuilder> aClass = restClientBuilder.getClass();
+        //restClientBuilder.setMaxRetryTimeoutMillis(retryTimeOut);
+        try {
+            Method setMaxRetryTimeoutMillis = aClass.getDeclaredMethod("setMaxRetryTimeoutMillis", Integer.class);
+            if(setMaxRetryTimeoutMillis!=null) {
+                setMaxRetryTimeoutMillis.invoke(restClientBuilder, retryTimeOut);
+            }
+        } catch (NoSuchMethodException e) {
+            log.warn("反射获取到setMaxRetryTimeoutMillis方法失败");
+        } catch (IllegalAccessException e) {
+        } catch (InvocationTargetException e) {
+        }
         final HttpClientConfigCallback httpClientConfigCallback = getHttpClientConfigCallback(config);
         if (httpClientConfigCallback != null) {
             restClientBuilder.setHttpClientConfigCallback(httpClientConfigCallback);
@@ -122,7 +131,13 @@ public class RestClientSetup {
      * @return callback or null if the request customization is not needed
      */
     protected RequestConfigCallback getRequestConfigCallback(Configuration config) {
-        return null;
+        Integer connectTimeOut = config.get(ElasticSearchIndex.ES_CONNECT_TIMEOUT);
+        Integer socketTimeOut = config.get(ElasticSearchIndex.ES_SOCKET_TIMEOUT);
+        return requestConfigBuilder -> {
+            requestConfigBuilder.setConnectTimeout(connectTimeOut);
+            requestConfigBuilder.setSocketTimeout(socketTimeOut);
+            return requestConfigBuilder;
+        };
     }
 
     /**

@@ -17,13 +17,13 @@ package org.janusgraph.graphdb.olap.computer;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import org.janusgraph.diskstorage.EntryList;
-import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.apache.tinkerpop.gremlin.process.computer.MessageCombiner;
 import org.apache.tinkerpop.gremlin.process.computer.MessageScope;
 import org.apache.tinkerpop.gremlin.process.computer.VertexComputeKey;
 import org.apache.tinkerpop.gremlin.process.computer.VertexProgram;
-import org.cliffc.high_scale_lib.NonBlockingHashMapLong;
+import org.cliffc.high_scale_lib.NonBlockingHashMap;
+import org.janusgraph.diskstorage.EntryList;
+import org.janusgraph.graphdb.idmanagement.IDManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -38,7 +38,7 @@ public class FulgoraVertexMemory<M> {
 
 
 
-    private final NonBlockingHashMapLong<VertexState<M>> vertexStates;
+    private final NonBlockingHashMap<String,VertexState<M>> vertexStates;
     private final IDManager idManager;
     private final Set<VertexComputeKey> computeKeys;
     private final Map<String,Integer> elementKeyMap;
@@ -47,12 +47,12 @@ public class FulgoraVertexMemory<M> {
     private Map<MessageScope,Integer> currentScopes;
     private boolean inExecute;
 
-    private final NonBlockingHashMapLong<PartitionVertexAggregate<M>> partitionVertices;
+    private final NonBlockingHashMap<String,PartitionVertexAggregate<M>> partitionVertices;
 
     public FulgoraVertexMemory(int numVertices, final IDManager idManager, final VertexProgram<M> vertexProgram) {
         Preconditions.checkArgument(numVertices>=0 && vertexProgram!=null && idManager!=null);
-        vertexStates = new NonBlockingHashMapLong<>(numVertices);
-        partitionVertices = new NonBlockingHashMapLong<>(64);
+        vertexStates = new NonBlockingHashMap<>(numVertices);
+        partitionVertices = new NonBlockingHashMap<>(64);
         this.idManager = idManager;
         this.combiner = vertexProgram.getMessageCombiner().orElse(null);
         this.computeKeys = vertexProgram.getVertexComputeKeys();
@@ -60,8 +60,8 @@ public class FulgoraVertexMemory<M> {
         this.previousScopes = Collections.emptyMap();
     }
 
-    private VertexState<M> get(long vertexId, boolean create) {
-        assert vertexId==getCanonicalId(vertexId);
+    private VertexState<M> get(String vertexId, boolean create) {
+        assert vertexId.equals(getCanonicalId(vertexId));
         VertexState<M> state = vertexStates.get(vertexId);
         if (state==null) {
             if (!create) return VertexState.EMPTY_STATE;
@@ -71,7 +71,7 @@ public class FulgoraVertexMemory<M> {
         return state;
     }
 
-    public long getCanonicalId(long vertexId) {
+    public String getCanonicalId(String vertexId) {
         if (!idManager.isPartitionedVertex(vertexId)) return vertexId;
         else return idManager.getCanonicalVertexId(vertexId);
     }
@@ -80,21 +80,21 @@ public class FulgoraVertexMemory<M> {
         return previousScopes.keySet();
     }
 
-    public<V> void setProperty(long vertexId, String key, V value) {
+    public<V> void setProperty(String vertexId, String key, V value) {
         get(vertexId,true).setProperty(key,value,elementKeyMap);
     }
 
-    public<V> V getProperty(long vertexId, String key) {
+    public<V> V getProperty(String vertexId, String key) {
         return get(vertexId,false).getProperty(key,elementKeyMap);
     }
 
-    void sendMessage(long vertexId, M message, MessageScope scope) {
+    void sendMessage(String vertexId, M message, MessageScope scope) {
         VertexState<M> state = get(vertexId,true);
         if (scope instanceof MessageScope.Global) state.addMessage(message,GLOBAL_SCOPE,currentScopes,combiner);
         else state.setMessage(message,scope,currentScopes);
     }
 
-    Stream<M> getMessage(long vertexId, MessageScope scope) {
+    Stream<M> getMessage(String vertexId, MessageScope scope) {
         return get(vertexId,false).getMessage(normalizeScope(scope),previousScopes);
     }
 
@@ -111,7 +111,7 @@ public class FulgoraVertexMemory<M> {
         inExecute = true;
     }
 
-    public Map<Long,Map<String,Object>> getMutableVertexProperties() {
+    public Map<String,Map<String,Object>> getMutableVertexProperties() {
         return Maps.transformValues(vertexStates, vs -> {
             Map<String,Object> map = new HashMap<>(elementKeyMap.size());
             for (String key : elementKeyMap.keySet()) {
@@ -138,7 +138,7 @@ public class FulgoraVertexMemory<M> {
 
     //######## Partitioned Vertices ##########
 
-    private PartitionVertexAggregate<M> getPartitioned(long vertexId) {
+    private PartitionVertexAggregate<M> getPartitioned(String vertexId) {
         assert idManager.isPartitionedVertex(vertexId);
         vertexId=getCanonicalId(vertexId);
         PartitionVertexAggregate<M> state = partitionVertices.get(vertexId);
@@ -149,19 +149,19 @@ public class FulgoraVertexMemory<M> {
         return state;
     }
 
-    public void setLoadedProperties(long vertexId, EntryList entries) {
+    public void setLoadedProperties(String vertexId, EntryList entries) {
         getPartitioned(vertexId).setLoadedProperties(entries);
     }
 
-    public void aggregateMessage(long vertexId, M message, MessageScope scope) {
+    public void aggregateMessage(String vertexId, M message, MessageScope scope) {
         getPartitioned(vertexId).addMessage(message,normalizeScope(scope),previousScopes,combiner);
     }
 
-    Stream<M> getAggregateMessage(long vertexId, MessageScope scope) {
+    Stream<M> getAggregateMessage(String vertexId, MessageScope scope) {
         return getPartitioned(vertexId).getMessage(normalizeScope(scope),previousScopes);
     }
 
-    public Map<Long,EntryList> retrievePartitionAggregates() {
+    public Map<String,EntryList> retrievePartitionAggregates() {
         for (PartitionVertexAggregate agg : partitionVertices.values()) agg.completeIteration();
         return Maps.transformValues(partitionVertices, PartitionVertexAggregate::getLoadedProperties);
     }

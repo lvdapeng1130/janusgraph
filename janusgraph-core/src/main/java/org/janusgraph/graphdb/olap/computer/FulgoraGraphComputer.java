@@ -379,7 +379,7 @@ public class FulgoraGraphComputer implements JanusGraphComputer {
 
             //TODO: Filter based on VertexProgram
             HaltedTraverserStrategy haltedTraverserStrategy = HaltedTraverserStrategy.reference();
-            Map<Long, Map<String, Object>> mutatedProperties = Maps.transformValues(vertexMemory.getMutableVertexProperties(),
+            Map<String, Map<String, Object>> mutatedProperties = Maps.transformValues(vertexMemory.getMutableVertexProperties(),
                 (Function<Map<String, Object>, Map<String, Object>>) o -> {
                     Map<String, Object> nonTransientKeys =
                         Maps.filterKeys(o, s -> !VertexProgramHelper.isTransientVertexComputeKey(s, vertexProgram.getVertexComputeKeys()));
@@ -398,9 +398,9 @@ public class FulgoraGraphComputer implements JanusGraphComputer {
             if (resultGraphMode == ResultGraph.ORIGINAL) {
                 AtomicInteger failures = new AtomicInteger(0);
                 try (WorkerPool workers = new WorkerPool(numThreads)) {
-                    List<Map.Entry<Long, Map<String, Object>>> subset = new ArrayList<>(writeBatchSize / vertexProgram.getVertexComputeKeys().size());
+                    List<Map.Entry<String, Map<String, Object>>> subset = new ArrayList<>(writeBatchSize / vertexProgram.getVertexComputeKeys().size());
                     int currentSize = 0;
-                    for (Map.Entry<Long, Map<String, Object>> entry : mutatedProperties.entrySet()) {
+                    for (Map.Entry<String, Map<String, Object>> entry : mutatedProperties.entrySet()) {
                         subset.add(entry);
                         currentSize += entry.getValue().size();
                         if (currentSize >= writeBatchSize) {
@@ -420,7 +420,7 @@ public class FulgoraGraphComputer implements JanusGraphComputer {
                 }
             } else if (resultGraphMode == ResultGraph.NEW) {
                 resultgraph = graph.newTransaction();
-                for (Map.Entry<Long, Map<String, Object>> vertexProperty : mutatedProperties.entrySet()) {
+                for (Map.Entry<String, Map<String, Object>> vertexProperty : mutatedProperties.entrySet()) {
                     Vertex v = resultgraph.vertices(vertexProperty.getKey()).next();
                     for (Map.Entry<String, Object> prop : vertexProperty.getValue().entrySet()) {
                         if (prop.getValue() instanceof List) {
@@ -438,10 +438,10 @@ public class FulgoraGraphComputer implements JanusGraphComputer {
 
     private class VertexPropertyWriter implements Runnable {
 
-        private final List<Map.Entry<Long, Map<String, Object>>> properties;
+        private final List<Map.Entry<String, Map<String, Object>>> properties;
         private final AtomicInteger failures;
 
-        private VertexPropertyWriter(List<Map.Entry<Long, Map<String, Object>>> properties, AtomicInteger failures) {
+        private VertexPropertyWriter(List<Map.Entry<String, Map<String, Object>>> properties, AtomicInteger failures) {
             assert properties != null && !properties.isEmpty() && failures != null;
             this.properties = properties;
             this.failures = failures;
@@ -451,7 +451,7 @@ public class FulgoraGraphComputer implements JanusGraphComputer {
         public void run() {
             JanusGraphTransaction tx = graph.buildTransaction().enableBatchLoading().start();
             try {
-                for (Map.Entry<Long, Map<String, Object>> vertexProperty : properties) {
+                for (Map.Entry<String, Map<String, Object>> vertexProperty : properties) {
                     Vertex v = tx.getVertex(vertexProperty.getKey());
                     if (v == null) {
                         continue;

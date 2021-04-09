@@ -44,7 +44,7 @@ public interface InternalElement extends JanusGraphElement {
         return tx();
     }
 
-    void setId(long id);
+    void setId(String id);
 
     /**
      * @see ElementLifeCycle

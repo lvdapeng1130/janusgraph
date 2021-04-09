@@ -17,6 +17,9 @@ package org.janusgraph.graphdb.database.cache;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import org.apache.commons.lang.StringUtils;
+import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.janusgraph.diskstorage.EntryList;
 import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.relations.EdgeDirection;
@@ -24,8 +27,6 @@ import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.graphdb.types.system.BaseLabel;
 import org.janusgraph.graphdb.types.system.BaseRelationType;
 import org.janusgraph.graphdb.types.system.SystemRelationType;
-import org.apache.tinkerpop.gremlin.structure.Direction;
-import org.cliffc.high_scale_lib.NonBlockingHashMapLong;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,7 +48,7 @@ public class StandardSchemaCache implements SchemaCache {
     private static final int SCHEMAID_TOTALFORW_SHIFT = 3; //Total number of bits appended - the 1 is for the 1 bit direction
     private static final int SCHEMAID_BACK_SHIFT = 2; //Number of bits to remove from end of schema id since its just the padding
     static {
-        assert IDManager.VertexIDType.Schema.removePadding(1L<<SCHEMAID_BACK_SHIFT)==1;
+        //assert IDManager.VertexIDType.Schema.removePadding(1L<<SCHEMAID_BACK_SHIFT)==1;
         assert SCHEMAID_TOTALFORW_SHIFT-SCHEMAID_BACK_SHIFT>=0;
     }
 
@@ -55,11 +56,11 @@ public class StandardSchemaCache implements SchemaCache {
     private final int maxCachedRelations;
     private final StoreRetrieval retriever;
 
-    private volatile ConcurrentMap<String,Long> typeNames;
-    private final Cache<String,Long> typeNamesBackup;
+    private volatile ConcurrentMap<String,String> typeNames;
+    private final Cache<String,String> typeNamesBackup;
 
-    private volatile ConcurrentMap<Long,EntryList> schemaRelations;
-    private final Cache<Long,EntryList> schemaRelationsBackup;
+    private volatile ConcurrentMap<String,EntryList> schemaRelations;
+    private final Cache<String,EntryList> schemaRelationsBackup;
 
     public StandardSchemaCache(final StoreRetrieval retriever) {
         this(MAX_CACHED_TYPES_DEFAULT,retriever);
@@ -81,14 +82,14 @@ public class StandardSchemaCache implements SchemaCache {
                 .concurrencyLevel(CONCURRENCY_LEVEL).initialCapacity(INITIAL_CACHE_SIZE *CACHE_RELATION_MULTIPLIER)
                 .maximumSize(maxCachedRelations).build();
 //        typeRelations = new ConcurrentHashMap<Long, EntryList>(INITIAL_CAPACITY*CACHE_RELATION_MULTIPLIER,0.75f,CONCURRENCY_LEVEL);
-        schemaRelations = new NonBlockingHashMapLong<>(INITIAL_CAPACITY * CACHE_RELATION_MULTIPLIER); //TODO: Is this data structure safe or should we go with ConcurrentHashMap (line above)?
+        schemaRelations = new NonBlockingHashMap<>(INITIAL_CAPACITY * CACHE_RELATION_MULTIPLIER); //TODO: Is this data structure safe or should we go with ConcurrentHashMap (line above)?
     }
 
 
     @Override
-    public Long getSchemaId(final String schemaName) {
-        ConcurrentMap<String,Long> types = typeNames;
-        Long id;
+    public String getSchemaId(final String schemaName) {
+        ConcurrentMap<String,String> types = typeNames;
+        String id;
         if (types==null) {
             id = typeNamesBackup.getIfPresent(schemaName);
             if (id==null) {
@@ -118,11 +119,12 @@ public class StandardSchemaCache implements SchemaCache {
         return id;
     }
 
-    private long getIdentifier(final long schemaId, final SystemRelationType type, final Direction dir) {
+    private String getIdentifier(final String schemaId, final SystemRelationType type, final Direction dir) {
         int edgeDir = EdgeDirection.position(dir);
         assert edgeDir==0 || edgeDir==1;
 
-        long typeId = (schemaId >>> SCHEMAID_BACK_SHIFT);
+        //long typeId = (schemaId >>> SCHEMAID_BACK_SHIFT);
+        String typeId = IDManager.VertexIDType.Schema.removePadding(schemaId);
         int systemTypeId;
         if (type== BaseLabel.SchemaDefinitionEdge) systemTypeId=0;
         else if (type== BaseKey.SchemaName) systemTypeId=1;
@@ -131,21 +133,23 @@ public class StandardSchemaCache implements SchemaCache {
         else throw new AssertionError("Unexpected SystemType encountered in StandardSchemaCache: " + type.name());
 
         //Ensure that there is enough padding
-        assert (systemTypeId<(1<<2));
-        return (((typeId<<2)+systemTypeId)<<1)+edgeDir;
+        //assert (systemTypeId<(1<<2));
+        //return (((typeId<<2)+systemTypeId)<<1)+edgeDir;
+        String newId=typeId+systemTypeId+edgeDir;
+        return newId;
     }
 
     @Override
-    public EntryList getSchemaRelations(final long schemaId, final BaseRelationType type, final Direction dir) {
-        assert IDManager.isSystemRelationTypeId(type.longId()) && type.longId()>0;
+    public EntryList getSchemaRelations(final String schemaId, final BaseRelationType type, final Direction dir) {
+        assert IDManager.isSystemRelationTypeId(type.longId()) && StringUtils.isNotBlank(type.longId());
         Preconditions.checkArgument(IDManager.VertexIDType.Schema.is(schemaId));
-        Preconditions.checkArgument((Long.MAX_VALUE>>>(SCHEMAID_TOTALFORW_SHIFT-SCHEMAID_BACK_SHIFT))>= schemaId);
+        //Preconditions.checkArgument((Long.MAX_VALUE>>>(SCHEMAID_TOTALFORW_SHIFT-SCHEMAID_BACK_SHIFT))>= schemaId);
 
         int edgeDir = EdgeDirection.position(dir);
         assert edgeDir==0 || edgeDir==1;
 
-        final long typePlusRelation = getIdentifier(schemaId,type,dir);
-        ConcurrentMap<Long,EntryList> types = schemaRelations;
+        final String typePlusRelation = getIdentifier(schemaId,type,dir);
+        ConcurrentMap<String,EntryList> types = schemaRelations;
         EntryList entries;
         if (types==null) {
             entries = schemaRelationsBackup.getIfPresent(typePlusRelation);
@@ -183,22 +187,43 @@ public class StandardSchemaCache implements SchemaCache {
 //    }
 
     @Override
-    public void expireSchemaElement(final long schemaId) {
-        //1) expire relations
+    public void expireSchemaElement(final String schemaId) {
+       /* //1) expire relations
         final long cutTypeId = (schemaId >>> SCHEMAID_BACK_SHIFT);
-        ConcurrentMap<Long,EntryList> types = schemaRelations;
+        ConcurrentMap<String,EntryList> types = schemaRelations;
         if (types!=null) {
             types.keySet().removeIf(key -> (key >>> SCHEMAID_TOTALFORW_SHIFT) == cutTypeId);
         }
-        for (Long key : schemaRelationsBackup.asMap().keySet()) {
+        for (String key : schemaRelationsBackup.asMap().keySet()) {
             if ((key >>> SCHEMAID_TOTALFORW_SHIFT) == cutTypeId) schemaRelationsBackup.invalidate(key);
         }
         //2) expire names
-        ConcurrentMap<String,Long> names = typeNames;
+        ConcurrentMap<String,String> names = typeNames;
         if (names!=null) {
             names.entrySet().removeIf(next -> next.getValue().equals(schemaId));
         }
-        for (Map.Entry<String,Long> entry : typeNamesBackup.asMap().entrySet()) {
+        for (Map.Entry<String,String> entry : typeNamesBackup.asMap().entrySet()) {
+            if (entry.getValue().equals(schemaId)) typeNamesBackup.invalidate(entry.getKey());
+        }*/
+
+        final String cutTypeId =schemaId.substring(0,schemaId.length()-SCHEMAID_BACK_SHIFT);
+        ConcurrentMap<String,EntryList> types = schemaRelations;
+        if (types!=null) {
+            types.keySet().removeIf(key ->{
+                String kTypeId =key.substring(0,key.length()-SCHEMAID_BACK_SHIFT);
+                return  kTypeId.equals(cutTypeId);
+            });
+        }
+        for (String key : schemaRelationsBackup.asMap().keySet()) {
+            String kTypeId =key.substring(0,key.length()-SCHEMAID_BACK_SHIFT);
+            if (kTypeId.equals(cutTypeId)) schemaRelationsBackup.invalidate(key);
+        }
+        //2) expire names
+        ConcurrentMap<String,String> names = typeNames;
+        if (names!=null) {
+            names.entrySet().removeIf(next -> next.getValue().equals(schemaId));
+        }
+        for (Map.Entry<String,String> entry : typeNamesBackup.asMap().entrySet()) {
             if (entry.getValue().equals(schemaId)) typeNamesBackup.invalidate(entry.getKey());
         }
     }

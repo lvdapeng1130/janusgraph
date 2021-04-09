@@ -25,7 +25,7 @@ public abstract class RelationTypeDefinition extends SchemaElementDefinition {
 
     private final Multiplicity multiplicity;
 
-    public RelationTypeDefinition(String name, long id, Multiplicity multiplicity) {
+    public RelationTypeDefinition(String name, String id, Multiplicity multiplicity) {
         super(name, id);
         this.multiplicity = multiplicity;
     }

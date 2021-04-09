@@ -32,7 +32,7 @@ import java.util.stream.StreamSupport;
 public class VertexLabelVertex extends JanusGraphSchemaVertex implements InternalVertexLabel {
 
 
-    public VertexLabelVertex(StandardJanusGraphTx tx, long id, byte lifecycle) {
+    public VertexLabelVertex(StandardJanusGraphTx tx, String id, byte lifecycle) {
         super(tx, id, lifecycle);
     }
 

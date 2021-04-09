@@ -30,9 +30,9 @@ public interface InternalRelationType extends RelationType, InternalVertex {
 
     boolean isInvisibleType();
 
-    long[] getSignature();
+    String[] getSignature();
 
-    long[] getSortKey();
+    String[] getSortKey();
 
     Order getSortOrder();
 

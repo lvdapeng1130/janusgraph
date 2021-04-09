@@ -64,13 +64,18 @@ public class FulgoraVertexProperty<V> implements JanusGraphVertexProperty<V> {
     }
 
     @Override
+    public Property<V> lastProperty(String key) {
+        return this.property(key);
+    }
+
+    @Override
     public void remove() {
         mixinParent.removeKey(key);
         isRemoved=true;
     }
 
     @Override
-    public long longId() {
+    public String longId() {
         throw new IllegalStateException("An id has not been set for this property");
     }
 

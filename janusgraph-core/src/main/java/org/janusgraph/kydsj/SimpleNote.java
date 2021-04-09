@@ -8,20 +8,20 @@ import org.janusgraph.kydsj.serialize.Note;
  * @time: 2020/7/28 20:22
  * @jira:
  */
-public class SimpleAddedNote {
-    private final HashMultimap<Long, Note> notes= HashMultimap.create();
+public class SimpleNote {
+    private final HashMultimap<String, Note> notes= HashMultimap.create();
 
-    public boolean add(Long id,Note note) {
+    public boolean add(String id,Note note) {
         notes.put(id,note);
         return true;
     }
 
-    public boolean remove(Long id,Note note) {
+    public boolean remove(String id,Note note) {
         notes.remove(id,note);
         return true;
     }
 
-    public HashMultimap<Long, Note> getNotes() {
+    public HashMultimap<String, Note> getNotes() {
         return notes;
     }
 

@@ -32,7 +32,6 @@ import org.janusgraph.diskstorage.keycolumnvalue.KeySliceQuery;
 import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.HashingUtil;
 import org.janusgraph.diskstorage.util.StaticArrayEntry;
-import org.janusgraph.graphdb.database.idhandling.VariableLong;
 import org.janusgraph.graphdb.database.management.ManagementSystem;
 import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.database.serialize.InternalAttributeUtil;
@@ -345,17 +344,17 @@ public class IndexSerializer {
                                                                MixedIndexType index, IndexUpdate.Type updateType)  {
         IndexEntry indexEntry = new IndexEntry(key2Field(index.getField(key)), value);
         if(p!=null){
-            Property<Object> startDatePrperty = p.property("startDate");
+            Property<Object> startDatePrperty = p.lastProperty("startDate");
             if(startDatePrperty!=null&&!(startDatePrperty instanceof EmptyProperty)){
                 Date startDate = (Date)startDatePrperty.value();
                 indexEntry.setStartDate(startDate);
             }
-            Property<Object> endDateProperty = p.property("endDate");
+            Property<Object> endDateProperty = p.lastProperty("endDate");
             if(endDateProperty!=null&&!(endDateProperty instanceof EmptyProperty)){
                 Date endDate = (Date)endDateProperty.value();
                 indexEntry.setEndDate(endDate);
             }
-            Property<Object> geoProperty = p.property("geo");
+            Property<Object> geoProperty = p.lastProperty("geo");
             if(geoProperty!=null&&!(geoProperty instanceof EmptyProperty)){
                 Geoshape geoshape = (Geoshape)geoProperty.value();
                 if(geoshape!=null&&geoshape.getPoint()!=null){
@@ -363,14 +362,14 @@ public class IndexSerializer {
                     indexEntry.setGeo(new double[]{point.getLongitude(),point.getLatitude()});
                 }
             }
-            Property<Object> dsrProperty = p.property("dsr");
+            Property<Object> dsrProperty = p.lastProperty("dsr");
             if(dsrProperty!=null&&!(dsrProperty instanceof EmptyProperty)){
                 String dsr = (String)dsrProperty.value();
                 if(StringUtils.isNotBlank(dsr)) {
                     indexEntry.setDsr(Sets.newHashSet(dsr));
                 }
             }
-            Property<Object> roleProperty = p.property("role");
+            Property<Object> roleProperty = p.lastProperty("role");
             if(roleProperty!=null&&!(roleProperty instanceof EmptyProperty)){
                 String role = (String)roleProperty.value();
                 indexEntry.setRole(role);
@@ -464,11 +463,11 @@ public class IndexSerializer {
 
     private static class RecordEntry {
 
-        final long relationId;
+        final String relationId;
         final Object value;
         final PropertyKey key;
 
-        private RecordEntry(long relationId, Object value, PropertyKey key) {
+        private RecordEntry(String relationId, Object value, PropertyKey key) {
             this.relationId = relationId;
             this.value = value;
             this.key = key;
@@ -489,7 +488,7 @@ public class IndexSerializer {
         final IndexField[] fields = index.getFieldKeys();
         if (indexAppliesTo(index,vertex)) {
             indexMatches(vertex,new RecordEntry[fields.length],matches,fields,0,false,
-                replaceKey,new RecordEntry(0,replaceValue,replaceKey));
+                replaceKey,new RecordEntry("",replaceValue,replaceKey));
         }
         return matches;
     }
@@ -558,7 +557,9 @@ public class IndexSerializer {
                     entryValue.movePositionTo(entry.getValuePosition());
                     switch(index.getElement()) {
                         case VERTEX:
-                            results.add(VariableLong.readPositive(entryValue));
+                            //results.add(VariableLong.readPositive(entryValue));
+                            String vertexId = serializer.readObjectNotNull(entryValue, String.class);
+                            results.add(vertexId);
                             break;
                         default:
                             results.add(bytebuffer2RelationId(entryValue));
@@ -728,8 +729,8 @@ public class IndexSerializer {
     }
 
     private static String element2String(Object elementId) {
-        Preconditions.checkArgument(elementId instanceof Long || elementId instanceof RelationIdentifier);
-        if (elementId instanceof Long) return longID2Name((Long)elementId);
+        Preconditions.checkArgument(elementId instanceof String || elementId instanceof RelationIdentifier);
+        if (elementId instanceof String) return longID2Name(elementId.toString());
         else return ((RelationIdentifier) elementId).toString();
     }
 
@@ -751,12 +752,12 @@ public class IndexSerializer {
         return longID2Name(key.longId());
     }
 
-    private static String longID2Name(long id) {
-        Preconditions.checkArgument(id > 0);
+    private static String longID2Name(String id) {
+        Preconditions.checkArgument(StringUtils.isNotBlank(id));
         return LongEncoding.encode(id);
     }
 
-    private static long name2LongID(String name) {
+    private static String name2LongID(String name) {
         return LongEncoding.decode(name);
     }
 
@@ -767,7 +768,8 @@ public class IndexSerializer {
 
     private StaticBuffer getIndexKey(CompositeIndexType index, Object[] values) {
         final DataOutput out = serializer.getDataOutput(8*DEFAULT_OBJECT_BYTELEN + 8);
-        VariableLong.writePositive(out, index.getID());
+        //VariableLong.writePositive(out, index.getID());
+        out.writeObjectNotNull(index.getID());
         final IndexField[] fields = index.getFieldKeys();
         Preconditions.checkArgument(fields.length>0 && fields.length==values.length);
         for (int i = 0; i < fields.length; i++) {
@@ -786,40 +788,55 @@ public class IndexSerializer {
         return key;
     }
 
-    public long getIndexIdFromKey(StaticBuffer key) {
+    public String getIndexIdFromKey(StaticBuffer key) {
         if (hashKeys) key = HashingUtil.getKey(hashLength,key);
-        return VariableLong.readPositive(key.asReadBuffer());
+        //return VariableLong.readPositive(key.asReadBuffer());
+        return this.serializer.readObjectNotNull(key.asReadBuffer(),String.class);
     }
 
     private Entry getIndexEntry(CompositeIndexType index, RecordEntry[] record, JanusGraphElement element) {
         final DataOutput out = serializer.getDataOutput(1+8+8*record.length+4*8);
         out.putByte(FIRST_INDEX_COLUMN_BYTE);
         if (index.getCardinality()!=Cardinality.SINGLE) {
-            VariableLong.writePositive(out,element.longId());
+            //VariableLong.writePositive(out,element.longId());
+            out.writeObjectNotNull(element.longId());
             if (index.getCardinality()!=Cardinality.SET) {
                 for (final RecordEntry re : record) {
-                    VariableLong.writePositive(out,re.relationId);
+                    //VariableLong.writePositive(out,re.relationId);
+                    out.writeObjectNotNull(re.relationId);
                 }
             }
         }
         final int valuePosition=out.getPosition();
         if (element instanceof JanusGraphVertex) {
-            VariableLong.writePositive(out,element.longId());
+            //VariableLong.writePositive(out,element.longId());
+            out.writeObjectNotNull(element.longId());
         } else {
             assert element instanceof JanusGraphRelation;
             final RelationIdentifier rid = (RelationIdentifier)element.id();
-            final long[] longs = rid.getLongRepresentation();
+
+            final String[] longs = rid.getLongRepresentation();
             Preconditions.checkArgument(longs.length == 3 || longs.length == 4);
-            for (final long aLong : longs) VariableLong.writePositive(out, aLong);
+            for (final String aLong : longs) {
+                //VariableLong.writePositive(out, aLong);
+                out.writeObjectNotNull(aLong);
+            }
         }
         return new StaticArrayEntry(out.getStaticBuffer(),valuePosition);
     }
 
-    private static RelationIdentifier bytebuffer2RelationId(ReadBuffer b) {
-        long[] relationId = new long[4];
-        for (int i = 0; i < 3; i++) relationId[i] = VariableLong.readPositive(b);
-        if (b.hasRemaining()) relationId[3] = VariableLong.readPositive(b);
-        else relationId = Arrays.copyOfRange(relationId,0,3);
+    private RelationIdentifier bytebuffer2RelationId(ReadBuffer b) {
+        String[] relationId = new String[4];
+        for (int i = 0; i < 3; i++) {
+            relationId[i]=serializer.readObjectNotNull(b,String.class);
+            //relationId[i] = VariableLong.readPositive(b);
+        }
+        if (b.hasRemaining()) {
+            //relationId[3] = VariableLong.readPositive(b);
+            relationId[3] = serializer.readObjectNotNull(b,String.class);
+        } else{
+            relationId = Arrays.copyOfRange(relationId,0,3);
+        }
         return RelationIdentifier.get(relationId);
     }
 

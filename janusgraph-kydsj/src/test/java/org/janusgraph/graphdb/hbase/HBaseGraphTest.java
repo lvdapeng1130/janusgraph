@@ -27,12 +27,12 @@ import java.io.IOException;
 public class HBaseGraphTest extends JanusGraphTest {
     @BeforeAll
     public static void startHBase() throws IOException {
-        HBaseStorageSetup.startHBase();
+       // HBaseStorageSetup.startHBase();
     }
 
     @Override
     public WriteConfiguration getConfiguration() {
-        return HBaseStorageSetup.getHBaseGraphConfiguration();
+        return HBaseStorageSetup.getHBaseConfiguration("ldp_test_graph").getConfiguration();
     }
 
     @Override @Test @Disabled("HBase does not support retrieving cell TTL by client")

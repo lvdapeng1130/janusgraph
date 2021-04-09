@@ -14,15 +14,14 @@
 
 package org.janusgraph.graphdb.database.idhandling;
 
+import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.diskstorage.ReadBuffer;
 import org.janusgraph.diskstorage.StaticBuffer;
-import org.janusgraph.diskstorage.WriteBuffer;
 import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
-import org.janusgraph.diskstorage.util.WriteByteBuffer;
+import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.internal.RelationCategory;
-import org.apache.tinkerpop.gremlin.structure.Direction;
 
 import static org.janusgraph.graphdb.idmanagement.IDManager.VertexIDType.*;
 
@@ -34,6 +33,8 @@ public class IDHandler {
 
     public static final StaticBuffer MIN_KEY = BufferUtil.getLongBuffer(0);
     public static final StaticBuffer MAX_KEY = BufferUtil.getLongBuffer(-1);
+    private static final byte BIT_MASK = 127;
+    private static final byte STOP_MASK = -128;
 
     public enum DirectionID {
 
@@ -99,10 +100,10 @@ public class IDHandler {
 
 
     private static final int PREFIX_BIT_LEN = 3;
+    //private static final int PREFIX_BIT_LEN = 1;
 
-    public static int relationTypeLength(long relationTypeId) {
-        assert relationTypeId > 0 && (relationTypeId << 1) > 0;  //Check positive and no-overflow
-        return VariableLong.positiveWithPrefixLength(IDManager.stripEntireRelationTypePadding(relationTypeId) << 1, PREFIX_BIT_LEN);
+    public static int relationTypeLength(String relationTypeId) {
+        return relationTypeId.length();
     }
 
     /**
@@ -114,24 +115,31 @@ public class IDHandler {
      * @param relationTypeId
      * @param dirID
      */
-    public static void writeRelationType(WriteBuffer out, long relationTypeId, DirectionID dirID, boolean invisible) {
-        assert relationTypeId > 0 && (relationTypeId << 1) > 0; //Check positive and no-overflow
-
-        long strippedId = (IDManager.stripEntireRelationTypePadding(relationTypeId) << 1) + dirID.getDirectionInt();
-        VariableLong.writePositiveWithPrefix(out, strippedId, dirID.getPrefix(invisible, IDManager.isSystemRelationTypeId(relationTypeId)), PREFIX_BIT_LEN);
+    public static void writeRelationType(DataOutput out, String relationTypeId, DirectionID dirID, boolean invisible) {
+        String strippedId = IDManager.stripEntireRelationTypePadding(relationTypeId);
+        int directionInt = dirID.getDirectionInt();
+        int prefix = dirID.getPrefix(invisible, IDManager.isSystemRelationTypeId(relationTypeId));
+        VariableLong.writePositive(out,prefix);
+        out.writeObjectNotNull(strippedId);
+        VariableLong.writePositive(out,directionInt);
     }
 
-    public static StaticBuffer getRelationType(long relationTypeId, DirectionID dirID, boolean invisible) {
-        WriteBuffer b = new WriteByteBuffer(relationTypeLength(relationTypeId));
+    public static StaticBuffer getRelationType(String relationTypeId, DirectionID dirID, boolean invisible) {
+        //WriteBuffer b = new WriteByteBuffer(relationTypeLength(relationTypeId));
+        DataOutput b = BufferUtil.getSerializer().getDataOutput(relationTypeLength(relationTypeId));
         IDHandler.writeRelationType(b, relationTypeId, dirID, invisible);
         return b.getStaticBuffer();
     }
 
     public static RelationTypeParse readRelationType(ReadBuffer in) {
-        long[] countPrefix = VariableLong.readPositiveWithPrefix(in, PREFIX_BIT_LEN);
-        DirectionID dirID = DirectionID.getDirectionID((int) countPrefix[1] & 1, (int) (countPrefix[0] & 1));
-        long typeId = countPrefix[0] >>> 1;
-        boolean isSystemType = (countPrefix[1]>>1)==0;
+        int relationType = (int)VariableLong.readPositive(in);
+        String typeId=BufferUtil.getSerializer().readObjectNotNull(in,String.class);
+        int direction=(int)VariableLong.readPositive(in);
+        //int relationType=Integer.parseInt(id.charAt(0)+"");
+        //int direction = Integer.parseInt(id.charAt(id.length() - 1)+"");
+
+        DirectionID dirID = DirectionID.getDirectionID(relationType & 1, direction & 1);
+        boolean isSystemType = (relationType>>1)==0;
 
         if (dirID == DirectionID.PROPERTY_DIR)
             typeId = IDManager.getSchemaId(isSystemType?SystemPropertyKey:UserPropertyKey, typeId);
@@ -142,30 +150,31 @@ public class IDHandler {
 
     public static class RelationTypeParse {
 
-        public final long typeId;
+        public final String typeId;
         public final DirectionID dirID;
 
-        public RelationTypeParse(long typeId, DirectionID dirID) {
+        public RelationTypeParse(String typeId, DirectionID dirID) {
             this.typeId = typeId;
             this.dirID = dirID;
         }
     }
 
 
-    public static void writeInlineRelationType(WriteBuffer out, long relationTypeId) {
-        long compressId = IDManager.stripRelationTypePadding(relationTypeId);
-        VariableLong.writePositive(out, compressId);
+    public static void writeInlineRelationType(DataOutput out, String relationTypeId) {
+        String compressId = IDManager.stripRelationTypePadding(relationTypeId);
+        out.writeObjectNotNull(compressId);
     }
 
-    public static long readInlineRelationType(ReadBuffer in) {
-        long compressId = VariableLong.readPositive(in);
+    public static String readInlineRelationType(ReadBuffer in) {
+        String compressId=BufferUtil.getSerializer().readObjectNotNull(in,String.class);
         return IDManager.addRelationTypePadding(compressId);
     }
 
     private static StaticBuffer getPrefixed(int prefix) {
-        assert prefix < (1 << PREFIX_BIT_LEN) && prefix >= 0;
+        byte b = (byte) ((prefix) & BIT_MASK);
+        b = (byte) (b | STOP_MASK);
         byte[] arr = new byte[1];
-        arr[0] = (byte) (prefix << (Byte.SIZE - PREFIX_BIT_LEN));
+        arr[0] = b;
         return new StaticArrayBuffer(arr);
     }
 
@@ -189,7 +198,9 @@ public class IDHandler {
         }
         end++;
         assert end > start;
-        return new StaticBuffer[]{getPrefixed(start), getPrefixed(end)};
+        StaticBuffer startBuffer = new StaticArrayBuffer(getPrefixed(start));
+        StaticBuffer endBuffer = new StaticArrayBuffer(getPrefixed(end));
+        return new StaticBuffer[]{startBuffer, endBuffer};
     }
 
 }

@@ -36,7 +36,7 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 public class JanusGraphSchemaVertex extends CacheVertex implements SchemaSource {
 
-    public JanusGraphSchemaVertex(StandardJanusGraphTx tx, long id, byte lifecycle) {
+    public JanusGraphSchemaVertex(StandardJanusGraphTx tx, String id, byte lifecycle) {
         super(tx, id, lifecycle);
     }
 

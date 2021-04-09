@@ -86,11 +86,26 @@ public class KGElasticSearchIndex implements IndexProvider {
             "    if (field.cardinality == 'SINGLE') {",
             "        ctx._source.remove(field.name);",
             "    } else if (ctx._source.containsKey(field.name)) {",
-            "        def fieldValueName = field.name+'.value';",
-            "        def fieldIndex = ctx._source[fieldValueName].indexOf(field.value);",
-            "        if (fieldIndex >= 0 && fieldIndex < ctx._source[field.name].size()) {",
-            "            ctx._source[field.name].remove(fieldIndex);",
-            "        }",
+        "            def fieldValueArray = ctx._source.get(field.name);",
+        "            def fieldIndex=-1;",
+        "            def cId=0;",
+        "            if (fieldValueArray != null) {",
+        "                Map existMap=null;",
+        "                for (Map simple : fieldValueArray) {",
+        "                    if (simple != null && simple.containsKey(\"value\")) {",
+        "                        Object v=simple.get(\"value\");",
+        "                        if(v!=null&&simple.get(\"value\").equals(field.value)){",
+        "                            existMap=simple;",
+        "                            fieldIndex=cId;",
+        "                            break;",
+        "                        }",
+        "                    }",
+        "                    cId=cId+1;",
+        "                }",
+        "               if (fieldIndex >= 0 && fieldIndex < ctx._source[field.name].size()) {",
+        "                   ctx._source[field.name].remove(fieldIndex);",
+        "                }",
+        "            }",
             "    }",
             "}");
     private static final String PARAMETERIZED_ADDITION_SCRIPT1 = parameterizedScriptPrepare("",
@@ -753,13 +768,13 @@ public class KGElasticSearchIndex implements IndexProvider {
                         }
                     }
                     if (mutation.hasAdditions()) {
-                        if (mutation.isNew()) { //Index
+                       /* if (mutation.isNew()) { //Index
                             log.trace("Adding entire document {}", documentId);
                             final Map<String, Object> source = getNewDocument(mutation.getAdditions(),
                                     information.get(storeName));
                             requestByStore.add(ElasticSearchMutation.createIndexRequest(indexStoreName, storeName,
                                     documentId, source));
-                        } else {
+                        } else {*/
                             final Map upsert;
                             if (!mutation.hasDeletions()) {
                                 upsert = getNewDocument(mutation.getAdditions(), information.get(storeName));
@@ -783,7 +798,7 @@ public class KGElasticSearchIndex implements IndexProvider {
                                         documentId, builder, upsert));
                                 log.trace("Adding update {}", doc);
                             }
-                        }
+                       // }
                     }
                 }
                 if (!requestByStore.isEmpty() && ingestPipelines.containsKey(storeName)) {

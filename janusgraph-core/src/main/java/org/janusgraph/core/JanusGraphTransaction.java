@@ -15,6 +15,10 @@
 package org.janusgraph.core;
 
 import org.janusgraph.graphdb.relations.RelationIdentifier;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
+
+import java.util.Iterator;
 
 /**
  * JanusGraphTransaction defines a transactional context for a {@link JanusGraph}. Since JanusGraph is a transactional graph
@@ -61,7 +65,7 @@ public interface JanusGraphTransaction extends Transaction {
      * @param vertexLabel vertex label for this vertex - can be null if no vertex label should be set.
      * @return New vertex
      */
-    JanusGraphVertex addVertex(Long id, VertexLabel vertexLabel);
+    JanusGraphVertex addVertex(String id, VertexLabel vertexLabel);
 
     /**
      * Retrieves the vertex for the specified id.
@@ -71,12 +75,16 @@ public interface JanusGraphTransaction extends Transaction {
      * @param id id of the vertex to retrieve
      * @return vertex with the given id if it exists, else null
      */
-    JanusGraphVertex getVertex(long id);
+    JanusGraphVertex getVertex(String id);
 
 
-    Iterable<JanusGraphVertex> getVertices(long... ids);
+    Iterable<JanusGraphVertex> getVertices(String... ids);
 
     Iterable<JanusGraphEdge> getEdges(RelationIdentifier... ids);
+
+    Iterator<Note> getNotes(String vertexId, String ...keys);
+
+    Iterator<MediaData> getMediaDatas(String vertexId, String ...keys);
 
    /* ---------------------------------------------------------------
     * Closing and admin

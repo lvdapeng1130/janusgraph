@@ -14,23 +14,24 @@
 
 package org.janusgraph.graphdb.transaction.vertexcache;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
+import org.cliffc.high_scale_lib.NonBlockingHashMap;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.util.ConcurrentLRUCache;
 import org.janusgraph.util.datastructures.Retriever;
-import org.cliffc.high_scale_lib.NonBlockingHashMapLong;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class LRUVertexCache implements VertexCache {
 
-    private final NonBlockingHashMapLong<InternalVertex> volatileVertices;
+    private final NonBlockingHashMap<String,InternalVertex> volatileVertices;
     private final ConcurrentLRUCache<InternalVertex> cache;
 
     public LRUVertexCache(int capacity) {
-        volatileVertices = new NonBlockingHashMapLong<>();
+        volatileVertices = new NonBlockingHashMap<>();
         cache = new ConcurrentLRUCache<>(capacity * 2, // upper is double capacity
             capacity + capacity / 3, // lower is capacity + 1/3
             capacity, // acceptable watermark is capacity
@@ -49,14 +50,14 @@ public class LRUVertexCache implements VertexCache {
     }
 
     @Override
-    public boolean contains(long id) {
-        Long vertexId = id;
+    public boolean contains(String id) {
+        String vertexId = id;
         return cache.containsKey(vertexId) || volatileVertices.containsKey(vertexId);
     }
 
     @Override
-    public InternalVertex get(long id, final Retriever<Long, InternalVertex> retriever) {
-        final Long vertexId = id;
+    public InternalVertex get(String id, final Retriever<String, InternalVertex> retriever) {
+        final String vertexId = id;
 
         InternalVertex vertex = cache.get(vertexId);
 
@@ -76,10 +77,10 @@ public class LRUVertexCache implements VertexCache {
     }
 
     @Override
-    public void add(InternalVertex vertex, long id) {
+    public void add(InternalVertex vertex, String id) {
         Preconditions.checkNotNull(vertex);
-        Preconditions.checkArgument(id != 0);
-        Long vertexId = id;
+        Preconditions.checkArgument(StringUtils.isNotBlank(id));
+        String vertexId = id;
 
         cache.put(vertexId, vertex);
         if (vertex.isNew() || vertex.hasAddedRelations())

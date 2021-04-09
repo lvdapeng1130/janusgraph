@@ -16,6 +16,7 @@ package org.janusgraph.graphdb.database.idassigner;
 
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
 import org.janusgraph.core.*;
 import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
 import org.janusgraph.graphdb.internal.InternalRelationType;
@@ -285,19 +286,19 @@ public class VertexIDAssigner implements AutoCloseable {
     }
 
     private long getPartitionID(final InternalVertex v) {
-        long vid = v.longId();
+        String vid = v.longId();
         if (IDManager.VertexIDType.Schema.is(vid)) return IDManager.SCHEMA_PARTITION;
         else return idManager.getPartitionId(vid);
     }
 
     private void assignID(final InternalElement element, final long partitionIDl, final IDManager.VertexIDType userVertexIDType) {
         Preconditions.checkNotNull(element);
-        Preconditions.checkArgument(!element.hasId());
+        //Preconditions.checkArgument(!element.hasId());
         Preconditions.checkArgument((element instanceof JanusGraphRelation) ^ (userVertexIDType!=null));
         Preconditions.checkArgument(partitionIDl >= 0 && partitionIDl < partitionIdBound, partitionIDl);
         final int partitionID = (int) partitionIDl;
 
-        long count;
+        String count;
         if (element instanceof JanusGraphSchemaVertex) {
             Preconditions.checkArgument(partitionID==IDManager.SCHEMA_PARTITION);
             count = schemaIdPool.nextID();
@@ -335,22 +336,23 @@ public class VertexIDAssigner implements AutoCloseable {
             }
         }
 
-        long elementId;
+        String elementId;
+        String countStr=count+"";
         if (element instanceof InternalRelation) {
-            elementId = idManager.getRelationID(count, partitionID);
+            elementId = idManager.getRelationID(countStr, partitionID);
         } else if (element instanceof PropertyKey) {
-            elementId = IDManager.getSchemaId(IDManager.VertexIDType.UserPropertyKey,count);
+            elementId = IDManager.getSchemaId(IDManager.VertexIDType.UserPropertyKey,countStr);
         } else if (element instanceof EdgeLabel) {
-            elementId = IDManager.getSchemaId(IDManager.VertexIDType.UserEdgeLabel, count);
+            elementId = IDManager.getSchemaId(IDManager.VertexIDType.UserEdgeLabel, countStr);
         } else if (element instanceof VertexLabel) {
-            elementId = IDManager.getSchemaId(IDManager.VertexIDType.VertexLabel, count);
+            elementId = IDManager.getSchemaId(IDManager.VertexIDType.VertexLabel, countStr);
         } else if (element instanceof JanusGraphSchemaVertex) {
-            elementId = IDManager.getSchemaId(IDManager.VertexIDType.GenericSchemaType,count);
+            elementId = IDManager.getSchemaId(IDManager.VertexIDType.GenericSchemaType,countStr);
         } else {
-            elementId = idManager.getVertexID(count, partitionID, userVertexIDType);
+            elementId = idManager.getVertexID(countStr, partitionID, userVertexIDType);
         }
 
-        Preconditions.checkArgument(elementId >= 0);
+        Preconditions.checkArgument(StringUtils.isNotBlank(elementId));
         element.setId(elementId);
     }
 
