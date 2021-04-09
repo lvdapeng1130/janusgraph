@@ -1409,13 +1409,13 @@
             </build>
         </profile>
 
-        <profileH>
+        <profile>
             <id>sonar-upload</id>
             <properties>
                 <sonar.jacoco.reportPath>${top.level.basedir}/target/jacoco-combined.exec</sonar.jacoco.reportPath>
                 <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
             </properties>
-        </profileH>
+        </profile>
 
         <profile>
             <id>hadoop2</id>
