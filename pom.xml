@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.janusgraph</groupId>
     <artifactId>janusgraph</artifactId>
-    <version>KGYY_R3.01_20210303-hbase2</version>
+    <version>KGYY_R3.01_20210326-hbase1</version>
     <packaging>pom</packaging>
     <prerequisites>
         <maven>2.2.1</maven>
@@ -1409,13 +1409,13 @@
             </build>
         </profile>
 
-        <profile>
+        <profileH>
             <id>sonar-upload</id>
             <properties>
                 <sonar.jacoco.reportPath>${top.level.basedir}/target/jacoco-combined.exec</sonar.jacoco.reportPath>
                 <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
             </properties>
-        </profile>
+        </profileH>
 
         <profile>
             <id>hadoop2</id>

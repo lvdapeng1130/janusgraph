@@ -34,6 +34,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -81,7 +83,19 @@ public class RestClientSetup {
 
     protected RestClient getRestClient(HttpHost[] hosts, Configuration config) {
         final RestClientBuilder restClientBuilder = getRestClientBuilder(hosts);
-
+        Integer retryTimeOut = config.get(ElasticSearchIndex.EL_RETRY_TIMEOUT);
+        Class<? extends RestClientBuilder> aClass = restClientBuilder.getClass();
+        //restClientBuilder.setMaxRetryTimeoutMillis(retryTimeOut);
+        try {
+            Method setMaxRetryTimeoutMillis = aClass.getDeclaredMethod("setMaxRetryTimeoutMillis", Integer.class);
+            if(setMaxRetryTimeoutMillis!=null) {
+                setMaxRetryTimeoutMillis.invoke(restClientBuilder, retryTimeOut);
+            }
+        } catch (NoSuchMethodException e) {
+            log.warn("反射获取到setMaxRetryTimeoutMillis方法失败");
+        } catch (IllegalAccessException e) {
+        } catch (InvocationTargetException e) {
+        }
         final HttpClientConfigCallback httpClientConfigCallback = getHttpClientConfigCallback(config);
         if (httpClientConfigCallback != null) {
             restClientBuilder.setHttpClientConfigCallback(httpClientConfigCallback);

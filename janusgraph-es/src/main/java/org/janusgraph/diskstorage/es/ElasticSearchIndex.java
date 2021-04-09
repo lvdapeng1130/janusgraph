@@ -140,6 +140,9 @@ public class ElasticSearchIndex implements IndexProvider {
     public static final ConfigOption<Integer> ES_SOCKET_TIMEOUT =
         new ConfigOption<>(ELASTICSEARCH_NS, "el-cs-socket-timeout",
             "Controls the amount of time, in milliseconds, before a timeout occurs when waiting for a response.", ConfigOption.Type.MASKABLE, 60000);
+    public static final ConfigOption<Integer> EL_RETRY_TIMEOUT =
+        new ConfigOption<>(ELASTICSEARCH_NS, "el-cs-retry-timeout",
+            "Controls the amount of time, in milliseconds, before a timeout occurs when waiting for a response.", ConfigOption.Type.MASKABLE, 60000);
 
     public static final ConfigOption<Integer> ES_SCROLL_KEEP_ALIVE =
             new ConfigOption<>(ELASTICSEARCH_NS, "scroll-keep-alive",
