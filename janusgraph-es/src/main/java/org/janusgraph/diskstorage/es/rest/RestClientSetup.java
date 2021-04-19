@@ -87,7 +87,7 @@ public class RestClientSetup {
         Class<? extends RestClientBuilder> aClass = restClientBuilder.getClass();
         //restClientBuilder.setMaxRetryTimeoutMillis(retryTimeOut);
         try {
-            Method setMaxRetryTimeoutMillis = aClass.getDeclaredMethod("setMaxRetryTimeoutMillis", Integer.class);
+            Method setMaxRetryTimeoutMillis = aClass.getDeclaredMethod("setMaxRetryTimeoutMillis", Integer.TYPE);
             if(setMaxRetryTimeoutMillis!=null) {
                 setMaxRetryTimeoutMillis.invoke(restClientBuilder, retryTimeOut);
             }
