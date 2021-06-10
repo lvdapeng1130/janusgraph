@@ -748,6 +748,9 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                         AbstractVertexProperty vertexProperty=(AbstractVertexProperty)edge;
                         if (edge.isRemoved()) {
                             //deletions.addAll(entries);
+                            /**
+                             * 删除这个属性是需要查询出这个属性的所有的属性的属性
+                             */
                             List<StaticArrayEntry> mutilArrayEntry = edgeSerializer.writeMulitPropertyProperties(vertexProperty, type, tx);
                             deletions.addAll(mutilArrayEntry);
                         } else {
