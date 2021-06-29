@@ -15,6 +15,7 @@ import org.apache.tinkerpop.gremlin.structure.T;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.attribute.Text;
+import org.janusgraph.dsl.KydsjTraversalSource;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.junit.Test;
@@ -64,6 +65,10 @@ public class ManageDataTest extends AbstractKGgraphTest{
         assertTrue(tid.equals(newTid),"一致");
     }
 
+    /**
+     * @see org.janusgraph.graphdb.tinkerpop.JanusGraphBlueprintsTransaction
+     * @see org.janusgraph.graphdb.transaction.StandardJanusGraphTx
+     */
     @Test
     public void insertSimple(){
         try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
@@ -82,6 +87,20 @@ public class ManageDataTest extends AbstractKGgraphTest{
                 .property("qq_num","111111","dsr","程序导入")
                 .property(T.id, tid);
             Vertex qq = qqTraversal.next();
+            threadedTx.commit();
+        }
+    }
+
+    @Test
+    public void updateProperty(){
+        try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
+            .consistencyChecks(true)
+            .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
+            String tid="tid002";
+            String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
+            KydsjTraversalSource kg = threadedTx.traversal(KydsjTraversalSource.class);
+            kg.T(tid).properties("name").hasValue("我是测试qq111").drop();
+            kg.T(tid).property("name","我是新值").next();
             threadedTx.commit();
         }
     }
@@ -126,6 +145,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
         }
     }
 
+
     @Test
     public void uDsr(){
         try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
@@ -157,6 +177,41 @@ public class ManageDataTest extends AbstractKGgraphTest{
                     "geo", Geoshape.point(22.22, 113.1122));
             Vertex qq = qqTraversal.next();
             threadedTx.commit();
+        }
+    }
+
+    @Test
+    public void delete1(){
+        try {
+            if (g == null) {
+                return;
+            }
+            LOGGER.info("deleting elements");
+            List<Vertex> vertices = g.V("tid002_29_000").toList();
+            for(Vertex vertex:vertices){
+                Object id = vertex.id();
+                String label = vertex.label();
+                System.out.println("id->"+id);
+                System.out.println("label->"+label);
+                vertex.remove();
+            }
+            g.tx().commit();
+        } catch (Exception e) {
+            g.tx().rollback();
+        }
+    }
+
+    @Test
+    public void delete2(){
+        try {
+            if (g == null) {
+                return;
+            }
+            LOGGER.info("deleting elements");
+            g.T("tid002").drop().iterate();
+            g.tx().commit();
+        } catch (Exception e) {
+            g.tx().rollback();
         }
     }
 
