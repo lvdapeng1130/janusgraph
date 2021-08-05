@@ -9,32 +9,14 @@ import java.security.MessageDigest;
  *
  */
 public class MD5Util {
-	
-	static char hexdigits [] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 
-/**
- * 把byte[] 转换成16进制 字符串
- * @param tmp
- * @return
- */
-	private static String byteToHexString(byte[] tmp) {
-		 char str [] = new char[16*2];
-		 int k = 0;
-		 for (int i = 0; i < 16 ; i++) {
-			 byte byt0 = tmp[i];
-			 str[k++]= hexdigits[byt0 >>> 4 & 0xf];
-			 str[k++]= hexdigits[byt0  & 0xf];
-		}
-		return  new String(str);
-	}
-	
 	 /**
      * 对字符串md5加密(小写+字母)
      *
      * @param str 传入要加密的字符串
      * @return  MD5加密后的字符串
      */
-    public static String getMD5(String str) {
+    private static String getMD5(String str) {
         try {
             // 生成一个MD5加密计算摘要
             MessageDigest md = MessageDigest.getInstance("MD5");
@@ -52,53 +34,20 @@ public class MD5Util {
     public static String getMD5(Object object){
         String string = object.toString();
         String propertyValueMD5 = MD5Util.getMD5(string);
-        return propertyValueMD5;
+        String id = propertyValueMD5.substring(8, 24);
+        return id;
     }
-    
-    
-    /**
-     * 对字符串md5加密(大写+数字)
-     *
-     * @param s 传入要加密的字符串
-     * @return  MD5加密后的字符串
-     */
-    
-    public static String MD5(String s) {
-        char hexDigits[]={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};       
- 
-        try {
-            byte[] btInput = s.getBytes();
-            // 获得MD5摘要算法的 MessageDigest 对象
-            MessageDigest mdInst = MessageDigest.getInstance("MD5");
-            // 使用指定的字节更新摘要
-            mdInst.update(btInput);
-            // 获得密文
-            byte[] md = mdInst.digest();
-            // 把密文转换成十六进制的字符串形式
-            int j = md.length;
-            char str[] = new char[j * 2];
-            int k = 0;
-            for (int i = 0; i < j; i++) {
-                byte byte0 = md[i];
-				str[k++] = hexDigits[byte0 >>> 4 & 0xf];
-				str[k++] = hexDigits[byte0 & 0xf];
-			}
-			return new String(str);
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-	
-	public static void main(String[] args) {
-		
-//		System.out.println(getMD5ByFile(new File("C:/Users/yang.jie/Desktop/FMB本体编辑及本体表修改.docx")));
-//		System.out.println(getMD5ByFile(new File("C:/Users/yang.jie/Desktop/sql.txt")));
-//		System.out.println(getMD5ByFile(new File("C:/Users/yang.jie/Desktop/sql - 副本.txt")));
-		
-		System.out.println(byteToHexString("C:/workspaces/fmb-proc/trunk/target/classes/status".getBytes()));
-		System.out.println(byteToHexString("C:/workspaces/fmb-proc/trunk/target/classes/status/namespace".getBytes()));
 
-	
-	}
+    public static String getMD8(Object object){
+        String string = object.toString();
+        String propertyValueMD5 = MD5Util.getMD5(string);
+        String id = propertyValueMD5.substring(8, 16);
+        return id;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(getMD8(2222));
+        System.out.println(getMD8(2224));
+    }
+
 }

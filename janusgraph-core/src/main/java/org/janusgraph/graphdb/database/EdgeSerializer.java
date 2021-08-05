@@ -362,7 +362,7 @@ public class EdgeSerializer implements RelationReader {
         List<StaticArrayEntry> entries=new ArrayList<>();
         String typeId = type.longId();
         String relationId = vertexProperty.longId();
-        String propertyValueMD5 = MD5Util.getMD5(vertexProperty.value());
+        String propertyValueMD5 = MD5Util.getMD8(vertexProperty.value());
         while (properties.hasNext()){
             Property<Object> property=properties.next();
             String key = property.key();
@@ -399,7 +399,7 @@ public class EdgeSerializer implements RelationReader {
             String typeId = type.longId();
             //Multiplicity multiplicity = type.multiplicity();
             String relationId = vertexProperty.longId();
-            String propertyValueMD5 = MD5Util.getMD5(vertexProperty.value());
+            String propertyValueMD5 = MD5Util.getMD8(vertexProperty.value());
             Iterable<PropertyKey> propertyKeysDirect = vertexProperty.getPropertyKeysDirect();
             for (PropertyKey propertyPropertyKey : propertyKeysDirect) {
                 if (propertyPropertyKey.cardinality() == Cardinality.SET) {

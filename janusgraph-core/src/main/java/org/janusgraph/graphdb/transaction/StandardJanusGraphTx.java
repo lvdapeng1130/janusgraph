@@ -1044,7 +1044,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
                 PropertyKey propertyKey=(PropertyKey)relation.getType();
                 InternalVertex vertex = relation.getVertex(0);
                 StaticBuffer rowkey = this.getHBaseTableRowkey(vertex.longId());
-                String propertyValueMD5 = MD5Util.getMD5(propertyValue);
+                String propertyValueMD5 = MD5Util.getMD8(propertyValue);
                 StaticBuffer prefix = getStartStaticBuffer(propertyKey, propertyValueMD5);
                 StaticBuffer end = getEndStaticBuffer(propertyKey, propertyValueMD5);
                 KeySliceQuery keySliceQuery = new KeySliceQuery(rowkey, prefix, end);
