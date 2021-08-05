@@ -543,7 +543,7 @@ public class KGElasticSearchIndex implements IndexProvider {
             mapping.put("ignore_malformed",true);
         }
         Mapping map = Mapping.getMapping(information);
-        if (dataType != Geoshape.class && map!=Mapping.PREFIX_TREE) {
+        if (AttributeUtils.isString(dataType)&&dataType != Geoshape.class && map!=Mapping.PREFIX_TREE) {
             mapping.put("fields", ImmutableMap.of("keyword", ImmutableMap.of("type",
                 "keyword", "ignore_above", 100)));
         }
