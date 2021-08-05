@@ -26,7 +26,7 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
      */
     @Test
     public void selectByTid1(){
-        String tid="tid002";
+        String tid="JDYZB0ZJbeP";
         Vertex next = g.T(tid).next();
         Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
         while (qq_num_properties.hasNext()){
