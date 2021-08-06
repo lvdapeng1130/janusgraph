@@ -14,60 +14,23 @@
 
 package org.janusgraph.diskstorage.solr;
 
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_MAX_RESULT_SET_SIZE;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_NS;
-
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.UncheckedIOException;
-import java.lang.reflect.Constructor;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.util.AbstractMap.SimpleEntry;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.TimeZone;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpEntityEnclosingRequest;
-import org.apache.http.HttpException;
-import org.apache.http.HttpRequest;
 import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.client.HttpClient;
 import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.impl.auth.KerberosScheme;
-import org.apache.http.protocol.HttpContext;
 import org.apache.lucene.analysis.CachingTokenFilter;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.TermToBytesRefAttribute;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.impl.CloudSolrClient;
-import org.apache.solr.client.solrj.impl.HttpClientUtil;
-import org.apache.solr.client.solrj.impl.HttpSolrClient;
-import org.apache.solr.client.solrj.impl.Krb5HttpClientBuilder;
-import org.apache.solr.client.solrj.impl.LBHttpSolrClient;
-import org.apache.solr.client.solrj.impl.PreemptiveAuth;
-import org.apache.solr.client.solrj.impl.SolrHttpClientBuilder;
+import org.apache.solr.client.solrj.impl.*;
 import org.apache.solr.client.solrj.request.CollectionAdminRequest;
 import org.apache.solr.client.solrj.request.UpdateRequest;
 import org.apache.solr.client.solrj.response.CollectionAdminResponse;
@@ -75,11 +38,7 @@ import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.util.ClientUtils;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrInputDocument;
-import org.apache.solr.common.cloud.ClusterState;
-import org.apache.solr.common.cloud.DocCollection;
-import org.apache.solr.common.cloud.Replica;
-import org.apache.solr.common.cloud.Slice;
-import org.apache.solr.common.cloud.ZkStateReader;
+import org.apache.solr.common.cloud.*;
 import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.zookeeper.KeeperException;
@@ -91,39 +50,38 @@ import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.attribute.Text;
 import org.janusgraph.core.schema.Mapping;
 import org.janusgraph.core.schema.Parameter;
-import org.janusgraph.diskstorage.BackendException;
-import org.janusgraph.diskstorage.BaseTransaction;
-import org.janusgraph.diskstorage.BaseTransactionConfig;
-import org.janusgraph.diskstorage.BaseTransactionConfigurable;
-import org.janusgraph.diskstorage.PermanentBackendException;
-import org.janusgraph.diskstorage.TemporaryBackendException;
+import org.janusgraph.diskstorage.*;
 import org.janusgraph.diskstorage.configuration.ConfigNamespace;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
-import org.janusgraph.diskstorage.indexing.IndexEntry;
-import org.janusgraph.diskstorage.indexing.IndexFeatures;
-import org.janusgraph.diskstorage.indexing.IndexMutation;
-import org.janusgraph.diskstorage.indexing.IndexProvider;
-import org.janusgraph.diskstorage.indexing.IndexQuery;
-import org.janusgraph.diskstorage.indexing.KeyInformation;
-import org.janusgraph.diskstorage.indexing.RawQuery;
+import org.janusgraph.diskstorage.indexing.*;
 import org.janusgraph.diskstorage.solr.transform.GeoToWktConverter;
 import org.janusgraph.diskstorage.util.DefaultTransaction;
 import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
 import org.janusgraph.graphdb.database.serialize.AttributeUtils;
 import org.janusgraph.graphdb.internal.Order;
 import org.janusgraph.graphdb.query.JanusGraphPredicate;
-import org.janusgraph.graphdb.query.condition.And;
-import org.janusgraph.graphdb.query.condition.Condition;
-import org.janusgraph.graphdb.query.condition.Not;
-import org.janusgraph.graphdb.query.condition.Or;
-import org.janusgraph.graphdb.query.condition.PredicateCondition;
+import org.janusgraph.graphdb.query.condition.*;
 import org.janusgraph.graphdb.types.ParameterType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.UncheckedIOException;
+import java.lang.reflect.Constructor;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_MAX_RESULT_SET_SIZE;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_NS;
 
 /**
  * @author Jared Holmberg (jholmberg@bericotechnologies.com), Pavel Yaskevich (pavel@thinkaurelius.com)
@@ -364,6 +322,12 @@ public class SolrIndex implements IndexProvider {
         String field = keyFieldIds.get(collection);
         if (field==null) field = DEFAULT_ID_FIELD;
         return field;
+    }
+
+    @Override
+    public void register(String store, String key, KeyInformation information,
+                         BaseTransaction tx,Set<String> aliases) throws BackendException {
+        this.register(store,key,information,tx);
     }
 
     /**

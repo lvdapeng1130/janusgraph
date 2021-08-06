@@ -14,13 +14,14 @@
 
 package org.janusgraph.diskstorage.es;
 
+import org.janusgraph.diskstorage.es.mapping.IndexMapping;
+import org.janusgraph.diskstorage.es.script.ESScriptResponse;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
-import org.janusgraph.diskstorage.es.mapping.IndexMapping;
-import org.janusgraph.diskstorage.es.script.ESScriptResponse;
+import java.util.Set;
 
 public interface ElasticSearchClient extends Closeable {
 
@@ -63,5 +64,7 @@ public interface ElasticSearchClient extends Closeable {
     void deleteScroll(String scrollId) throws IOException;
 
     void addAlias(String alias, String index) throws IOException;
+
+    void addAliases(String index, Set<String> aliases) throws IOException;
 
 }

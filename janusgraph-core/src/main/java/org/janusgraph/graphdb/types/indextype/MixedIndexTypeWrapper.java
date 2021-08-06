@@ -15,10 +15,15 @@
 package org.janusgraph.graphdb.types.indextype;
 
 import com.google.common.collect.Iterables;
-import org.janusgraph.core.schema.Parameter;
-import org.janusgraph.core.PropertyKey;
-import org.janusgraph.graphdb.types.*;
 import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.janusgraph.core.PropertyKey;
+import org.janusgraph.core.schema.Parameter;
+import org.janusgraph.graphdb.types.MixedIndexType;
+import org.janusgraph.graphdb.types.ParameterIndexField;
+import org.janusgraph.graphdb.types.SchemaSource;
+import org.janusgraph.graphdb.types.TypeDefinitionCategory;
+
+import java.util.Set;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -42,6 +47,17 @@ public class MixedIndexTypeWrapper extends IndexTypeWrapper implements MixedInde
     }
 
     ParameterIndexField[] fields = null;
+
+    private Set<String> aliases;
+
+    public Set<String> getAliases() {
+        return aliases;
+    }
+
+    @Override
+    public void setAliases(Set<String> aliases) {
+        this.aliases = aliases;
+    }
 
     @Override
     public ParameterIndexField[] getFieldKeys() {

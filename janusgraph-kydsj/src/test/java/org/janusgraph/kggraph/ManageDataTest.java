@@ -47,7 +47,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
     public void insertTidIdData(){
         String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId("tid000001");
         System.out.println(graphId);
-        createElements(false,10,1);
+        createElements(false,10,1000000);
     }
 
     @Test

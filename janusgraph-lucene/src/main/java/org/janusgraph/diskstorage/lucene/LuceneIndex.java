@@ -204,6 +204,12 @@ public class LuceneIndex implements IndexProvider {
     }
 
     @Override
+    public void register(String store, String key, KeyInformation information,
+                         BaseTransaction tx,Set<String> aliases) throws BackendException {
+        this.register(store,key,information,tx);
+    }
+
+    @Override
     public void register(String store, String key, KeyInformation information, BaseTransaction tx) throws BackendException {
         final Class<?> dataType = information.getDataType();
         final Mapping map = Mapping.getMapping(information);

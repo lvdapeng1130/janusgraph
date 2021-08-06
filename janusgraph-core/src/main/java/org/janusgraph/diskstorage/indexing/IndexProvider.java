@@ -23,6 +23,7 @@ import org.janusgraph.diskstorage.BaseTransactionConfigurable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -58,6 +59,22 @@ public interface IndexProvider extends IndexInformation {
      * @throws org.janusgraph.diskstorage.BackendException
      */
     void register(String store, String key, KeyInformation information, BaseTransaction tx) throws BackendException;
+
+    /**
+     * This method registers a new key for the specified index store with the given data type. This allows the IndexProvider
+     * to prepare the index if necessary.
+     *
+     * It is expected that this method is first called with each new key to inform the index of the expected type before the
+     * key is used in any documents.
+     *
+     * @param store Index store
+     * @param key New key to register
+     * @param information Information on the key to register
+     * @param tx enclosing transaction
+     * @param aliases es索引的别名
+     * @throws org.janusgraph.diskstorage.BackendException
+     */
+    void register(String store, String key, KeyInformation information, BaseTransaction tx, Set<String> aliases) throws BackendException;
 
     /**
      * Mutates the index (adds and removes fields or entire documents)

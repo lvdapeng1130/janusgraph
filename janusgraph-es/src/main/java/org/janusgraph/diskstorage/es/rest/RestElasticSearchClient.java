@@ -16,18 +16,15 @@ package org.janusgraph.diskstorage.es.rest;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
+import com.google.common.collect.Lists;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.tinkerpop.shaded.jackson.annotation.JsonIgnoreProperties;
 import org.apache.tinkerpop.shaded.jackson.core.JsonParseException;
 import org.apache.tinkerpop.shaded.jackson.core.type.TypeReference;
-import org.apache.tinkerpop.shaded.jackson.databind.JsonMappingException;
-import org.apache.tinkerpop.shaded.jackson.databind.ObjectMapper;
-import org.apache.tinkerpop.shaded.jackson.databind.ObjectReader;
-import org.apache.tinkerpop.shaded.jackson.databind.ObjectWriter;
-import org.apache.tinkerpop.shaded.jackson.databind.SerializationFeature;
+import org.apache.tinkerpop.shaded.jackson.databind.*;
 import org.apache.tinkerpop.shaded.jackson.databind.module.SimpleModule;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
@@ -48,10 +45,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -275,6 +269,23 @@ public class RestElasticSearchClient implements ElasticSearchClient {
     public void addAlias(String alias, String index) throws IOException {
         final Map actionAlias = ImmutableMap.of("actions", ImmutableList.of(ImmutableMap.of("add", ImmutableMap.of("index", index, "alias", alias))));
         performRequest(REQUEST_TYPE_POST, REQUEST_SEPARATOR + "_aliases", mapWriter.writeValueAsBytes(actionAlias));
+    }
+
+    @Override
+    public void addAliases(String index, Set<String> aliases) throws IOException {
+        List<ImmutableMap<String, ImmutableMap<String, String>>> aliaseList = Lists.newArrayList();
+        if(aliases!=null) {
+            for (String alias : aliases) {
+                if (StringUtils.isNotBlank(alias)) {
+                    ImmutableMap<String, ImmutableMap<String, String>> of = ImmutableMap.of("add", ImmutableMap.of("index", index, "alias", alias));
+                    aliaseList.add(of);
+                }
+            }
+        }
+        if(aliaseList.size()>0) {
+            final Map actionAlias = ImmutableMap.of("actions", aliaseList);
+            performRequest(REQUEST_TYPE_POST, REQUEST_SEPARATOR + "_aliases", mapWriter.writeValueAsBytes(actionAlias));
+        }
     }
 
     @Override

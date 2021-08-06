@@ -16,6 +16,7 @@ package org.janusgraph.graphdb.database.management;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Edge;
@@ -820,11 +821,16 @@ public class ManagementSystem implements JanusGraphManagement {
         }
 
         @Override
-        public JanusGraphIndex buildKGMixedIndex(String backingIndex) {
+        public JanusGraphIndex buildKGMixedIndex(String backingIndex,String ... aliases) {
             Preconditions.checkArgument(StringUtils.isNotBlank(backingIndex), "Need to specify backing index name");
             Preconditions.checkArgument(!unique, "An external index cannot be unique");
 
             JanusGraphIndex index = createMixedIndex(indexName, elementCategory, constraint, backingIndex);
+            IndexType indexType = ((JanusGraphIndexWrapper) index).getBaseIndex();
+            MixedIndexType mixedIndexType=(MixedIndexType) indexType;
+            if(mixedIndexType!=null&&aliases!=null){
+                mixedIndexType.setAliases(Sets.newHashSet(aliases));
+            }
             for (Map.Entry<PropertyKey, Parameter[]> entry : keys.entrySet()) {
                 addKGIndexKey(index, entry.getKey(), entry.getValue());
             }

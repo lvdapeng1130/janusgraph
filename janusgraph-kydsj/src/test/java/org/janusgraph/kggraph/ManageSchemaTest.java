@@ -110,7 +110,7 @@ public class ManageSchemaTest extends AbstractKGgraphTest{
             .addKey(management.getPropertyKey("age1"))
             .addKey(management.getPropertyKey("tid"))
             .indexOnly(management.getVertexLabel("object_qq"))
-            .buildKGMixedIndex(mixedIndexConfigName);
+            .buildKGMixedIndex(mixedIndexConfigName,"fmb_000xxx");
         management.buildIndex("object_qqqun", Vertex.class)
             .addKey(management.getPropertyKey("name"))
             .addKey(management.getPropertyKey("time"))
@@ -118,7 +118,7 @@ public class ManageSchemaTest extends AbstractKGgraphTest{
             .addKey(management.getPropertyKey("text"))
             .addKey(management.getPropertyKey("tid"))
             .indexOnly(management.getVertexLabel("object_qqqun"))
-            .buildKGMixedIndex(mixedIndexConfigName);
+            .buildKGMixedIndex(mixedIndexConfigName,"wqq");
 
             //关系的混合索引
         management.buildIndex("link_simple_mix", Edge.class).addKey(management.getPropertyKey("linktid"))

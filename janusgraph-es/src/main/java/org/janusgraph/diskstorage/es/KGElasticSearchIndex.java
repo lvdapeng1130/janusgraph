@@ -329,7 +329,7 @@ public class KGElasticSearchIndex implements IndexProvider {
      * @param index index name
      * @throws IOException if the index status could not be checked or index could not be created
      */
-    private void checkForOrCreateIndex(String index) throws IOException {
+    private void checkForOrCreateIndex(String index,Set<String> aliases) throws IOException {
         Objects.requireNonNull(client);
         Objects.requireNonNull(index);
 
@@ -338,7 +338,12 @@ public class KGElasticSearchIndex implements IndexProvider {
             if(!client.indexExists(index)) {
                 client.createIndex(index, indexSetting);
                 client.updateIndexSettings(index, MAX_RESULT_WINDOW);
-                client.addAlias(indexName, index);
+                Set<String> aliasSet = Sets.newHashSet();
+                if(aliases!=null){
+                    aliasSet.addAll(aliases);
+                }
+                aliasSet.add(indexName);
+                client.addAliases(index,aliasSet);
                 /*try {
                     log.debug("Sleeping {} ms after {} index creation returned from actionGet()", createSleep, index);
                     Thread.sleep(createSleep);
@@ -348,7 +353,12 @@ public class KGElasticSearchIndex implements IndexProvider {
             }
         }else{
             Preconditions.checkState(client.indexExists(index), "Could not create index: %s",index);
-            client.addAlias(indexName, index);
+            Set<String> aliasSet = Sets.newHashSet();
+            if(aliases!=null){
+                aliasSet.addAll(aliases);
+            }
+            aliasSet.add(indexName);
+            client.addAliases(index,aliasSet);
         }
     }
 
@@ -401,12 +411,12 @@ public class KGElasticSearchIndex implements IndexProvider {
 
     @Override
     public void register(String store, String key, KeyInformation information,
-                         BaseTransaction tx) throws BackendException {
+                         BaseTransaction tx,Set<String> aliases) throws BackendException {
         final Class<?> dataType = information.getDataType();
         final Mapping map = Mapping.getMapping(information);
         Preconditions.checkArgument(map==Mapping.DEFAULT || AttributeUtils.isString(dataType) ||
                 (map==Mapping.PREFIX_TREE && AttributeUtils.isGeo(dataType)),
-                "Specified illegal mapping [%s] for data type [%s]",map,dataType);
+            "Specified illegal mapping [%s] for data type [%s]",map,dataType);
         final String indexStoreName = getIndexStoreName(store);
         if (useExternalMappings) {
             try {
@@ -424,12 +434,18 @@ public class KGElasticSearchIndex implements IndexProvider {
             }
         } else {
             try {
-                checkForOrCreateIndex(indexStoreName);
+                checkForOrCreateIndex(indexStoreName,aliases);
             } catch (final IOException e) {
                 throw new PermanentBackendException(e);
             }
             this.pushMapping(store, key, information);
         }
+    }
+
+    @Override
+    public void register(String store, String key, KeyInformation information,
+                         BaseTransaction tx) throws BackendException {
+        this.register(store,key,information,tx,null);
     }
 
     /**

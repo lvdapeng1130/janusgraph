@@ -239,9 +239,10 @@ public interface JanusGraphManagement extends JanusGraphConfiguration, SchemaMan
          * the name under which that index is configured in the graph configuration)
          *
          * @param backingIndex the name of the mixed index
+         * @param aliases es索引别名
          * @return the created mixed {@link JanusGraphIndex}
          */
-        JanusGraphIndex buildKGMixedIndex(String backingIndex);
+        JanusGraphIndex buildKGMixedIndex(String backingIndex,String ... aliases);
 
     }
 

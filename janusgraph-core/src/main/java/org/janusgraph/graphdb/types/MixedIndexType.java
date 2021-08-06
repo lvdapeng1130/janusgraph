@@ -16,6 +16,8 @@ package org.janusgraph.graphdb.types;
 
 import org.janusgraph.core.PropertyKey;
 
+import java.util.Set;
+
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
  */
@@ -26,5 +28,17 @@ public interface MixedIndexType extends IndexType {
     ParameterIndexField getField(PropertyKey key);
 
     String getStoreName();
+
+    /**
+     * 设置es索引别名
+     * @param aliases
+     */
+    void setAliases(Set<String> aliases);
+
+    /**
+     * 获取es索引别名
+     * @return
+     */
+    Set<String> getAliases();
 
 }

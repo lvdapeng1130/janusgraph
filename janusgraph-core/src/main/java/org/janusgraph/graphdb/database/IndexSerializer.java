@@ -105,7 +105,7 @@ public class IndexSerializer {
     }
 
     public static void register(final MixedIndexType index, final PropertyKey key, final BackendTransaction tx) throws BackendException {
-        tx.getIndexTransaction(index.getBackingIndexName()).register(index.getStoreName(), key2Field(index,key), getKeyInformation(index.getField(key)));
+        tx.getIndexTransaction(index.getBackingIndexName()).register(index.getStoreName(), key2Field(index,key), getKeyInformation(index.getField(key)),index.getAliases());
     }
 
     public boolean supports(final MixedIndexType index, final ParameterIndexField field) {

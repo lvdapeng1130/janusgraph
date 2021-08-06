@@ -19,8 +19,10 @@ import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.indexing.*;
 import org.janusgraph.graphdb.query.JanusGraphPredicate;
+
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_BACKEND;
@@ -49,8 +51,14 @@ public class TestMockIndexProvider implements IndexProvider {
     }
 
     @Override
+    public void register(String store, String key, KeyInformation information,
+                         BaseTransaction tx, Set<String> aliases) throws BackendException {
+        index.register(store,key,information,tx,aliases);
+    }
+
+    @Override
     public void register(String store, String key, KeyInformation information, BaseTransaction tx) throws BackendException {
-        index.register(store,key,information,tx);
+        this.register(store,key,information,tx,null);
     }
 
     @Override
