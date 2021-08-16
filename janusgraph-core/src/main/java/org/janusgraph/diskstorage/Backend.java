@@ -284,9 +284,9 @@ public class Backend implements LockerProvider, AutoCloseable {
 
             KeyColumnValueStore edgeStoreRaw = storeManagerLocking.openDatabase(EDGESTORE_NAME);
             KeyColumnValueStore indexStoreRaw = storeManagerLocking.openDatabase(INDEXSTORE_NAME);
-            KeyColumnValueStore attachmentStoreRaw = storeManagerLocking.openDatabase(ATTACHMENT_FAMILY_NAME);
-            KeyColumnValueStore noteStoreRaw = storeManagerLocking.openDatabase(NOTE_FAMILY_NAME);
-            KeyColumnValueStore propertyPropertiesStoreRaw = storeManagerLocking.openDatabase(PROPERTY_PROPERTIES);
+            KeyColumnValueStore attachmentStoreRaw = storeManager.openDatabase(ATTACHMENT_FAMILY_NAME);
+            KeyColumnValueStore noteStoreRaw = storeManager.openDatabase(NOTE_FAMILY_NAME);
+            KeyColumnValueStore propertyPropertiesStoreRaw = storeManager.openDatabase(PROPERTY_PROPERTIES);
             attachmentStore = new NoKCVSCache(attachmentStoreRaw);
             noteStore = new NoKCVSCache(noteStoreRaw);
             propertyPopertiesStore = new NoKCVSCache(propertyPropertiesStoreRaw);

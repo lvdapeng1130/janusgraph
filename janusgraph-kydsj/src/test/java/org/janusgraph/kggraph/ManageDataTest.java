@@ -11,6 +11,7 @@ import lombok.Builder;
 import lombok.Data;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
+import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.T;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.attribute.Geoshape;
@@ -18,6 +19,8 @@ import org.janusgraph.core.attribute.Text;
 import org.janusgraph.dsl.KydsjTraversalSource;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
+import org.janusgraph.util.system.DefaultKeywordField;
+import org.janusgraph.util.system.DefaultTextField;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +50,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
     public void insertTidIdData(){
         String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId("tid000001");
         System.out.println(graphId);
-        createElements(false,10,1000000);
+        createElements(false,10,100);
     }
 
     @Test
@@ -74,19 +77,65 @@ public class ManageDataTest extends AbstractKGgraphTest{
         try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
             .consistencyChecks(true)
             .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
-            String tid="tid002";
+            String tid="tid003";
             String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
             GraphTraversal<Vertex, Vertex> qqTraversal = threadedTx.traversal()
                 .addV("object_qq")
                 .property("name", "我是测试qq",
                     "startDate", new Date(),
                     "endDate", new Date(),
-                    "dsr", "程序导入12",
+                    "dsr", "程序导入1222",
                     "geo", Geoshape.point(22.22, 113.1122))
-                .property("tid",tid)
+                .property(DefaultKeywordField.TID.getName(),tid)
+                .property(DefaultTextField.TITLE.getName(),"我是测试标签")
                 .property("qq_num","111111","dsr","程序导入")
                 .property(T.id, tid);
             Vertex qq = qqTraversal.next();
+            threadedTx.commit();
+        }
+    }
+
+    @Test
+    public void insertOtherSimple(){
+        try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
+            .consistencyChecks(true)
+            .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
+            String tid="tid004";
+            String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
+            GraphTraversal<Vertex, Vertex> qqTraversal = threadedTx.traversal()
+                .addV("object_qq")
+                .property("name", "我是测试22222",
+                    "startDate", new Date(),
+                    "endDate", new Date(),
+                    "dsr", "程序导入333",
+                    "geo", Geoshape.point(22.22, 113.1122))
+                .property(DefaultKeywordField.TID.getName(),tid)
+                .property(DefaultTextField.TITLE.getName(),"我是测试标签2")
+                .property("qq_num","2222","dsr","程序导入2")
+                .property(T.id, tid);
+            Vertex qq = qqTraversal.next();
+            threadedTx.commit();
+        }
+    }
+
+    @Test
+    public void insertEdge(){
+        try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
+            .consistencyChecks(true)
+            .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
+            String tid1="tid004";
+            String graphId1 = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid1);
+            String tid2="tid003";
+            String graphId2 = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid2);
+            String uuid = "link_tid_1";
+            Edge next = threadedTx.traversal().V(graphId1).as("a").V(graphId2)
+                .addE("link_simple")
+                .property("link_tid", uuid)
+                .property("left_tid", "left_tid1")
+                .property("right_tid", "right_tid1")
+                .property("dsr", RandomStringUtils.randomAlphabetic(4))
+                .to("a").next();
+            Object id = next.id();
             threadedTx.commit();
         }
     }
@@ -328,6 +377,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
                             "endDate", new Date(),
                             "dsr", "程序导入",
                             "geo", Geoshape.point(22.22, 113.1122))
+                        .property("dsr", RandomStringUtils.randomAlphabetic(5))
                         .property("age1", qqData.getQq_age(),
                             "startDate", new Date(),
                             "endDate", new Date(),
@@ -354,6 +404,7 @@ public class ManageDataTest extends AbstractKGgraphTest{
                             "endDate", new Date(),
                             "dsr", "程序导入",
                             "geo", Geoshape.point(22.22, 113.1122))
+                        .property("dsr", RandomStringUtils.randomAlphabetic(5))
                         .property("text", qqData.getText(),
                             "startDate", new Date(),
                             "endDate", new Date(),
@@ -364,7 +415,13 @@ public class ManageDataTest extends AbstractKGgraphTest{
                     }
                     Vertex qqqun = qqqunTraversal.next();;
                     String uuid = UUID.randomUUID().toString();
-                    threadedTx.traversal().V(qq.id()).as("a").V(qqqun.id()).addE("link_simple").property("linktid", uuid).to("a").next();
+                    threadedTx.traversal().V(qq.id()).as("a").V(qqqun.id())
+                        .addE("link_simple")
+                        .property("link_tid", uuid)
+                        .property("left_tid", "left_tid1")
+                        .property("right_tid", "right_tid1")
+                        .property("dsr", RandomStringUtils.randomAlphabetic(4))
+                        .to("a").next();
                 }
                 threadedTx.commit();
                 started.stop();

@@ -1,12 +1,15 @@
 package org.janusgraph.kggraph;
 
 import com.google.common.base.Stopwatch;
+import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.dsl.__;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.util.encoding.LongEncoding;
+import org.janusgraph.util.system.DefaultKeywordField;
+import org.janusgraph.util.system.DefaultTextField;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,6 +88,73 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
         Map<Object, Object> label2 = g.T("686", "354", "200", "202", "232", "890", "12", "233", "190", "122").out().group().by("age1").by(__.count()).next();
         started.stop();
         LOGGER.info("条数："+label.size()+"用时："+started.elapsed(TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    public void selectLinkId(){
+        Optional<Edge> optionalEdge = g.E("5120016_28-tid003_28_000-416010101-tid004_27_000").tryNext();
+        if(optionalEdge.isPresent()){
+            Edge edge = optionalEdge.get();
+            Iterator<Property<Object>> edgeProperties = edge.properties();
+            while (edgeProperties.hasNext()){
+                Property<Object> edgeProperty = edgeProperties.next();
+                if(edgeProperty.isPresent()){
+                    Object value = edgeProperty.value();
+                    System.out.println(edgeProperty.key()+"->"+value);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void selectTid() {
+        Optional<Vertex> tid003 = g.V().has(DefaultKeywordField.TID.getName(), "tid003").tryNext();
+        if(tid003.isPresent()){
+            Vertex next = tid003.get();
+            Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
+            while (qq_num_properties.hasNext()){
+                VertexProperty<Object> vertexProperty = qq_num_properties.next();
+                if(vertexProperty.isPresent()){
+                    Object value = vertexProperty.value();
+                    System.out.println(vertexProperty.key()+"->"+value);
+                    Iterator<Property<Object>> properties = vertexProperty.properties();
+                    while (properties.hasNext()){
+                        Property<Object> property = properties.next();
+                        if(property.isPresent()){
+                            Object value1 = property.value();
+                            System.out.println(property.key()+"<->"+value1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * mixed索引必须指定label才能使用索引
+     */
+    @Test
+    public void selectObjLabel() {
+        Optional<Vertex> tid003 = g.V().hasLabel("object_qq").has(DefaultTextField.TITLE.getName(),"我是测试标签").tryNext();
+        if(tid003.isPresent()){
+            Vertex next = tid003.get();
+            Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
+            while (qq_num_properties.hasNext()){
+                VertexProperty<Object> vertexProperty = qq_num_properties.next();
+                if(vertexProperty.isPresent()){
+                    Object value = vertexProperty.value();
+                    System.out.println(vertexProperty.key()+"->"+value);
+                    Iterator<Property<Object>> properties = vertexProperty.properties();
+                    while (properties.hasNext()){
+                        Property<Object> property = properties.next();
+                        if(property.isPresent()){
+                            Object value1 = property.value();
+                            System.out.println(property.key()+"<->"+value1);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Test

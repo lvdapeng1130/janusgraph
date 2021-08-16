@@ -374,10 +374,10 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
                 .put(SYSTEM_TX_LOG_NAME, "l")
                 .put(ATTACHMENT_FAMILY_NAME, "u")
                 .put(NOTE_FAMILY_NAME, "v")
-                .put(ATTACHMENT_FAMILY_NAME + LOCK_STORE_SUFFIX, "w")
-                .put(NOTE_FAMILY_NAME + LOCK_STORE_SUFFIX, "x")
                 .put(PROPERTY_PROPERTIES,"y")
-                .put(PROPERTY_PROPERTIES+LOCK_STORE_SUFFIX,"z")
+                //.put(ATTACHMENT_FAMILY_NAME + LOCK_STORE_SUFFIX, "w")
+                //.put(NOTE_FAMILY_NAME + LOCK_STORE_SUFFIX, "x")
+                //.put(PROPERTY_PROPERTIES+LOCK_STORE_SUFFIX,"z")
                 .build();
     }
 

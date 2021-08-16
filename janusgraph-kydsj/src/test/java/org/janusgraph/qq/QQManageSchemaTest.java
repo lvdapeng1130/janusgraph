@@ -102,7 +102,7 @@ public class QQManageSchemaTest extends AbstractKGgraphTest {
         management.makePropertyKey("linktid").dataType(String.class).cardinality(Cardinality.SINGLE).make();
         management.makePropertyKey("linkrole").dataType(String.class).cardinality(Cardinality.SINGLE).make();
         management.makePropertyKey("linktext").dataType(String.class).cardinality(Cardinality.SINGLE).make();
-        management.makePropertyKey("objlabel").dataType(String.class).cardinality(Cardinality.SINGLE).make();
+        management.makePropertyKey("title").dataType(String.class).cardinality(Cardinality.SINGLE).make();
         management.makePropertyKey("doctext").dataType(String.class).cardinality(Cardinality.SINGLE).make();
 
         management.makePropertyKey("startDate").dataType(Date.class).cardinality(Cardinality.SINGLE).make();
@@ -121,7 +121,7 @@ public class QQManageSchemaTest extends AbstractKGgraphTest {
         //对象的混合索引
         management.buildIndex("eidentity_qqqun", Vertex.class)
             .addKey(management.getPropertyKey("tid"))
-            .addKey(management.getPropertyKey("objlabel"))
+            .addKey(management.getPropertyKey("title"))
             .addKey(management.getPropertyKey("doctext"))
             .addKey(management.getPropertyKey("startDate"))
             .addKey(management.getPropertyKey("endDate"))
@@ -138,7 +138,7 @@ public class QQManageSchemaTest extends AbstractKGgraphTest {
             .buildKGMixedIndex(mixedIndexConfigName);
         management.buildIndex("eidentity_qq", Vertex.class)
             .addKey(management.getPropertyKey("tid"))
-            .addKey(management.getPropertyKey("objlabel"))
+            .addKey(management.getPropertyKey("title"))
             .addKey(management.getPropertyKey("doctext"))
             .addKey(management.getPropertyKey("startDate"))
             .addKey(management.getPropertyKey("endDate"))
