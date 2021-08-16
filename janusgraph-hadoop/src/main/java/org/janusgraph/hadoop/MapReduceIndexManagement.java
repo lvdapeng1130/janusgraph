@@ -17,13 +17,17 @@ package org.janusgraph.hadoop;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.janusgraph.core.JanusGraph;
 import org.janusgraph.core.RelationType;
+import org.janusgraph.core.schema.Index;
+import org.janusgraph.core.schema.JanusGraphIndex;
+import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.core.schema.RelationTypeIndex;
 import org.janusgraph.core.schema.SchemaAction;
-import org.janusgraph.core.schema.JanusGraphIndex;
-import org.janusgraph.core.schema.Index;
-import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.diskstorage.Backend;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.configuration.ConfigElement;
@@ -33,14 +37,11 @@ import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.olap.job.IndexRemoveJob;
 import org.janusgraph.graphdb.olap.job.IndexRepairJob;
 import org.janusgraph.graphdb.olap.job.IndexUpdateJob;
-import org.janusgraph.hadoop.config.ModifiableHadoopConfiguration;
 import org.janusgraph.hadoop.config.JanusGraphHadoopConfiguration;
+import org.janusgraph.hadoop.config.ModifiableHadoopConfiguration;
 import org.janusgraph.hadoop.scan.HadoopScanMapper;
 import org.janusgraph.hadoop.scan.HadoopScanRunner;
 import org.janusgraph.hadoop.scan.HadoopVertexScanMapper;
-import org.apache.hadoop.mapreduce.InputFormat;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,17 +68,22 @@ public class MapReduceIndexManagement {
         this.graph = (StandardJanusGraph)g;
     }
 
+    public JanusGraphManagement.IndexJobFuture updateIndex(Index index, SchemaAction updateAction) throws BackendException {
+        return updateIndex(index, updateAction, new Configuration());
+    }
+
     /**
      * Updates the provided index according to the given {@link SchemaAction}.
      * Only {@link SchemaAction#REINDEX} and {@link SchemaAction#REMOVE_INDEX} are supported.
      *
      * @param index the index to process
      * @param updateAction either {@code REINDEX} or {@code REMOVE_INDEX}
+     * @param hadoopConf
      * @return a future that returns immediately;
      *         this method blocks until the Hadoop MapReduce job completes
      */
     // TODO make this future actually async and update javadoc @return accordingly
-    public JanusGraphManagement.IndexJobFuture updateIndex(Index index, SchemaAction updateAction)
+    public JanusGraphManagement.IndexJobFuture updateIndex(Index index, SchemaAction updateAction, Configuration hadoopConf)
             throws BackendException {
 
         Preconditions.checkNotNull(index, "Index parameter must not be null", index);
@@ -91,7 +97,6 @@ public class MapReduceIndexManagement {
                 "Index %s has class %s: must be a %s or %s (or subtype)",
                 index.getClass(), RelationTypeIndex.class.getSimpleName(), JanusGraphIndex.class.getSimpleName());
 
-        org.apache.hadoop.conf.Configuration hadoopConf = new org.apache.hadoop.conf.Configuration();
         ModifiableHadoopConfiguration janusGraphMapReduceConfiguration =
                 ModifiableHadoopConfiguration.of(JanusGraphHadoopConfiguration.MAPRED_NS, hadoopConf);
 
@@ -151,7 +156,7 @@ public class MapReduceIndexManagement {
         janusGraphMapReduceConfiguration.set(JanusGraphHadoopConfiguration.SCAN_JOB_CONFIG_ROOT,
                 GraphDatabaseConfiguration.class.getName() + "#JOB_NS");
         // Copy the StandardJanusGraph configuration under JanusGraphHadoopConfiguration.GRAPH_CONFIG_KEYS
-        org.apache.commons.configuration.Configuration localConfiguration = graph.getConfiguration().getConfigurationAtOpen();
+        org.apache.commons.configuration2.Configuration localConfiguration = graph.getConfiguration().getConfigurationAtOpen();
         localConfiguration.clearProperty(Graph.GRAPH);
         copyInputKeys(hadoopConf, localConfiguration);
 
@@ -164,7 +169,7 @@ public class MapReduceIndexManagement {
         }
     }
 
-    private static void copyInputKeys(org.apache.hadoop.conf.Configuration hadoopConf, org.apache.commons.configuration.Configuration source) {
+    private static void copyInputKeys(org.apache.hadoop.conf.Configuration hadoopConf, org.apache.commons.configuration2.Configuration source) {
         // Copy IndexUpdateJob settings into the hadoop-backed cfg
         Iterator<String> keyIter = source.getKeys();
         while (keyIter.hasNext()) {

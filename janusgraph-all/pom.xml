@@ -20,9 +20,17 @@
 
     <properties>
         <top.level.basedir>${basedir}/..</top.level.basedir>
+        <default-test.phase>none</default-test.phase>
+        <default-testResources.phase>none</default-testResources.phase>
+        <default-testCompile.phase>none</default-testCompile.phase>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.janusgraph</groupId>
+            <artifactId>janusgraph-grpc</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-driver</artifactId>
@@ -67,6 +75,12 @@
             <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-hadoop</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.code.gson</groupId>
+                    <artifactId>gson</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.janusgraph</groupId>
@@ -116,7 +130,7 @@
             <artifactId>jackson-jaxrs</artifactId>
             <version>${jackson1.version}</version>
         </dependency>
- 
+
         <!-- Jackson 2.x -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -156,7 +170,7 @@
                 <executions>
                     <execution>
                         <id>default-testResources</id>
-                        <phase>none</phase>
+                        <phase>${default-testResources.phase}</phase>
                     </execution>
                 </executions>
             </plugin>
@@ -165,7 +179,19 @@
                 <executions>
                     <execution>
                         <id>default-test</id>
-                        <phase>none</phase>
+                        <phase>${default-test.phase}</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <phase>${default-testCompile.phase}</phase>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
@@ -174,6 +200,65 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>janusgraph-cache</id>
+	        <properties>
+                <default-test.phase>test</default-test.phase>
+                <default-testCompile.phase>test-compile</default-testCompile.phase>
+                <default-testResources.phase>process-test-resources</default-testResources.phase>
+            </properties>
+            <dependencies>
+                <!-- Logging backends. -->
+                <!-- Enforce a classpath ordering constraint to ensure log4j is used for logging. -->
+                <dependency>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                    <optional>true</optional>
+                </dependency>
+                <dependency>
+                    <groupId>ch.qos.logback</groupId>
+                    <artifactId>logback-classic</artifactId>
+                </dependency>
+                <!-- End logging backends. -->
+                <dependency>
+                    <groupId>org.janusgraph</groupId>
+                    <artifactId>janusgraph-backend-testutils</artifactId>
+                    <version>${project.version}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.janusgraph</groupId>
+                    <artifactId>janusgraph-inmemory</artifactId>
+                    <version>${project.version}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-sources-for-jacoco</id>
+                                <phase>process-resources</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/jacoco-sources</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>../janusgraph-core/src/main/java/</directory>
+                                            <filtering>false</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>hbase1</id>
             <dependencies>

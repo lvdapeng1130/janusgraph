@@ -44,8 +44,6 @@ public class StandardEdge extends AbstractEdge implements StandardRelation, Reas
         this.lifecycle = lifecycle;
     }
 
-    //############## SAME CODE AS StandardProperty #############################
-
     @Override
     public String getPreviousID() {
         return previousID;
@@ -71,7 +69,7 @@ public class StandardEdge extends AbstractEdge implements StandardRelation, Reas
             } else {
                 synchronized (this) {
                     if (properties == EMPTY_PROPERTIES) {
-                        properties = Collections.synchronizedMap(new HashMap<PropertyKey, Object>(5));
+                        properties = Collections.synchronizedMap(new HashMap<>(5));
                     }
                 }
             }

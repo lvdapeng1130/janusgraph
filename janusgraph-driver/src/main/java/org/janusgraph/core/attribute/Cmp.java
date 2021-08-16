@@ -17,7 +17,8 @@ package org.janusgraph.core.attribute;
 import com.google.common.base.Preconditions;
 import org.janusgraph.graphdb.database.serialize.AttributeUtils;
 import org.janusgraph.graphdb.query.JanusGraphPredicate;
-import org.apache.commons.lang.ArrayUtils;
+
+import java.util.Objects;
 
 /**
  * Basic comparison relations for comparable (i.e. linearly ordered) objects.
@@ -44,7 +45,7 @@ public enum Cmp implements JanusGraphPredicate {
             if (condition==null) {
                 return value==null;
             } else {
-                return condition.equals(value) || (condition.getClass().isArray() && ArrayUtils.isEquals(condition, value));
+                return condition.equals(value) || (condition.getClass().isArray() && Objects.deepEquals(condition, value));
             }
         }
 
@@ -73,11 +74,10 @@ public enum Cmp implements JanusGraphPredicate {
 
         @Override
         public boolean test(Object value, Object condition) {
-            if (condition==null) {
-                return value!=null;
-            } else {
-                return !condition.equals(value);
-            }
+            // To align with TinkerPop behaviour, if an element does not have property p, then has(p, neq(anything))
+            // should always evaluate to false. Note that JanusGraph does not support null value, so the "value == null"
+            // here implies the element does not have such property.
+            return value != null && !value.equals(condition);
         }
 
         @Override

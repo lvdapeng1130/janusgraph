@@ -17,7 +17,6 @@ package org.janusgraph.diskstorage.solr;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.solr.client.solrj.embedded.JettyConfig;
 import org.apache.solr.cloud.ConfigurableMiniSolrCloudCluster;
@@ -40,9 +39,6 @@ public class SolrRunner {
 
     protected static final int NUM_SERVERS = 1;
     protected static final String[] COLLECTIONS = readCollections();
-
-    protected static final String[] KEY_FIELDS = new String[0];
-
 
     private static final String SECURITY_JSON = "{\"authentication\": {\"class\": \"org.apache.solr.security.KerberosPlugin\"}}";
 

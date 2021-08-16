@@ -14,14 +14,13 @@
 
 package org.janusgraph.diskstorage.solr;
 
-import java.io.File;
-import java.util.Properties;
-
+import com.google.common.base.Joiner;
 import org.apache.kerby.kerberos.kerb.KrbException;
 import org.apache.kerby.kerberos.kerb.server.SimpleKdcServer;
 import org.apache.kerby.util.NetworkUtil;
 
-import com.google.common.base.Joiner;
+import java.io.File;
+import java.util.Properties;
 
 public class MiniKDC {
 
@@ -75,8 +74,8 @@ public class MiniKDC {
         setSystemProperties();
     }
 
-    public void setUpMiniKdc() throws Exception {
-        setUpKdcServer();
+    public void start(String listenAddress) throws Exception {
+        setUpKdcServer(listenAddress);
         setUpPrincipals();
     }
 
@@ -108,10 +107,10 @@ public class MiniKDC {
         unsetSystemProperties();
     }
 
-    private void setUpKdcServer() throws Exception {
+    private void setUpKdcServer(String listenAddress) throws Exception {
         kdcServer = new SimpleKdcServer();
         kdcServer.setKdcRealm(REALM);
-        kdcServer.setKdcHost(LOCALHOST);
+        kdcServer.setKdcHost(listenAddress);
         kdcServer.setWorkDir(testDir);
         kdcServer.setKdcTcpPort(NetworkUtil.getServerPort());
 

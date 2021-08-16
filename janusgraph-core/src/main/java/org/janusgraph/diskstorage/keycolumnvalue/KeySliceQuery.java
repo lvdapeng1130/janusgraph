@@ -14,9 +14,8 @@
 
 package org.janusgraph.diskstorage.keycolumnvalue;
 
-import org.janusgraph.diskstorage.StaticBuffer;
-
 import com.google.common.base.Preconditions;
+import org.janusgraph.diskstorage.StaticBuffer;
 
 import java.util.Objects;
 
@@ -79,6 +78,9 @@ public class KeySliceQuery extends SliceQuery {
 
     @Override
     public String toString() {
-        return String.format("KeySliceQuery(key: %s, start: %s, end: %s, limit:%d)", key, getSliceStart(), getSliceEnd(), getLimit());
+        StringBuilder builder = new StringBuilder("KeySliceQuery(");
+        builder.append(key).append(")[").append(getSliceStart()).append(",").append(getSliceEnd()).append(")");
+        if (hasLimit()) builder.append("@").append(getLimit());
+        return builder.toString();
     }
 }

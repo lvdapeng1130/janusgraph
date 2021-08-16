@@ -20,20 +20,46 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.*;
 import org.apache.commons.lang.StringUtils;
+import com.carrotsearch.hppc.LongArrayList;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.tinkerpop.gremlin.process.traversal.TraversalStrategies;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Graph;
-import org.janusgraph.core.*;
+import org.janusgraph.core.Cardinality;
+import org.janusgraph.core.JanusGraphException;
+import org.janusgraph.core.JanusGraphTransaction;
+import org.janusgraph.core.JanusGraphVertex;
+import org.janusgraph.core.Multiplicity;
+import org.janusgraph.core.VertexLabel;
 import org.janusgraph.core.schema.ConsistencyModifier;
 import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.core.schema.SchemaStatus;
-import org.janusgraph.diskstorage.*;
+import org.janusgraph.diskstorage.Backend;
+import org.janusgraph.diskstorage.BackendException;
+import org.janusgraph.diskstorage.BackendTransaction;
+import org.janusgraph.diskstorage.Entry;
+import org.janusgraph.diskstorage.EntryList;
+import org.janusgraph.diskstorage.EntryMetaData;
+import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.configuration.BasicConfiguration;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 import org.janusgraph.diskstorage.indexing.IndexEntry;
 import org.janusgraph.diskstorage.indexing.IndexTransaction;
-import org.janusgraph.diskstorage.keycolumnvalue.*;
+import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStore;
+import org.janusgraph.diskstorage.keycolumnvalue.KeyIterator;
+import org.janusgraph.diskstorage.keycolumnvalue.KeyRangeQuery;
+import org.janusgraph.diskstorage.keycolumnvalue.KeySliceQuery;
+import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
+import org.janusgraph.diskstorage.keycolumnvalue.StoreFeatures;
 import org.janusgraph.diskstorage.keycolumnvalue.cache.KCVSCache;
 import org.janusgraph.diskstorage.log.Log;
 import org.janusgraph.diskstorage.log.Message;
@@ -65,6 +91,18 @@ import org.janusgraph.graphdb.relations.EdgeDirection;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphBlueprintsGraph;
 import org.janusgraph.graphdb.tinkerpop.JanusGraphFeatures;
 import org.janusgraph.graphdb.tinkerpop.optimize.*;
+import org.janusgraph.graphdb.relations.EdgeDirection;
+import org.janusgraph.graphdb.tinkerpop.JanusGraphBlueprintsGraph;
+import org.janusgraph.graphdb.tinkerpop.JanusGraphFeatures;
+import org.janusgraph.graphdb.tinkerpop.optimize.strategy.AdjacentVertexFilterOptimizerStrategy;
+import org.janusgraph.graphdb.tinkerpop.optimize.strategy.AdjacentVertexHasIdOptimizerStrategy;
+import org.janusgraph.graphdb.tinkerpop.optimize.strategy.JanusGraphMixedIndexCountStrategy;
+import org.janusgraph.graphdb.tinkerpop.optimize.strategy.AdjacentVertexHasUniquePropertyOptimizerStrategy;
+import org.janusgraph.graphdb.tinkerpop.optimize.strategy.AdjacentVertexIsOptimizerStrategy;
+import org.janusgraph.graphdb.tinkerpop.optimize.strategy.JanusGraphIoRegistrationStrategy;
+import org.janusgraph.graphdb.tinkerpop.optimize.strategy.JanusGraphLocalQueryOptimizerStrategy;
+import org.janusgraph.graphdb.tinkerpop.optimize.strategy.JanusGraphMultiQueryStrategy;
+import org.janusgraph.graphdb.tinkerpop.optimize.strategy.JanusGraphStepStrategy;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.graphdb.transaction.StandardTransactionBuilder;
 import org.janusgraph.graphdb.transaction.TransactionConfiguration;
@@ -84,6 +122,13 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -105,7 +150,10 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                 .addStrategies(AdjacentVertexFilterOptimizerStrategy.instance(),
                                AdjacentVertexHasIdOptimizerStrategy.instance(),
                                AdjacentVertexIsOptimizerStrategy.instance(),
+                               AdjacentVertexHasUniquePropertyOptimizerStrategy.instance(),
                                JanusGraphLocalQueryOptimizerStrategy.instance(),
+                               JanusGraphMultiQueryStrategy.instance(),
+                               JanusGraphMixedIndexCountStrategy.instance(),
                                JanusGraphStepStrategy.instance(),
                                JanusGraphIoRegistrationStrategy.instance());
 
@@ -173,7 +221,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
         isOpen = true;
         txCounter = new AtomicLong(0);
-        openTransactions = Collections.newSetFromMap(new ConcurrentHashMap<StandardJanusGraphTx, Boolean>(100, 0.75f, 1));
+        openTransactions = Collections.newSetFromMap(new ConcurrentHashMap<>(100, 0.75f, 1));
 
         //Register instance and ensure uniqueness
         uniqueInstanceId = configuration.getUniqueGraphId();
@@ -794,7 +842,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                        final HashMultimap<String, MediaData> attachments,
                        final HashMultimap<String, MediaData> deletedAttachments,
                        final HashMultimap<String, Note> notes,
-                       final HashMultimap<String, Note> deletedNotes, final StandardJanusGraphTx tx) {
+                       final HashMultimap<String, Note> deletedNotes, final StandardJanusGraphTx tx) throws BackendException {
         if (addedRelations.isEmpty() && deletedRelations.isEmpty()&&attachments.isEmpty()&&notes.isEmpty()
             &&deletedAttachments.isEmpty()&&deletedNotes.isEmpty()) return;
         //1. Finalize transaction
@@ -947,8 +995,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             } catch (Throwable e2) {
                 log.error("Could not roll-back transaction ["+transactionId+"] after failure due to exception",e2);
             }
-            if (e instanceof RuntimeException) throw (RuntimeException)e;
-            else throw new JanusGraphException("Unexpected exception",e);
+            throw e;
         }
     }
 
@@ -965,9 +1012,9 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             log.debug("Shutting down graph {} using shutdown hook {}", graph, this);
 
             graph.closeInternal();
+            graph.shutdownHook = null;
         }
     }
-
     /***********************************mediaData和note**************************/
     @Override
     public List<MediaData> getMediaDatas(String vertexId){
@@ -1019,5 +1066,4 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             TXUtils.rollbackQuietly(consistentTx);
         }
     }
-
 }

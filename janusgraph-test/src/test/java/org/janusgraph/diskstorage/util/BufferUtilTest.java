@@ -21,7 +21,9 @@ import org.junit.jupiter.api.Test;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -82,18 +84,6 @@ public class BufferUtilTest {
         StaticBuffer bn = BufferUtil.nextBiggerBufferAllowOverflow(b);
         assertEquals(8,bn.length());
         assertEquals(BufferUtil.zeroBuffer(8), bn);
-    }
-
-    @Test
-    public void staticArrayBufferTest() {
-        long[] values = {2342342342L,2342,0,-1,-214252345234L};
-        byte[] array = new byte[values.length*8];
-        for (int i=0;i<values.length;i++) {
-            StaticArrayBuffer.putLong(array,i*8,values[i]);
-        }
-        for (int i=0;i<values.length;i++) {
-            assertEquals(values[i],StaticArrayBuffer.getLong(array,i*8));
-        }
     }
 
     public static ByteBuffer of(long val) {

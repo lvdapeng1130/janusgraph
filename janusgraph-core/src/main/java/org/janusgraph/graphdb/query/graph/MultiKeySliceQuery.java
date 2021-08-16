@@ -14,13 +14,12 @@
 
 package org.janusgraph.graphdb.query.graph;
 
+import com.google.common.base.Preconditions;
 import org.janusgraph.diskstorage.BackendTransaction;
 import org.janusgraph.diskstorage.EntryList;
 import org.janusgraph.diskstorage.keycolumnvalue.KeySliceQuery;
 import org.janusgraph.graphdb.query.BackendQuery;
 import org.janusgraph.graphdb.query.BaseQuery;
-
-import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -73,7 +72,10 @@ public class MultiKeySliceQuery extends BaseQuery implements BackendQuery<MultiK
 
     @Override
     public String toString() {
-        return "multiKSQ["+queries.size()+"]@"+getLimit();
+        StringBuilder builder = new StringBuilder("multiKSQ[");
+        builder.append(queries.size()).append("]");
+        if (hasLimit()) builder.append("@").append(getLimit());
+        return builder.toString();
     }
 
 }

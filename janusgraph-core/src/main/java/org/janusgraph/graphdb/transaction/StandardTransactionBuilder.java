@@ -14,20 +14,24 @@
 
 package org.janusgraph.graphdb.transaction;
 
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.ROOT_NS;
-
-import java.time.Instant;
 import com.google.common.base.Preconditions;
-import org.janusgraph.core.schema.DefaultSchemaMaker;
 import org.janusgraph.core.JanusGraphTransaction;
 import org.janusgraph.core.TransactionBuilder;
-import org.janusgraph.diskstorage.configuration.*;
-
+import org.janusgraph.core.schema.DefaultSchemaMaker;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
+import org.janusgraph.diskstorage.configuration.ConfigElement;
+import org.janusgraph.diskstorage.configuration.ConfigOption;
+import org.janusgraph.diskstorage.configuration.Configuration;
+import org.janusgraph.diskstorage.configuration.MergedConfiguration;
+import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 import org.janusgraph.diskstorage.util.StandardBaseTransactionConfig;
+import org.janusgraph.diskstorage.util.time.TimestampProvider;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
-import org.janusgraph.diskstorage.util.time.TimestampProvider;
+
+import java.time.Instant;
+
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.ROOT_NS;
 
 /**
  * Used to configure a {@link org.janusgraph.core.JanusGraphTransaction}.
@@ -57,7 +61,9 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
 
     private boolean acquireLocks = true;
 
-    private final boolean propertyPrefetching;
+    private boolean propertyPrefetching;
+
+    private boolean multiQuery;
 
     private boolean singleThreaded = false;
 
@@ -101,6 +107,7 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
         this.groupName = graphConfig.getMetricsPrefix();
         this.logIdentifier = null;
         this.propertyPrefetching = graphConfig.hasPropertyPrefetching();
+        this.multiQuery = graphConfig.useMultiQuery();
         this.writableCustomOptions = GraphDatabaseConfiguration.buildGraphConfiguration();
         this.customOptions = new MergedConfiguration(writableCustomOptions, graphConfig.getConfiguration());
         vertexCacheSize(graphConfig.getTxVertexCacheSize());
@@ -120,6 +127,7 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
         this.groupName = graphConfig.getMetricsPrefix();
         this.logIdentifier = null;
         this.propertyPrefetching = graphConfig.hasPropertyPrefetching();
+        this.multiQuery = graphConfig.useMultiQuery();
         this.writableCustomOptions = null;
         this.customOptions = customOptions;
         vertexCacheSize(graphConfig.getTxVertexCacheSize());
@@ -139,6 +147,16 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
     }
 
     @Override
+    public StandardTransactionBuilder readOnlyOLAP() {
+        isReadOnly = true;
+        preloadedData = true;
+        verifyInternalVertexExistence = false;
+        dirtyVertexSize = 0;
+        vertexCacheSize = 0;
+        return this;
+    }
+
+    @Override
     public StandardTransactionBuilder enableBatchLoading() {
         hasEnabledBatchLoading = true;
         checkExternalVertexExistence(false);
@@ -151,6 +169,18 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
         hasEnabledBatchLoading = false;
         checkExternalVertexExistence(true);
         consistencyChecks(true);
+        return this;
+    }
+
+    @Override
+    public StandardTransactionBuilder propertyPrefetching(boolean enabled) {
+        propertyPrefetching = enabled;
+        return this;
+    }
+
+    @Override
+    public StandardTransactionBuilder multiQuery(boolean enabled) {
+        multiQuery = enabled;
         return this;
     }
 
@@ -236,7 +266,7 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
         TransactionConfiguration immutable = new ImmutableTxCfg(isReadOnly, hasEnabledBatchLoading,
                 assignIDsImmediately, preloadedData, forceIndexUsage, verifyExternalVertexExistence,
                 verifyInternalVertexExistence, acquireLocks, verifyUniqueness,
-                propertyPrefetching, singleThreaded, threadBound, getTimestampProvider(), userCommitTime,
+                propertyPrefetching, multiQuery, singleThreaded, threadBound, getTimestampProvider(), userCommitTime,
                 indexCacheWeight, getVertexCacheSize(), getDirtyVertexSize(),
                 logIdentifier, restrictedPartitions, groupName,
                 defaultSchemaMaker, hasDisabledSchemaConstraints, customOptions);
@@ -301,8 +331,14 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
         return verifyUniqueness;
     }
 
+    @Override
     public boolean hasPropertyPrefetching() {
         return propertyPrefetching;
+    }
+
+    @Override
+    public boolean useMultiQuery() {
+        return multiQuery;
     }
 
     @Override
@@ -392,6 +428,7 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
         private final boolean hasAcquireLocks;
         private final boolean hasVerifyUniqueness;
         private final boolean hasPropertyPrefetching;
+        private final boolean useMultiQuery;
         private final boolean isSingleThreaded;
         private final boolean isThreadBound;
         private final long indexCacheWeight;
@@ -412,7 +449,7 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
                 boolean hasVerifyExternalVertexExistence,
                 boolean hasVerifyInternalVertexExistence,
                 boolean hasAcquireLocks, boolean hasVerifyUniqueness,
-                boolean hasPropertyPrefetching, boolean isSingleThreaded,
+                boolean hasPropertyPrefetching, boolean useMultiQuery, boolean isSingleThreaded,
                 boolean isThreadBound, TimestampProvider times, Instant commitTime,
                 long indexCacheWeight, int vertexCacheSize, int dirtyVertexSize, String logIdentifier,
                 int[] restrictedPartitions,
@@ -430,6 +467,7 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
             this.hasAcquireLocks = hasAcquireLocks;
             this.hasVerifyUniqueness = hasVerifyUniqueness;
             this.hasPropertyPrefetching = hasPropertyPrefetching;
+            this.useMultiQuery = useMultiQuery;
             this.isSingleThreaded = isSingleThreaded;
             this.isThreadBound = isThreadBound;
             this.indexCacheWeight = indexCacheWeight;
@@ -504,6 +542,11 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
         @Override
         public boolean hasPropertyPrefetching() {
             return hasPropertyPrefetching;
+        }
+
+        @Override
+        public boolean useMultiQuery() {
+            return useMultiQuery;
         }
 
         @Override

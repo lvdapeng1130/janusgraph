@@ -15,6 +15,7 @@
 package org.janusgraph.graphdb.log;
 
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
+import com.carrotsearch.hppc.cursors.LongObjectCursor;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.core.EdgeLabel;
 import org.janusgraph.core.PropertyKey;
@@ -25,7 +26,11 @@ import org.janusgraph.graphdb.internal.ElementLifeCycle;
 import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.InternalVertex;
-import org.janusgraph.graphdb.relations.*;
+import org.janusgraph.graphdb.relations.CacheEdge;
+import org.janusgraph.graphdb.relations.CacheVertexProperty;
+import org.janusgraph.graphdb.relations.RelationCache;
+import org.janusgraph.graphdb.relations.StandardEdge;
+import org.janusgraph.graphdb.relations.StandardVertexProperty;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 
 /**

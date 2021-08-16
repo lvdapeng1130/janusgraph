@@ -14,22 +14,34 @@
 
 package org.janusgraph.diskstorage;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.commons.configuration.BaseConfiguration;
-import org.apache.commons.lang.StringUtils;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.commons.lang3.StringUtils;
 import org.janusgraph.core.JanusGraphConfigurationException;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.diskstorage.configuration.BasicConfiguration;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
+import org.janusgraph.diskstorage.configuration.ExecutorServiceBuilder;
+import org.janusgraph.diskstorage.configuration.ExecutorServiceConfiguration;
+import org.janusgraph.diskstorage.configuration.ExecutorServiceInstrumentation;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 import org.janusgraph.diskstorage.configuration.backend.CommonsConfiguration;
 import org.janusgraph.diskstorage.configuration.backend.KCVSConfiguration;
 import org.janusgraph.diskstorage.configuration.backend.builder.KCVSConfigurationBuilder;
 import org.janusgraph.diskstorage.idmanagement.ConsistentKeyIDAuthority;
-import org.janusgraph.diskstorage.indexing.*;
-import org.janusgraph.diskstorage.keycolumnvalue.*;
+import org.janusgraph.diskstorage.indexing.IndexFeatures;
+import org.janusgraph.diskstorage.indexing.IndexInformation;
+import org.janusgraph.diskstorage.indexing.IndexProvider;
+import org.janusgraph.diskstorage.indexing.IndexTransaction;
+import org.janusgraph.diskstorage.indexing.KeyInformation;
+import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStore;
+import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStoreManager;
+import org.janusgraph.diskstorage.keycolumnvalue.StoreFeatures;
+import org.janusgraph.diskstorage.keycolumnvalue.StoreManager;
+import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
 import org.janusgraph.diskstorage.keycolumnvalue.cache.CacheTransaction;
 import org.janusgraph.diskstorage.keycolumnvalue.cache.ExpirationKCVSCache;
 import org.janusgraph.diskstorage.keycolumnvalue.cache.KCVSCache;
@@ -46,6 +58,7 @@ import org.janusgraph.diskstorage.log.LogManager;
 import org.janusgraph.diskstorage.log.kcvs.KCVSLog;
 import org.janusgraph.diskstorage.log.kcvs.KCVSLogManager;
 import org.janusgraph.diskstorage.util.BackendOperation;
+import org.janusgraph.diskstorage.util.MetricInstrumentedIndexProvider;
 import org.janusgraph.diskstorage.util.MetricInstrumentedStoreManager;
 import org.janusgraph.diskstorage.util.StandardBaseTransactionConfig;
 import org.janusgraph.diskstorage.util.time.TimestampProvider;
@@ -64,11 +77,44 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.BASIC_METRICS;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.BUFFER_SIZE;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.DB_CACHE;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.DB_CACHE_CLEAN_WAIT;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.DB_CACHE_SIZE;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.DB_CACHE_TIME;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.IDS_STORE_NAME;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_BACKEND;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_NS;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.JOB_NS;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.JOB_START_TIME;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.LOCK_BACKEND;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.LOG_BACKEND;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.MANAGEMENT_LOG;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.METRICS_MERGE_STORES;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.METRICS_PREFIX;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.PAGE_SIZE;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.PARALLEL_BACKEND_EXECUTOR_SERVICE_CLASS;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.PARALLEL_BACKEND_EXECUTOR_SERVICE_CORE_POOL_SIZE;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.PARALLEL_BACKEND_EXECUTOR_SERVICE_KEEP_ALIVE_TIME;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.PARALLEL_BACKEND_EXECUTOR_SERVICE_MAX_POOL_SIZE;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.PARALLEL_BACKEND_OPS;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.STORAGE_BACKEND;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.STORAGE_BATCH;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.STORAGE_DIRECTORY;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.STORAGE_HOSTS;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.STORAGE_READ_WAITTIME;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.STORAGE_WRITE_WAITTIME;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.SYSTEM_PROPERTIES_STORE_NAME;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.TIMESTAMP_PROVIDER;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.TRANSACTION_LOG;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.USER_CONFIGURATION_IDENTIFIER;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.USER_LOG;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.USER_LOG_PREFIX;
 
 /**
  * Orchestrates and configures all backend systems:
@@ -99,6 +145,7 @@ public class Backend implements LockerProvider, AutoCloseable {
     public static final String METRICS_MERGED_STORE = "stores";
     public static final String METRICS_MERGED_CACHE = "caches";
     public static final String METRICS_CACHE_SUFFIX = ".cache";
+    public static final String METRICS_INDEX_PROVIDER_NAME = "indexProvider";
     public static final String LOCK_STORE_SUFFIX = "_lock_";
 
     public static final String SYSTEM_TX_LOG_NAME = "txlog";
@@ -114,8 +161,6 @@ public class Backend implements LockerProvider, AutoCloseable {
     public static final double INDEXSTORE_CACHE_PERCENT = 0.2;
 
     private static final long ETERNAL_CACHE_EXPIRATION = 1000L *3600*24*365*200; //200 years
-
-    public static final int THREAD_POOL_SIZE_SCALE_FACTOR = 2;
 
     //############ Registered Storage Managers ##############
 
@@ -221,13 +266,7 @@ public class Backend implements LockerProvider, AutoCloseable {
             storeManagerLocking = storeManager;
         }
 
-        if (configuration.get(PARALLEL_BACKEND_OPS)) {
-            int poolSize = Runtime.getRuntime().availableProcessors() * THREAD_POOL_SIZE_SCALE_FACTOR;
-            threadPool = Executors.newFixedThreadPool(poolSize);
-            log.info("Initiated backend operations thread pool of size {}", poolSize);
-        } else {
-            threadPool = null;
-        }
+        threadPool = configuration.get(PARALLEL_BACKEND_OPS) ? buildExecutorService(configuration) : null;
 
         final String lockBackendName = configuration.get(LOCK_BACKEND);
         if (REGISTERED_LOCKERS.containsKey(lockBackendName)) {
@@ -367,10 +406,6 @@ public class Backend implements LockerProvider, AutoCloseable {
     public Map<String, IndexInformation> getIndexInformation() {
         return Collections.unmodifiableMap(new HashMap<>(indexes));
     }
-//
-//    public IndexProvider getIndexProvider(String name) {
-//        return indexes.get(name);
-//    }
 
     public KCVSLog getSystemTxLog() {
         try {
@@ -482,6 +517,9 @@ public class Backend implements LockerProvider, AutoCloseable {
             IndexProvider provider = getImplementationClass(config.restrictTo(index), config.get(INDEX_BACKEND,index),
                     StandardIndexProvider.getAllProviderClasses());
             Preconditions.checkNotNull(provider);
+            if (config.get(BASIC_METRICS)) {
+                provider = new MetricInstrumentedIndexProvider(provider, METRICS_INDEX_PROVIDER_NAME + "." + index);
+            }
             indexesMap.put(index, provider);
         }
         return Collections.unmodifiableMap(indexesMap);
@@ -617,9 +655,8 @@ public class Backend implements LockerProvider, AutoCloseable {
     }
 
     private ModifiableConfiguration buildJobConfiguration() {
-
         return new ModifiableConfiguration(JOB_NS,
-            new CommonsConfiguration(new BaseConfiguration()),
+            new CommonsConfiguration(ConfigurationUtil.createBaseConfiguration()),
             BasicConfiguration.Restriction.NONE);
     }
 
@@ -656,5 +693,26 @@ public class Backend implements LockerProvider, AutoCloseable {
         } catch (InvocationTargetException e) {
             throw new IllegalArgumentException("Could not invoke method when configuring locking for: " + classname,e);
         }
+    }
+
+    @VisibleForTesting
+    static ExecutorService buildExecutorService(Configuration configuration){
+        Integer corePoolSize = configuration.getOrDefault(PARALLEL_BACKEND_EXECUTOR_SERVICE_CORE_POOL_SIZE);
+        Integer maxPoolSize = configuration.getOrDefault(PARALLEL_BACKEND_EXECUTOR_SERVICE_MAX_POOL_SIZE);
+        Long keepAliveTime = configuration.getOrDefault(PARALLEL_BACKEND_EXECUTOR_SERVICE_KEEP_ALIVE_TIME);
+        String executorServiceClass = configuration.getOrDefault(PARALLEL_BACKEND_EXECUTOR_SERVICE_CLASS);
+
+        ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("Backend[%02d]").build();
+        if (configuration.get(BASIC_METRICS)) {
+            threadFactory = ExecutorServiceInstrumentation.instrument(configuration.get(METRICS_PREFIX), "backend", threadFactory);
+        }
+
+        ExecutorServiceConfiguration executorServiceConfiguration =
+            new ExecutorServiceConfiguration(executorServiceClass, corePoolSize, maxPoolSize, keepAliveTime, threadFactory);
+        ExecutorService executorService = ExecutorServiceBuilder.build(executorServiceConfiguration);
+        if (configuration.get(BASIC_METRICS)) {
+            executorService = ExecutorServiceInstrumentation.instrument(configuration.get(METRICS_PREFIX), "backend", executorService);
+        }
+        return executorService;
     }
 }

@@ -27,6 +27,8 @@ import org.janusgraph.graphdb.database.idassigner.IDPoolExhaustedException;
 import org.janusgraph.graphdb.database.idassigner.StandardIDPool;
 import org.janusgraph.util.datastructures.IntHashSet;
 import org.janusgraph.util.datastructures.IntSet;
+import org.janusgraph.graphdb.util.IntHashSet;
+import org.janusgraph.graphdb.util.IntSet;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -35,6 +37,10 @@ import java.util.Random;
 
 import static org.easymock.EasyMock.expect;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)

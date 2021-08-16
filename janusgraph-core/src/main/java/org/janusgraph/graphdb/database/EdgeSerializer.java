@@ -22,6 +22,17 @@ import com.google.common.base.Preconditions;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Property;
 import org.janusgraph.core.*;
+import com.carrotsearch.hppc.LongArrayList;
+import com.carrotsearch.hppc.LongHashSet;
+import com.carrotsearch.hppc.LongObjectHashMap;
+import com.carrotsearch.hppc.LongSet;
+import com.google.common.base.Preconditions;
+import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.janusgraph.core.Cardinality;
+import org.janusgraph.core.JanusGraphVertexProperty;
+import org.janusgraph.core.Multiplicity;
+import org.janusgraph.core.PropertyKey;
+import org.janusgraph.core.RelationType;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.EntryMetaData;
 import org.janusgraph.diskstorage.ReadBuffer;
@@ -298,8 +309,7 @@ public class EdgeSerializer implements RelationReader {
                 valuePosition = out.getPosition();
             }
         } else {
-            assert relation.isProperty();
-            Preconditions.checkArgument(relation.isProperty());
+            Preconditions.checkArgument(relation.isProperty(), "Given relation is not property");
             Object value = ((JanusGraphVertexProperty) relation).value();
             Preconditions.checkNotNull(value);
             PropertyKey key = (PropertyKey) type;
@@ -508,8 +518,7 @@ public class EdgeSerializer implements RelationReader {
                     assert propertyKey==ImplicitKey.JANUSGRAPHID || propertyKey==ImplicitKey.ADJACENT_ID;
                     assert propertyKey!=ImplicitKey.ADJACENT_ID || (i==sortKeyIDs.length);
                     assert propertyKey!=ImplicitKey.JANUSGRAPHID || (!type.multiplicity().isConstrained() &&
-                                                  (i==sortKeyIDs.length && propertyKey.isPropertyKey()
-                                                      || i==sortKeyIDs.length+1 && propertyKey.isEdgeLabel() ));
+                                                  (i==sortKeyIDs.length || i==sortKeyIDs.length+1));
                     assert colStart.getPosition()==colEnd.getPosition();
                     assert interval==null || interval.isPoints();
                     keyEndPos = colStart.getPosition();
@@ -580,7 +589,7 @@ public class EdgeSerializer implements RelationReader {
                 sliceEnd = BufferUtil.nextBiggerBuffer(sliceStart);
             }
         }
-        return new SliceQuery(sliceStart, sliceEnd);
+        return new SliceQuery(sliceStart, sliceEnd, type.name());
     }
 
     public static class TypedInterval {

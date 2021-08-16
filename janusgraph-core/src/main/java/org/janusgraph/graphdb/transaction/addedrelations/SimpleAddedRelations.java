@@ -14,19 +14,18 @@
 
 package org.janusgraph.graphdb.transaction.addedrelations;
 
-import org.janusgraph.graphdb.internal.InternalRelation;
-
 import com.carrotsearch.hppc.ObjectHashSet;
 import com.carrotsearch.hppc.ObjectSet;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
-import javax.annotation.Nonnull;
+import org.janusgraph.graphdb.internal.InternalRelation;
 
 import java.util.AbstractCollection;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import javax.annotation.Nonnull;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -76,6 +75,11 @@ public class SimpleAddedRelations implements AddedRelationsContainer {
                 return container.size();
             }
         });
+    }
+
+    @Override
+    public void clear() {
+        container.release();
     }
 
     private Iterator<InternalRelation> iterator() {

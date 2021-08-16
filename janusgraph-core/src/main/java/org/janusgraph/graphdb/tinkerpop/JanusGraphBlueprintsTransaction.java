@@ -16,6 +16,17 @@ package org.janusgraph.graphdb.tinkerpop;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;
+import org.apache.tinkerpop.gremlin.structure.Edge;
+import org.apache.tinkerpop.gremlin.structure.Graph;
+import org.apache.tinkerpop.gremlin.structure.T;
+import org.apache.tinkerpop.gremlin.structure.Transaction;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.structure.io.Io;
+import org.apache.tinkerpop.gremlin.structure.util.AbstractThreadedTransaction;
+import org.apache.tinkerpop.gremlin.structure.util.ElementHelper;
+import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 import org.janusgraph.core.JanusGraphTransaction;
 import org.janusgraph.core.JanusGraphVertex;
 import org.janusgraph.core.VertexLabel;
@@ -24,17 +35,11 @@ import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.olap.computer.FulgoraGraphComputer;
 import org.janusgraph.graphdb.relations.RelationIdentifier;
 import org.janusgraph.graphdb.types.system.BaseVertexLabel;
-import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;
-import org.apache.tinkerpop.gremlin.structure.*;
-import org.apache.tinkerpop.gremlin.structure.io.Io;
-import org.apache.tinkerpop.gremlin.structure.util.AbstractThreadedTransaction;
-import org.apache.tinkerpop.gremlin.structure.util.ElementHelper;
-import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
-import org.apache.commons.configuration.Configuration;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Optional;
 
 /**
  * Blueprints specific implementation of {@link JanusGraphTransaction}.
@@ -103,7 +108,8 @@ public abstract class JanusGraphBlueprintsTransaction implements JanusGraphTrans
     @Override
     public JanusGraphVertex addVertex(Object... keyValues) {
         ElementHelper.legalPropertyKeyValueArray(keyValues);
-        if (ElementHelper.getIdValue(keyValues).isPresent() && !((StandardJanusGraph) getGraph()).getConfiguration().allowVertexIdSetting()) throw Vertex.Exceptions.userSuppliedIdsNotSupported();
+        final Optional<Object> idValue = ElementHelper.getIdValue(keyValues);
+        if (idValue.isPresent() && !((StandardJanusGraph) getGraph()).getConfiguration().allowVertexIdSetting()) throw Vertex.Exceptions.userSuppliedIdsNotSupported();
         Object labelValue = null;
         for (int i = 0; i < keyValues.length; i = i + 2) {
             if (keyValues[i].equals(T.label)) {
@@ -118,7 +124,8 @@ public abstract class JanusGraphBlueprintsTransaction implements JanusGraphTrans
             label = (labelValue instanceof VertexLabel)?(VertexLabel)labelValue:getOrCreateVertexLabel((String) labelValue);
         }
 
-        final String id = ElementHelper.getIdValue(keyValues).map(String.class::cast).orElse(null);
+        final String id = idValue.map(String.class::cast).orElse(null);
+        //final Long id = idValue.map(Number.class::cast).map(Number::longValue).orElse(null);
         final JanusGraphVertex vertex = addVertex(id, label);
         org.janusgraph.graphdb.util.ElementHelper.attachProperties(vertex, keyValues);
         return vertex;
@@ -155,14 +162,6 @@ public abstract class JanusGraphBlueprintsTransaction implements JanusGraphTrans
         if (pos<ids.length) ids = Arrays.copyOf(ids,pos);
         return (Iterator)getEdges(ids).iterator();
     }
-
-
-
-
-//    @Override
-//    public GraphComputer compute(final Class... graphComputerClass) {
-//        throw new UnsupportedOperationException("Graph Computer not supported on an individual transaction. Call on graph instead.");
-//    }
 
     @Override
     public String toString() {

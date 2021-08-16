@@ -17,18 +17,32 @@ package org.janusgraph.diskstorage.locking.consistentkey;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.janusgraph.core.JanusGraphConfigurationException;
-
+import org.janusgraph.diskstorage.BackendException;
+import org.janusgraph.diskstorage.Entry;
+import org.janusgraph.diskstorage.PermanentBackendException;
+import org.janusgraph.diskstorage.StaticBuffer;
+import org.janusgraph.diskstorage.TemporaryBackendException;
 import org.janusgraph.diskstorage.configuration.ConfigElement;
-
+import org.janusgraph.diskstorage.configuration.Configuration;
+import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStore;
+import org.janusgraph.diskstorage.keycolumnvalue.KeySliceQuery;
+import org.janusgraph.diskstorage.keycolumnvalue.StoreManager;
+import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
+import org.janusgraph.diskstorage.locking.AbstractLocker;
+import org.janusgraph.diskstorage.locking.LocalLockMediator;
+import org.janusgraph.diskstorage.locking.LocalLockMediators;
+import org.janusgraph.diskstorage.locking.Locker;
+import org.janusgraph.diskstorage.locking.LockerState;
+import org.janusgraph.diskstorage.locking.PermanentLockingException;
+import org.janusgraph.diskstorage.locking.TemporaryLockingException;
+import org.janusgraph.diskstorage.util.BufferUtil;
+import org.janusgraph.diskstorage.util.KeyColumn;
+import org.janusgraph.diskstorage.util.StandardBaseTransactionConfig;
+import org.janusgraph.diskstorage.util.StaticArrayBuffer;
+import org.janusgraph.diskstorage.util.StaticArrayEntry;
 import org.janusgraph.diskstorage.util.time.Timer;
 import org.janusgraph.diskstorage.util.time.TimestampProvider;
-import org.janusgraph.diskstorage.*;
-import org.janusgraph.diskstorage.configuration.Configuration;
-import org.janusgraph.diskstorage.keycolumnvalue.*;
-import org.janusgraph.diskstorage.locking.*;
-import org.janusgraph.diskstorage.util.*;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -381,13 +395,20 @@ public class ConsistentKeyLocker extends AbstractLocker<ConsistentKeyLockStatus>
         final Timer writeTimer = times.getTimer().start();
         StaticBuffer newLockCol = serializer.toLockCol(writeTimer.getStartTime(), rid, times);
         Entry newLockEntry = StaticArrayEntry.of(newLockCol, zeroBuf);
+        StoreTransaction newTx = null;
         try {
-            final StoreTransaction newTx = overrideTimestamp(txh, writeTimer.getStartTime());
+            newTx = overrideTimestamp(txh, writeTimer.getStartTime());
+
             store.mutate(key, Collections.singletonList(newLockEntry),
                 null == del ? KeyColumnValueStore.NO_DELETIONS : Collections.singletonList(del), newTx);
+
+            newTx.commit();
+            newTx = null;
         } catch (BackendException e) {
             log.debug("Lock write attempt failed with exception", e);
             t = e;
+        } finally {
+            rollbackIfNotNull(newTx);
         }
         writeTimer.stop();
 
@@ -397,11 +418,18 @@ public class ConsistentKeyLocker extends AbstractLocker<ConsistentKeyLockStatus>
     private WriteResult tryDeleteLockOnce(StaticBuffer key, StaticBuffer col, StoreTransaction txh) {
         Throwable t = null;
         final Timer delTimer = times.getTimer().start();
+        StoreTransaction newTx = null;
         try {
-            final StoreTransaction newTx = overrideTimestamp(txh, delTimer.getStartTime());
+            newTx = overrideTimestamp(txh, delTimer.getStartTime());
+
             store.mutate(key, Collections.emptyList(), Collections.singletonList(col), newTx);
+
+            newTx.commit();
+            newTx = null;
         } catch (BackendException e) {
             t = e;
+        } finally {
+            rollbackIfNotNull(newTx);
         }
         delTimer.stop();
 
@@ -430,8 +458,8 @@ public class ConsistentKeyLocker extends AbstractLocker<ConsistentKeyLockStatus>
         // ...and then filter out the TimestampRid objects with expired timestamps
         // (This doesn't use Iterables.filter and Predicate so that we can throw a checked exception if necessary)
         final List<TimestampRid> unexpiredTRs = new ArrayList<>(Iterables.size(iterable));
+        final Instant cutoffTime = now.minus(lockExpire);
         for (TimestampRid tr : iterable) {
-            final Instant cutoffTime = now.minus(lockExpire);
             if (tr.getTimestamp().isBefore(cutoffTime)) {
                 log.warn("Discarded expired claim on {} with timestamp {}", kc, tr.getTimestamp());
                 if (null != cleanerService)
@@ -439,7 +467,7 @@ public class ConsistentKeyLocker extends AbstractLocker<ConsistentKeyLockStatus>
                 // Locks that this instance wrote that have now expired should not only log
                 // but also throw a descriptive exception
                 if (rid.equals(tr.getRid()) && ls.getWriteTimestamp().equals(tr.getTimestamp())) {
-                    throw new ExpiredLockException("Expired lock on " + kc.toString() +
+                    throw new ExpiredLockException("Expired lock on " + kc +
                             ": lock timestamp " + tr.getTimestamp() + " " + times.getUnit() + " is older than " +
                             ConfigElement.getPath(GraphDatabaseConfiguration.LOCK_EXPIRE) + "=" + lockExpire);
                     // Really shouldn't refer to GDC.LOCK_EXPIRE here,
@@ -532,9 +560,13 @@ public class ConsistentKeyLocker extends AbstractLocker<ConsistentKeyLockStatus>
     protected void deleteSingleLock(KeyColumn kc, ConsistentKeyLockStatus ls, StoreTransaction tx) {
         List<StaticBuffer> deletions = Collections.singletonList(serializer.toLockCol(ls.getWriteTimestamp(), rid, times));
         for (int i = 0; i < lockRetryCount; i++) {
+            StoreTransaction newTx = null;
             try {
-                StoreTransaction newTx = overrideTimestamp(tx, times.getTime());
+                newTx = overrideTimestamp(tx, times.getTime());
                 store.mutate(serializer.toLockKey(kc.getKey(), kc.getColumn()), Collections.emptyList(), deletions, newTx);
+
+                newTx.commit();
+                newTx = null;
                 return;
             } catch (TemporaryBackendException e) {
                 log.warn("Temporary storage exception while deleting lock", e);
@@ -542,6 +574,8 @@ public class ConsistentKeyLocker extends AbstractLocker<ConsistentKeyLockStatus>
             } catch (BackendException e) {
                 log.error("Storage exception while deleting lock", e);
                 return; // give up on this lock
+            } finally {
+                rollbackIfNotNull(newTx);
             }
         }
     }
@@ -551,6 +585,21 @@ public class ConsistentKeyLocker extends AbstractLocker<ConsistentKeyLockStatus>
         StandardBaseTransactionConfig newCfg = new StandardBaseTransactionConfig.Builder(tx.getConfiguration())
                .commitTime(commitTime).build();
         return manager.beginTransaction(newCfg);
+    }
+
+    private void rollbackIfNotNull(StoreTransaction tx) {
+        if (tx != null) {
+            try {
+                if (log.isDebugEnabled()) {
+                    log.debug("Transaction is still open! Rolling back: " + tx, new Throwable());
+                }
+
+                tx.rollback();
+            } catch (Throwable excp) {
+                log.error("Failed to rollback transaction " + tx + ". The transaction may be leaked.", excp);
+            }
+        }
+
     }
 
     private static class WriteResult {

@@ -14,21 +14,27 @@
 
 package org.janusgraph.graphdb.cql;
 
+import io.github.artsok.RepeatedIfExceptionsTest;
 import org.janusgraph.JanusGraphCassandraContainer;
-import org.janusgraph.core.JanusGraphFactory;
-import org.janusgraph.diskstorage.configuration.ConfigElement;
 import org.janusgraph.diskstorage.configuration.WriteConfiguration;
 import org.janusgraph.graphdb.JanusGraphTest;
-import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
-import org.janusgraph.graphdb.configuration.JanusGraphConstants;
-import org.janusgraph.graphdb.database.StandardJanusGraph;
-import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import static org.janusgraph.diskstorage.cql.CQLConfigOptions.*;
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.Arrays;
+import java.util.stream.Stream;
+
+import static org.janusgraph.diskstorage.cql.CQLConfigOptions.ATOMIC_BATCH_MUTATE;
+import static org.janusgraph.diskstorage.cql.CQLConfigOptions.BATCH_STATEMENT_SIZE;
+import static org.janusgraph.diskstorage.cql.CQLConfigOptions.EXECUTOR_SERVICE_ENABLED;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.ASSIGN_TIMESTAMP;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 @Testcontainers
 public class CQLGraphTest extends JanusGraphTest {
@@ -41,101 +47,58 @@ public class CQLGraphTest extends JanusGraphTest {
     }
 
     @Test
-    public void testTitanGraphBackwardCompatibility() {
-        close();
-        WriteConfiguration wc = getConfiguration();
-        wc.set(ConfigElement.getPath(KEYSPACE), "titan");
-        wc.set(ConfigElement.getPath(GraphDatabaseConfiguration.TITAN_COMPATIBLE_VERSIONS), "x.x.x");
-
-        assertNull(wc.get(ConfigElement.getPath(GraphDatabaseConfiguration.INITIAL_JANUSGRAPH_VERSION),
-                GraphDatabaseConfiguration.INITIAL_JANUSGRAPH_VERSION.getDatatype()));
-
-        assertFalse(JanusGraphConstants.TITAN_COMPATIBLE_VERSIONS.contains(
-                wc.get(ConfigElement.getPath(GraphDatabaseConfiguration.TITAN_COMPATIBLE_VERSIONS),
-                        GraphDatabaseConfiguration.TITAN_COMPATIBLE_VERSIONS.getDatatype())));
-
-        wc.set(ConfigElement.getPath(GraphDatabaseConfiguration.TITAN_COMPATIBLE_VERSIONS), "1.0.0");
-        assertTrue(JanusGraphConstants.TITAN_COMPATIBLE_VERSIONS.contains(
-                wc.get(ConfigElement.getPath(GraphDatabaseConfiguration.TITAN_COMPATIBLE_VERSIONS),
-                        GraphDatabaseConfiguration.TITAN_COMPATIBLE_VERSIONS.getDatatype())));
-
-        graph = (StandardJanusGraph) JanusGraphFactory.open(wc);
-    }
-
-    @Test
     public void testHasTTL() {
         assertTrue(features.hasCellTTL());
     }
 
-    @Test
-    public void testStorageVersionSet() {
-        close();
-        WriteConfiguration wc = getConfiguration();
-        assertNull(wc.get(ConfigElement.getPath(GraphDatabaseConfiguration.INITIAL_STORAGE_VERSION),
-            GraphDatabaseConfiguration.INITIAL_STORAGE_VERSION.getDatatype()));
-        wc.set(ConfigElement.getPath(GraphDatabaseConfiguration.INITIAL_STORAGE_VERSION), JanusGraphConstants.STORAGE_VERSION);
-        graph = (StandardJanusGraph) JanusGraphFactory.open(wc);
-        mgmt = graph.openManagement();
-        assertEquals(JanusGraphConstants.STORAGE_VERSION, (mgmt.get("graph.storage-version")));
-        mgmt.rollback();
+    @RepeatedIfExceptionsTest(repeats = 3)
+    @Override
+    public void simpleLogTest() throws InterruptedException{
+        super.simpleLogTest();
     }
 
-    @Test
-    public void testGraphConfigUsedByThreadBoundTx() {
-        close();
-        WriteConfiguration wc = getConfiguration();
-        wc.set(ConfigElement.getPath(READ_CONSISTENCY), "ALL");
-        wc.set(ConfigElement.getPath(WRITE_CONSISTENCY), "LOCAL_QUORUM");
-
-        graph = (StandardJanusGraph) JanusGraphFactory.open(wc);
-
-        StandardJanusGraphTx tx = (StandardJanusGraphTx)graph.getCurrentThreadTx();
-        assertEquals("ALL",
-            tx.getTxHandle().getBaseTransactionConfig().getCustomOptions()
-                .get(READ_CONSISTENCY));
-        assertEquals("LOCAL_QUORUM",
-            tx.getTxHandle().getBaseTransactionConfig().getCustomOptions()
-                .get(WRITE_CONSISTENCY));
+    protected static Stream<Arguments> generateConsistencyConfigs() {
+        return Arrays.stream(new Arguments[]{
+            arguments(true, true, 20, true),
+            arguments(true, false, 20, true),
+            arguments(true, false, 1, true),
+            arguments(false, true, 20, true),
+            arguments(false, false, 20, true),
+            arguments(false, false, 1, true),
+            arguments(true, true, 20, false),
+            arguments(true, false, 20, false),
+            arguments(true, false, 1, false),
+            arguments(false, true, 20, false),
+            arguments(false, false, 20, false),
+            arguments(false, false, 1, false),
+        });
     }
 
+    @Override
     @Test
-    public void testGraphConfigUsedByTx() {
-        close();
-        WriteConfiguration wc = getConfiguration();
-        wc.set(ConfigElement.getPath(READ_CONSISTENCY), "TWO");
-        wc.set(ConfigElement.getPath(WRITE_CONSISTENCY), "THREE");
-
-        graph = (StandardJanusGraph) JanusGraphFactory.open(wc);
-
-        StandardJanusGraphTx tx = (StandardJanusGraphTx)graph.newTransaction();
-        assertEquals("TWO",
-            tx.getTxHandle().getBaseTransactionConfig().getCustomOptions()
-                .get(READ_CONSISTENCY));
-        assertEquals("THREE",
-            tx.getTxHandle().getBaseTransactionConfig().getCustomOptions()
-                .get(WRITE_CONSISTENCY));
-        tx.rollback();
+    @Disabled
+    public void testConsistencyEnforcement() {
+        // disable original test in favour of parameterized test
     }
 
+    @ParameterizedTest
+    @MethodSource("generateConsistencyConfigs")
+    public void testConsistencyEnforcement(boolean assignTimestamp, boolean atomicBatch, int batchSize, boolean executorServiceEnabled) {
+        clopen(option(ASSIGN_TIMESTAMP), assignTimestamp, option(ATOMIC_BATCH_MUTATE), atomicBatch, option(BATCH_STATEMENT_SIZE), batchSize, option(EXECUTOR_SERVICE_ENABLED), executorServiceEnabled);
+        super.testConsistencyEnforcement();
+    }
+
+    @Override
     @Test
-    public void testCustomConfigUsedByTx() {
-        close();
-        WriteConfiguration wc = getConfiguration();
-        wc.set(ConfigElement.getPath(READ_CONSISTENCY), "ALL");
-        wc.set(ConfigElement.getPath(WRITE_CONSISTENCY), "ALL");
+    @Disabled
+    public void testConcurrentConsistencyEnforcement() {
+        // disable original test in favour of parameterized test
+    }
 
-        graph = (StandardJanusGraph) JanusGraphFactory.open(wc);
-
-        StandardJanusGraphTx tx = (StandardJanusGraphTx)graph.buildTransaction()
-            .customOption(ConfigElement.getPath(READ_CONSISTENCY), "ONE")
-            .customOption(ConfigElement.getPath(WRITE_CONSISTENCY), "TWO").start();
-
-        assertEquals("ONE",
-            tx.getTxHandle().getBaseTransactionConfig().getCustomOptions()
-                .get(READ_CONSISTENCY));
-        assertEquals("TWO",
-            tx.getTxHandle().getBaseTransactionConfig().getCustomOptions()
-                .get(WRITE_CONSISTENCY));
-        tx.rollback();
+    @ParameterizedTest
+    @MethodSource("generateConsistencyConfigs")
+    public void testConcurrentConsistencyEnforcement(boolean assignTimestamp, boolean atomicBatch, int batchSize, boolean executorServiceEnabled) throws Exception {
+        clopen(option(ASSIGN_TIMESTAMP), assignTimestamp, option(ATOMIC_BATCH_MUTATE), atomicBatch, option(BATCH_STATEMENT_SIZE), batchSize, option(EXECUTOR_SERVICE_ENABLED), executorServiceEnabled);
+        super.testConcurrentConsistencyEnforcement();
     }
 }

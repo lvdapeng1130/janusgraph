@@ -23,7 +23,10 @@ import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.internal.RelationCategory;
 
-import static org.janusgraph.graphdb.idmanagement.IDManager.VertexIDType.*;
+import static org.janusgraph.graphdb.idmanagement.IDManager.VertexIDType.SystemEdgeLabel;
+import static org.janusgraph.graphdb.idmanagement.IDManager.VertexIDType.SystemPropertyKey;
+import static org.janusgraph.graphdb.idmanagement.IDManager.VertexIDType.UserEdgeLabel;
+import static org.janusgraph.graphdb.idmanagement.IDManager.VertexIDType.UserPropertyKey;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)

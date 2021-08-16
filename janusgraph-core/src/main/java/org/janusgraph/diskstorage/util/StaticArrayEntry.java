@@ -73,7 +73,7 @@ public class StaticArrayEntry extends BaseStaticArrayEntry implements Entry, Met
      * ############# IDENTICAL CODE ###############
      */
 
-    private volatile transient RelationCache cache;
+    private transient volatile RelationCache cache;
 
     @Override
     public RelationCache getCache() {
@@ -313,8 +313,13 @@ class BaseStaticArrayEntry extends StaticArrayBuffer implements Entry {
     @Override
     public String toString() {
         String s = super.toString();
-        int pos = getValuePosition()*4;
-        return s.substring(0,pos-1) + "->" + (getValuePosition()<length()?s.substring(pos):"");
+        int pos = getValuePosition()*2+2;
+        StringBuilder sb = new StringBuilder(s.substring(0, pos));
+        if (hasValue()) {
+            return sb.append("->0x").append(s.substring(pos)).toString();
+        } else {
+            return sb.append("->[no value]").toString();
+        }
     }
 
     //########## CACHE ############

@@ -18,11 +18,16 @@
 package org.janusgraph.graphdb.util;
 
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
+import org.cliffc.high_scale_lib.NonBlockingHashMapLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.ref.WeakReference;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
@@ -45,6 +50,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @since solr 1.4
  */
+@Deprecated
 public class ConcurrentLRUCache<V> {
     private static final Logger log = LoggerFactory.getLogger(ConcurrentLRUCache.class);
 

@@ -17,29 +17,28 @@
 
 package org.janusgraph.graphdb.util;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
 import org.janusgraph.core.JanusGraphElement;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.diskstorage.BackendTransaction;
 import org.janusgraph.graphdb.database.IndexSerializer;
 import org.janusgraph.graphdb.query.graph.JointIndexQuery;
 import org.janusgraph.graphdb.query.profile.QueryProfiler;
+import org.janusgraph.graphdb.transaction.subquerycache.SubqueryCache;
 
-import com.google.common.cache.Cache;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * @author davidclement90@laposte.net
  */
-public class SubqueryIterator implements Iterator<JanusGraphElement>, AutoCloseable {
+public class SubqueryIterator extends CloseableAbstractIterator<JanusGraphElement> {
 
     private final JointIndexQuery.Subquery subQuery;
 
-    private final Cache<JointIndexQuery.Subquery, List<Object>> indexCache;
+    private final SubqueryCache indexCache;
 
     private Iterator<? extends JanusGraphElement> elementIterator;
 
@@ -50,8 +49,8 @@ public class SubqueryIterator implements Iterator<JanusGraphElement>, AutoClosea
     private boolean isTimerRunning;
 
     public SubqueryIterator(JointIndexQuery.Subquery subQuery, IndexSerializer indexSerializer, BackendTransaction tx,
-            Cache<JointIndexQuery.Subquery, List<Object>> indexCache, int limit,
-            Function<Object, ? extends JanusGraphElement> function, List<Object> otherResults) {
+                            SubqueryCache indexCache, int limit,
+                            Function<Object, ? extends JanusGraphElement> function, List<Object> otherResults) {
         this.subQuery = subQuery;
         this.indexCache = indexCache;
         final List<Object> cacheResponse = indexCache.getIfPresent(subQuery);
@@ -65,32 +64,35 @@ public class SubqueryIterator implements Iterator<JanusGraphElement>, AutoClosea
                 isTimerRunning = true;
                 stream = indexSerializer.query(subQuery, tx).peek(r -> currentIds.add(r));
             } catch (final Exception e) {
-                throw new JanusGraphException("Could not call index", e.getCause());
+                throw new JanusGraphException("Could not call index", e);
             }
         }
         elementIterator = stream.filter(e -> otherResults == null || otherResults.contains(e)).limit(limit).map(function).map(r -> (JanusGraphElement) r).iterator();
     }
 
     @Override
-    public boolean hasNext() {
-        if (!elementIterator.hasNext() && currentIds != null) {
-            indexCache.put(subQuery, currentIds);
+    protected JanusGraphElement computeNext() {
+        if (elementIterator.hasNext()) {
+            return elementIterator.next();
+        }
+        close();
+        return endOfData();
+    }
+
+    /**
+     * Close the iterator, stop timer and update profiler.
+     * Put results into cache if the underlying elementIterator is exhausted.
+     */
+    @Override
+    public void close() {
+        if (isTimerRunning) {
+            assert currentIds != null;
+            if (!elementIterator.hasNext()) {
+                indexCache.put(subQuery, currentIds);
+            }
+            profiler.setResultSize(currentIds.size());
             profiler.stopTimer();
             isTimerRunning = false;
-            profiler.setResultSize(currentIds.size());
-        }
-        return elementIterator.hasNext();
-    }
-
-    @Override
-    public JanusGraphElement next() {
-        return this.elementIterator.next();
-    }
-
-    @Override
-    public void close() throws Exception {
-        if (isTimerRunning) {
-            profiler.stopTimer();
         }
     }
 

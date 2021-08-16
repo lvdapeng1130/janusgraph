@@ -17,8 +17,8 @@ package org.janusgraph.graphdb.schema;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import org.janusgraph.core.EdgeLabel;
-import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.JanusGraph;
+import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.VertexLabel;
 import org.janusgraph.core.schema.JanusGraphManagement;
 
@@ -26,7 +26,10 @@ import java.util.Map;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
+ *
+ * @deprecated part of the management revamp in JG, see https://github.com/JanusGraph/janusgraph/projects/3.
  */
+@Deprecated
 public class SchemaContainer implements SchemaProvider {
 
     private final Map<String,VertexLabelDefinition> vertexLabels;

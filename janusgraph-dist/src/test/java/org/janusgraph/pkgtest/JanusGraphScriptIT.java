@@ -14,15 +14,17 @@
 
 package org.janusgraph.pkgtest;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * Test the janusgraph.sh script that starts and stops Cassandra, ES, and Gremlin Server.
  */
-public class JanusGraphScriptIT extends AbstractJanusGraphAssemblyIT {
+public class JanusGraphScriptIT extends JanusGraphAssemblyBaseIT {
 
     @Test
-    public void testGraphOfTheGodsGraphSON() throws Exception {
+    @Tag(TestCategory.FULL_TESTS)
+    public void testGraphOfTheGodsGraphSONFull() throws Exception {
         unzipAndRunExpect("janusgraph-sh.expect.vm", true);
     }
 }

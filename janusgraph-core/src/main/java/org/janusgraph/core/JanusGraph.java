@@ -40,6 +40,21 @@ import java.util.List;
         method = "shouldHandleSetVertexProperties",
         reason = "JanusGraph can only handle SET cardinality for properties when defined in the schema.")
 @Graph.OptOut(
+        test = "org.apache.tinkerpop.gremlin.structure.VertexPropertyTest$VertexPropertyAddition",
+        method = "shouldHandleListVertexPropertiesWithoutNullPropertyValues",
+        reason = "This test case requires EmptyVertexProperty instance when setting null value to a property, while JanusGraph " +
+            "returns an EmptyJanusGraphVertexProperty instance in such case.")
+@Graph.OptOut(
+        test = "org.apache.tinkerpop.gremlin.process.traversal.step.map.AddVertexTest",
+        method = "g_V_hasLabelXpersonX_propertyXname_nullX",
+        reason = "TinkerPop assumes cardinality is SINGLE when not explicitly given, while JanusGraph uses the cardinality " +
+            "already defined in the schema.")
+@Graph.OptOut(
+        test = "org.apache.tinkerpop.gremlin.process.traversal.step.map.AddEdgeTest",
+        method = "g_V_outE_propertyXweight_nullX",
+        reason = "TinkerPop assumes cardinality is SINGLE when not explicitly given, while JanusGraph uses the cardinality " +
+            "already defined in the schema.")
+@Graph.OptOut(
         test = "org.apache.tinkerpop.gremlin.process.computer.GraphComputerTest",
         method = "shouldOnlyAllowReadingVertexPropertiesInMapReduce",
         reason = "JanusGraph simply throws the wrong exception -- should not be a ReadOnly transaction exception but a specific one for MapReduce. This is too cumbersome to refactor in JanusGraph.")
@@ -61,6 +76,11 @@ import java.util.List;
         reason = "JanusGraph test graph computer (FulgoraGraphComputer) " +
             "currently does not support graph filters but does not throw proper exception because doing so breaks numerous " +
             "tests in gremlin-test ProcessComputerSuite.")
+@Graph.OptOut(
+        test = "org.apache.tinkerpop.gremlin.process.traversal.strategy.decoration.EventStrategyProcessTest",
+        method = "shouldResetAfterRollback",
+        reason = "JanusGraph assumes lifecycle of transactionListeners in AbstractThreadLocalTransaction ends when the " +
+            "transaction ends (commit/rollback/close). TinkerPop, however, asserts transactionListeners are active across transactions.")
 public interface JanusGraph extends Transaction {
 
    /* ---------------------------------------------------------------

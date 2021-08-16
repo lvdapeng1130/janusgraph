@@ -14,28 +14,32 @@
 
 package org.janusgraph.graphdb.berkeleyje;
 
+import com.google.common.base.Preconditions;
+import org.janusgraph.BerkeleyStorageSetup;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.diskstorage.Backend;
 import org.janusgraph.diskstorage.BackendException;
+import org.janusgraph.diskstorage.berkeleyje.BerkeleyJEStoreManager;
+import org.janusgraph.diskstorage.berkeleyje.BerkeleyJEStoreManager.IsolationLevel;
+import org.janusgraph.diskstorage.configuration.ConfigElement;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
+import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
+import org.janusgraph.diskstorage.configuration.WriteConfiguration;
+import org.janusgraph.graphdb.JanusGraphTest;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
-import org.janusgraph.BerkeleyStorageSetup;
-import org.janusgraph.diskstorage.berkeleyje.BerkeleyJEStoreManager;
-import org.janusgraph.diskstorage.berkeleyje.BerkeleyJEStoreManager.IsolationLevel;
-import org.janusgraph.diskstorage.configuration.ConfigElement;
-import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
-import org.janusgraph.diskstorage.configuration.WriteConfiguration;
-import org.janusgraph.graphdb.JanusGraphTest;
-
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import static org.junit.jupiter.api.Assertions.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BerkeleyGraphTest extends JanusGraphTest {
 
@@ -112,6 +116,7 @@ public class BerkeleyGraphTest extends JanusGraphTest {
         //Do nothing TODO: Figure out why this is failing in BerkeleyDB!!
     }
 
+    @Disabled("Unable to run on GitHub Actions.")
     @Test
     public void testIDBlockAllocationTimeout() throws BackendException {
         config.set("ids.authority.wait-time", Duration.of(0L, ChronoUnit.NANOS));
@@ -119,12 +124,7 @@ public class BerkeleyGraphTest extends JanusGraphTest {
         close();
         JanusGraphFactory.drop(graph);
         open(config);
-        try {
-            graph.addVertex();
-            fail();
-        } catch (JanusGraphException ignored) {
-
-        }
+        assertThrows(JanusGraphException.class, () -> graph.addVertex());
 
         assertTrue(graph.isOpen());
 

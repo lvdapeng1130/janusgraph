@@ -16,6 +16,13 @@ package org.janusgraph.diskstorage.es;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
+import org.elasticsearch.client.RestClientBuilder;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.core.attribute.Cmp;
@@ -34,6 +41,13 @@ import org.janusgraph.diskstorage.es.mapping.IndexMapping;
 import org.janusgraph.diskstorage.es.rest.util.HttpAuthTypes;
 import org.janusgraph.diskstorage.es.script.ESScriptResponse;
 import org.janusgraph.diskstorage.indexing.*;
+import org.janusgraph.diskstorage.indexing.IndexEntry;
+import org.janusgraph.diskstorage.indexing.IndexFeatures;
+import org.janusgraph.diskstorage.indexing.IndexMutation;
+import org.janusgraph.diskstorage.indexing.IndexProvider;
+import org.janusgraph.diskstorage.indexing.IndexQuery;
+import org.janusgraph.diskstorage.indexing.KeyInformation;
+import org.janusgraph.diskstorage.indexing.RawQuery;
 import org.janusgraph.diskstorage.util.DefaultTransaction;
 import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
 import org.janusgraph.graphdb.database.serialize.AttributeUtils;
@@ -47,7 +61,19 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -58,6 +84,14 @@ import java.util.stream.StreamSupport;
 import static org.janusgraph.diskstorage.configuration.ConfigOption.disallowEmpty;
 import static org.janusgraph.diskstorage.es.ElasticSearchConstants.*;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
+import static org.janusgraph.diskstorage.es.ElasticSearchConstants.ES_DOC_KEY;
+import static org.janusgraph.diskstorage.es.ElasticSearchConstants.ES_GEO_COORDS_KEY;
+import static org.janusgraph.diskstorage.es.ElasticSearchConstants.ES_LANG_KEY;
+import static org.janusgraph.diskstorage.es.ElasticSearchConstants.ES_SCRIPT_KEY;
+import static org.janusgraph.diskstorage.es.ElasticSearchConstants.ES_TYPE_KEY;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_MAX_RESULT_SET_SIZE;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_NAME;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_NS;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -203,7 +237,8 @@ public class ElasticSearchIndex implements IndexProvider {
 
     public static final ConfigOption<String> ES_HTTP_AUTH_TYPE =
             new ConfigOption<>(ES_HTTP_AUTH_NS, "type",
-            "Authentication type to be used for HTTP(S) access.", ConfigOption.Type.LOCAL, HttpAuthTypes.NONE.toString());
+            "Authentication type to be used for HTTP(S) access. Available options are `NONE`, `BASIC` and `CUSTOM`.",
+            ConfigOption.Type.LOCAL, HttpAuthTypes.NONE.toString());
 
     public static final ConfigNamespace ES_HTTP_AUTH_BASIC_NS =
             new ConfigNamespace(ES_HTTP_AUTH_NS, "basic", "Configuration options for HTTP(S) Basic authentication.");
@@ -258,6 +293,16 @@ public class ElasticSearchIndex implements IndexProvider {
             "Enables cache for generated index store names. " +
                 "It is recommended to always enable index store names cache unless you have more then 50000 indexes " +
                 "per index store.", ConfigOption.Type.MASKABLE, true);
+
+    public static final ConfigOption<Integer> CONNECT_TIMEOUT =
+        new ConfigOption<>(ELASTICSEARCH_NS, "connect-timeout",
+            "Sets the maximum connection timeout (in milliseconds).", ConfigOption.Type.MASKABLE,
+            Integer.class, RestClientBuilder.DEFAULT_CONNECT_TIMEOUT_MILLIS);
+
+    public static final ConfigOption<Integer> SOCKET_TIMEOUT =
+        new ConfigOption<>(ELASTICSEARCH_NS, "socket-timeout",
+            "Sets the maximum socket timeout (in milliseconds).", ConfigOption.Type.MASKABLE,
+            Integer.class, RestClientBuilder.DEFAULT_SOCKET_TIMEOUT_MILLIS);
 
     public static final int HOST_PORT_DEFAULT = 9200;
 
@@ -672,7 +717,7 @@ public class ElasticSearchIndex implements IndexProvider {
                         .map(v -> convertToEsType(v.value, Mapping.getMapping(keyInformation)))
                         .filter(v -> {
                             Preconditions.checkArgument(!(v instanceof byte[]),
-                                "Collections not supported for " + add.getKey());
+                                "Collections not supported for %s", add.getKey());
                             return true;
                         }).toArray();
                     break;
@@ -928,9 +973,11 @@ public class ElasticSearchIndex implements IndexProvider {
             Object value = atom.getValue();
             final String key = atom.getKey();
             final JanusGraphPredicate predicate = atom.getPredicate();
-            if (value instanceof Number) {
+            if (value == null && predicate == Cmp.NOT_EQUAL) {
+                return compat.exists(key);
+            } else if (value instanceof Number) {
                 Preconditions.checkArgument(predicate instanceof Cmp,
-                        "Relation not supported on numeric types: " + predicate);
+                        "Relation not supported on numeric types: %s", predicate);
                 return getRelationFromCmp((Cmp) predicate, key, value);
             } else if (value instanceof String) {
 
@@ -948,22 +995,49 @@ public class ElasticSearchIndex implements IndexProvider {
 
                 if (predicate == Text.CONTAINS || predicate == Cmp.EQUAL) {
                     return compat.match(fieldName, value);
+                } else if (predicate == Text.NOT_CONTAINS) {
+                    return compat.boolMust(ImmutableList.of(compat.exists(fieldName),
+                        compat.boolMustNot(compat.match(fieldName, value))));
+                } else if (predicate == Text.CONTAINS_PHRASE) {
+                    return compat.matchPhrase(fieldName, value);
+                } else if (predicate == Text.NOT_CONTAINS_PHRASE) {
+                    return compat.boolMust(ImmutableList.of(compat.exists(fieldName),
+                        compat.boolMustNot(compat.matchPhrase(fieldName, value))));
                 } else if (predicate == Text.CONTAINS_PREFIX) {
                     if (!ParameterType.TEXT_ANALYZER.hasParameter(information.get(key).getParameters()))
                         value = ((String) value).toLowerCase();
                     return compat.prefix(fieldName, value);
+                } else if (predicate == Text.NOT_CONTAINS_PREFIX) {
+                    if (!ParameterType.TEXT_ANALYZER.hasParameter(information.get(key).getParameters()))
+                        value = ((String) value).toLowerCase();
+                    return compat.boolMust(ImmutableList.of(compat.exists(fieldName),
+                        compat.boolMustNot(compat.prefix(fieldName, value))));
                 } else if (predicate == Text.CONTAINS_REGEX) {
                     if (!ParameterType.TEXT_ANALYZER.hasParameter(information.get(key).getParameters()))
                         value = ((String) value).toLowerCase();
                     return compat.regexp(fieldName, value);
+                } else if (predicate == Text.NOT_CONTAINS_REGEX) {
+                    if (!ParameterType.TEXT_ANALYZER.hasParameter(information.get(key).getParameters()))
+                        value = ((String) value).toLowerCase();
+                    return compat.boolMust(ImmutableList.of(compat.exists(fieldName),
+                        compat.boolMustNot(compat.regexp(fieldName, value))));
                 } else if (predicate == Text.PREFIX) {
                     return compat.prefix(fieldName, value);
+                } else if (predicate == Text.NOT_PREFIX) {
+                    return compat.boolMust(ImmutableList.of(compat.exists(fieldName),
+                        compat.boolMustNot(compat.prefix(fieldName, value))));
                 } else if (predicate == Text.REGEX) {
                     return compat.regexp(fieldName, value);
+                } else if (predicate == Text.NOT_REGEX) {
+                    return compat.boolMust(ImmutableList.of(compat.exists(fieldName),
+                        compat.boolMustNot(compat.regexp(fieldName, value))));
                 } else if (predicate == Cmp.NOT_EQUAL) {
                     return compat.boolMustNot(compat.match(fieldName, value));
                 } else if (predicate == Text.FUZZY || predicate == Text.CONTAINS_FUZZY) {
                     return compat.fuzzyMatch(fieldName, value);
+                } else if (predicate == Text.NOT_FUZZY || predicate == Text.NOT_CONTAINS_FUZZY) {
+                    return compat.boolMust(ImmutableList.of(compat.exists(fieldName),
+                        compat.boolMustNot(compat.fuzzyMatch(fieldName, value))));
                 } else if (predicate == Cmp.LESS_THAN) {
                     return compat.lt(fieldName, value);
                 } else if (predicate == Cmp.LESS_THAN_EQUAL) {
@@ -978,7 +1052,7 @@ public class ElasticSearchIndex implements IndexProvider {
                 // geopoint
                 final Geoshape shape = (Geoshape) value;
                 Preconditions.checkArgument(predicate instanceof Geo && predicate != Geo.CONTAINS,
-                        "Relation not supported on geopoint types: " + predicate);
+                        "Relation not supported on geopoint types: %s", predicate);
 
                 final Map<String,Object> query;
                 switch (shape.getType()) {
@@ -1007,7 +1081,7 @@ public class ElasticSearchIndex implements IndexProvider {
                 return predicate == Geo.DISJOINT ?  compat.boolMustNot(query) : query;
             } else if (value instanceof Geoshape) {
                 Preconditions.checkArgument(predicate instanceof Geo,
-                        "Relation not supported on geoshape types: " + predicate);
+                        "Relation not supported on geoshape types: %s", predicate);
                 final Geoshape shape = (Geoshape) value;
                 final Map<String,Object> geo;
                 switch (shape.getType()) {
@@ -1054,7 +1128,7 @@ public class ElasticSearchIndex implements IndexProvider {
                 return compat.geoShape(key, geo, (Geo) predicate);
             } else if (value instanceof Date || value instanceof Instant) {
                 Preconditions.checkArgument(predicate instanceof Cmp,
-                        "Relation not supported on date types: " + predicate);
+                        "Relation not supported on date types: %s", predicate);
 
                 if (value instanceof Instant) {
                     value = Date.from((Instant) value);
@@ -1209,7 +1283,8 @@ public class ElasticSearchIndex implements IndexProvider {
             final KeyInformation information = informations.get(store).get(orderEntry.getKey());
             final Mapping mapping = Mapping.getMapping(information);
             final Class<?> datatype = orderEntry.getDatatype();
-            sr.addSort(orderEntry.getKey(), order.toLowerCase(), convertToEsDataType(datatype, mapping));
+            final String key = hasDualStringMapping(information) ? getDualMappingName(orderEntry.getKey()) : orderEntry.getKey();
+            sr.addSort(key, order.toLowerCase(), convertToEsDataType(datatype, mapping));
         }
     }
 
@@ -1225,6 +1300,20 @@ public class ElasticSearchIndex implements IndexProvider {
                 = StreamSupport.stream(Spliterators.spliteratorUnknownSize(resultIterator, Spliterator.ORDERED),
                 false).skip(query.getOffset());
         return query.hasLimit() ? toReturn.limit(query.getLimit()) : toReturn;
+    }
+
+    @Override
+    public Long queryCount(IndexQuery query, KeyInformation.IndexRetriever information, BaseTransaction tx) throws BackendException {
+        final ElasticSearchRequest sr = new ElasticSearchRequest();
+        final Map<String,Object> esQuery = getFilter(query.getCondition(), information.get(query.getStore()));
+        sr.setQuery(compat.prepareQuery(esQuery));
+        try {
+            return client.countTotal(
+                getIndexStoreName(query.getStore()),
+                compat.createRequestBody(sr, null));
+        } catch (final IOException | UncheckedIOException e) {
+            throw new PermanentBackendException(e);
+        }
     }
 
     @Override
@@ -1258,11 +1347,16 @@ public class ElasticSearchIndex implements IndexProvider {
             switch(mapping) {
                 case DEFAULT:
                 case TEXT:
-                    return janusgraphPredicate == Text.CONTAINS || janusgraphPredicate == Text.CONTAINS_PREFIX
-                            || janusgraphPredicate == Text.CONTAINS_REGEX || janusgraphPredicate == Text.CONTAINS_FUZZY;
+                    return janusgraphPredicate == Text.CONTAINS || janusgraphPredicate == Text.NOT_CONTAINS
+                            || janusgraphPredicate == Text.CONTAINS_FUZZY || janusgraphPredicate == Text.NOT_CONTAINS_FUZZY
+                            || janusgraphPredicate == Text.CONTAINS_PREFIX || janusgraphPredicate == Text.NOT_CONTAINS_PREFIX
+                            || janusgraphPredicate == Text.CONTAINS_REGEX || janusgraphPredicate == Text.NOT_CONTAINS_REGEX
+                            || janusgraphPredicate == Text.CONTAINS_PHRASE || janusgraphPredicate == Text.NOT_CONTAINS_PHRASE;
                 case STRING:
-                    return janusgraphPredicate instanceof Cmp || janusgraphPredicate==Text.REGEX
-                            || janusgraphPredicate==Text.PREFIX  || janusgraphPredicate == Text.FUZZY;
+                    return janusgraphPredicate instanceof Cmp
+                            || janusgraphPredicate==Text.REGEX || janusgraphPredicate==Text.NOT_REGEX
+                            || janusgraphPredicate==Text.PREFIX || janusgraphPredicate==Text.NOT_PREFIX
+                            || janusgraphPredicate == Text.FUZZY || janusgraphPredicate == Text.NOT_FUZZY;
                 case TEXTSTRING:
                     return janusgraphPredicate instanceof Text || janusgraphPredicate instanceof Cmp;
             }

@@ -14,15 +14,15 @@
 
 package org.janusgraph.core.schema;
 
-import org.janusgraph.core.EdgeLabel;
-import org.janusgraph.core.PropertyKey;
-import org.janusgraph.core.RelationType;
-import org.janusgraph.core.JanusGraphTransaction;
-import org.janusgraph.core.VertexLabel;
-import org.janusgraph.diskstorage.keycolumnvalue.scan.ScanMetrics;
 import org.apache.tinkerpop.gremlin.process.traversal.Order;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Element;
+import org.janusgraph.core.EdgeLabel;
+import org.janusgraph.core.JanusGraphTransaction;
+import org.janusgraph.core.PropertyKey;
+import org.janusgraph.core.RelationType;
+import org.janusgraph.core.VertexLabel;
+import org.janusgraph.diskstorage.keycolumnvalue.scan.ScanMetrics;
 
 import java.time.Duration;
 import java.util.Set;
@@ -162,6 +162,14 @@ public interface JanusGraphManagement extends JanusGraphConfiguration, SchemaMan
      * @return
      */
     Iterable<JanusGraphIndex> getGraphIndexes(final Class<? extends Element> elementType);
+
+    /**
+     * Returns the indexOnly constraint for the index with given name or null if such constraint does not exist
+     * @param indexName
+     * @return
+     * @throws IllegalArgumentException if there is no index with given name
+     */
+    JanusGraphSchemaType getIndexOnlyConstraint(final String indexName);
 
     /**
      * Returns an {@link IndexBuilder} to add a graph index to this JanusGraph graph. The index to-be-created
@@ -448,7 +456,7 @@ public interface JanusGraphManagement extends JanusGraphConfiguration, SchemaMan
     /**
      * Prints out schema information related to indexes
      *
-     * @return String with graph index information
+     * @return String with graph index and relation index information
      */
     String printIndexes();
 

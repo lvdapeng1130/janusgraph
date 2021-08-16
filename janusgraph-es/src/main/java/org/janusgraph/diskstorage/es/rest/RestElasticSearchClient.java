@@ -105,7 +105,7 @@ public class RestElasticSearchClient implements ElasticSearchClient {
     private Integer retryOnConflict;
 
     private final String retryOnConflictKey;
-
+    
     public RestElasticSearchClient(RestClient delegate, int scrollKeepAlive, boolean useMappingTypesForES7) {
         this.delegate = delegate;
         majorVersion = getMajorVersion();

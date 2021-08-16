@@ -16,6 +16,7 @@ package org.janusgraph.graphdb.tinkerpop;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration2.Configuration;
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
@@ -27,6 +28,17 @@ import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoVersion;
 import org.apache.tinkerpop.gremlin.structure.util.AbstractThreadLocalTransaction;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 import org.janusgraph.core.*;
+import org.janusgraph.core.EdgeLabel;
+import org.janusgraph.core.JanusGraph;
+import org.janusgraph.core.JanusGraphIndexQuery;
+import org.janusgraph.core.JanusGraphMultiVertexQuery;
+import org.janusgraph.core.JanusGraphQuery;
+import org.janusgraph.core.JanusGraphTransaction;
+import org.janusgraph.core.JanusGraphVertex;
+import org.janusgraph.core.MixedIndexCountQuery;
+import org.janusgraph.core.PropertyKey;
+import org.janusgraph.core.RelationType;
+import org.janusgraph.core.VertexLabel;
 import org.janusgraph.core.schema.EdgeLabelMaker;
 import org.janusgraph.core.schema.PropertyKeyMaker;
 import org.janusgraph.core.schema.VertexLabelMaker;
@@ -87,6 +99,8 @@ public abstract class JanusGraphBlueprintsGraph implements JanusGraph {
 
     @Override
     public synchronized void close() {
+        // If user closes the graph before committing/rolling back thread-bound transactions, there could be a leakage.
+        // In case that happens, here we at least remove the ThreadLocal object belonging to the current thread.
         txs.remove();
         txs = null;
     }
@@ -171,6 +185,11 @@ public abstract class JanusGraphBlueprintsGraph implements JanusGraph {
     @Override
     public JanusGraphQuery<? extends JanusGraphQuery> query() {
         return getAutoStartTx().query();
+    }
+
+    @Override
+    public MixedIndexCountQuery mixedIndexCountQuery() {
+        return getAutoStartTx().mixedIndexCountQuery();
     }
 
     @Override
@@ -282,6 +301,24 @@ public abstract class JanusGraphBlueprintsGraph implements JanusGraph {
 
         public GraphTransaction() {
             super(JanusGraphBlueprintsGraph.this);
+        }
+
+        @Override
+        public void commit() {
+            try {
+                super.commit();
+            } finally {
+                doClose();
+            }
+        }
+
+        @Override
+        public void rollback() {
+            try {
+                super.rollback();
+            } finally {
+                doClose();
+            }
         }
 
         @Override

@@ -30,4 +30,15 @@ public class LongEncoding {
     public static String encode(String num) {
         return num;
     }
+
+    public static String encode(long num, String symbols) {
+        Preconditions.checkArgument(num>=0,"Expected non-negative number: %d", num);
+        final int B = symbols.length();
+        StringBuilder sb = new StringBuilder();
+        while (num != 0) {
+            sb.append(symbols.charAt((int) (num % B)));
+            num /= B;
+        }
+        return sb.reverse().toString();
+    }
 }

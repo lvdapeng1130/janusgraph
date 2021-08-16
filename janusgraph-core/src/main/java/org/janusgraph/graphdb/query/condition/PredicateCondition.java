@@ -14,6 +14,8 @@
 
 package org.janusgraph.graphdb.query.condition;
 
+import com.google.common.base.Preconditions;
+import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.core.JanusGraphElement;
 import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.RelationType;
@@ -21,10 +23,6 @@ import org.janusgraph.graphdb.internal.InternalElement;
 import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.query.JanusGraphPredicate;
 import org.janusgraph.graphdb.util.ElementHelper;
-
-import org.apache.tinkerpop.gremlin.structure.Direction;
-
-import com.google.common.base.Preconditions;
 
 import java.util.Iterator;
 import java.util.Objects;
@@ -106,7 +104,7 @@ public class PredicateCondition<K, E extends JanusGraphElement> extends Literal<
             return false;
 
         PredicateCondition oth = (PredicateCondition) other;
-        return key.equals(oth.key) && predicate.equals(oth.predicate) && value.equals(oth.value);
+        return key.equals(oth.key) && predicate.equals(oth.predicate) && Objects.equals(value, oth.value);
     }
 
     @Override

@@ -17,17 +17,11 @@ package org.janusgraph.diskstorage.cql;
 import org.janusgraph.JanusGraphCassandraContainer;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.DistributedStoreManagerTest;
-import org.janusgraph.diskstorage.common.DistributedStoreManager.Deployment;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
-import org.janusgraph.testutil.FeatureFlag;
-import org.janusgraph.testutil.JanusGraphFeature;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Testcontainers
 public class CQLDistributedStoreManagerTest extends DistributedStoreManagerTest<CQLStoreManager> {
@@ -49,13 +43,5 @@ public class CQLDistributedStoreManagerTest extends DistributedStoreManagerTest<
     public void tearDown() throws BackendException {
         if (null != manager)
             manager.close();
-    }
-
-    @Override
-    @Test
-    @FeatureFlag(feature = JanusGraphFeature.OrderedScan)
-    public void testGetDeployment() {
-        final Deployment deployment = Deployment.LOCAL;
-        assertEquals(deployment, manager.getDeployment());
     }
 }

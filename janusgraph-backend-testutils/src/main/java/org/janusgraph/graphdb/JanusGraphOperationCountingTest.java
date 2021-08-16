@@ -26,6 +26,13 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.TestCategory;
 import org.janusgraph.core.*;
+import org.janusgraph.core.Cardinality;
+import org.janusgraph.core.EdgeLabel;
+import org.janusgraph.core.JanusGraphTransaction;
+import org.janusgraph.core.JanusGraphVertex;
+import org.janusgraph.core.Multiplicity;
+import org.janusgraph.core.PropertyKey;
+import org.janusgraph.core.VertexLabel;
 import org.janusgraph.core.attribute.Cmp;
 import org.janusgraph.core.schema.ConsistencyModifier;
 import org.janusgraph.core.schema.JanusGraphIndex;
@@ -44,7 +51,11 @@ import org.janusgraph.util.stats.MetricManager;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -54,6 +65,32 @@ import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
 import static org.janusgraph.graphdb.database.cache.MetricInstrumentedSchemaCache.*;
 import static org.janusgraph.testutil.JanusGraphAssert.assertCount;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.janusgraph.diskstorage.Backend.EDGESTORE_NAME;
+import static org.janusgraph.diskstorage.Backend.INDEXSTORE_NAME;
+import static org.janusgraph.diskstorage.Backend.LOCK_STORE_SUFFIX;
+import static org.janusgraph.diskstorage.Backend.METRICS_CACHE_SUFFIX;
+import static org.janusgraph.diskstorage.Backend.METRICS_STOREMANAGER_NAME;
+import static org.janusgraph.diskstorage.util.MetricInstrumentedStore.M_ACQUIRE_LOCK;
+import static org.janusgraph.diskstorage.util.MetricInstrumentedStore.M_GET_SLICE;
+import static org.janusgraph.diskstorage.util.MetricInstrumentedStore.M_MUTATE;
+import static org.janusgraph.diskstorage.util.MetricInstrumentedStore.OPERATION_NAMES;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.BASIC_METRICS;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.DB_CACHE;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.DB_CACHE_CLEAN_WAIT;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.DB_CACHE_TIME;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.IDS_STORE_NAME;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.METRICS_MERGE_STORES;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.PROPERTY_PREFETCHING;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.SCHEMA_CONSTRAINTS;
+import static org.janusgraph.graphdb.database.cache.MetricInstrumentedSchemaCache.METRICS_NAME;
+import static org.janusgraph.graphdb.database.cache.MetricInstrumentedSchemaCache.METRICS_RELATIONS;
+import static org.janusgraph.graphdb.database.cache.MetricInstrumentedSchemaCache.METRICS_TYPENAME;
+import static org.janusgraph.testutil.JanusGraphAssert.assertCount;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -424,19 +461,6 @@ public abstract class JanusGraphOperationCountingTest extends JanusGraphBaseTest
             "On type cache relation misses");
         assertTrue(relationMisses <= metric.getCounter(GraphDatabaseConfiguration.METRICS_SYSTEM_PREFIX_DEFAULT, METRICS_NAME, METRICS_RELATIONS, CacheMetricsAction.RETRIEVAL.getName()).getCount());
     }
-
-//    public void verifyCacheMetrics(String storeName) {
-//        verifyCacheMetrics(storeName,0,0);
-//    }
-//
-//    public void verifyCacheMetrics(String storeName, int misses, int retrievals) {
-//        verifyCacheMetrics(storeName, metricsPrefix, misses, retrievals);
-//    }
-//
-//    public void verifyCacheMetrics(String storeName, String prefix, int misses, int retrievals) {
-//        assertEquals("On "+storeName+"-cache retrievals",retrievals, metric.getCounter(prefix, storeName + Backend.METRICS_CACHE_SUFFIX, CacheMetricsAction.RETRIEVAL.getName()).getCount());
-//        assertEquals("On "+storeName+"-cache misses",misses, metric.getCounter(prefix, storeName + Backend.METRICS_CACHE_SUFFIX, CacheMetricsAction.MISS.getName()).getCount());
-//    }
 
     public void printAllMetrics(String prefix) {
         List<String> storeNames = new ArrayList<>();

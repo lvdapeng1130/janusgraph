@@ -15,7 +15,7 @@
 package org.janusgraph.diskstorage.indexing;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransaction;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
@@ -100,6 +100,8 @@ public interface IndexProvider extends IndexInformation {
      * @throws BackendException
      */
     void restore(Map<String,Map<String, List<IndexEntry>>> documents, KeyInformation.IndexRetriever information, BaseTransaction tx) throws BackendException;
+
+    Long queryCount(IndexQuery query, KeyInformation.IndexRetriever information, BaseTransaction tx) throws BackendException;
 
     /**
      * Executes the given query against the index.

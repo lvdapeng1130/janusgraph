@@ -18,28 +18,59 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.janusgraph.core.*;
+import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.janusgraph.core.BaseVertexQuery;
+import org.janusgraph.core.JanusGraphEdge;
+import org.janusgraph.core.JanusGraphRelation;
+import org.janusgraph.core.JanusGraphVertex;
+import org.janusgraph.core.PropertyKey;
+import org.janusgraph.core.RelationType;
+import org.janusgraph.core.VertexList;
 import org.janusgraph.core.attribute.Cmp;
+import org.janusgraph.core.schema.SchemaStatus;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.graphdb.database.EdgeSerializer;
-import org.janusgraph.graphdb.internal.*;
-import org.janusgraph.graphdb.query.*;
-import org.janusgraph.graphdb.query.condition.*;
+import org.janusgraph.graphdb.internal.ElementLifeCycle;
+import org.janusgraph.graphdb.internal.InternalRelationType;
+import org.janusgraph.graphdb.internal.InternalVertex;
+import org.janusgraph.graphdb.internal.RelationCategory;
+import org.janusgraph.graphdb.query.BackendQueryHolder;
+import org.janusgraph.graphdb.query.JanusGraphPredicate;
+import org.janusgraph.graphdb.query.Query;
+import org.janusgraph.graphdb.query.QueryProcessor;
+import org.janusgraph.graphdb.query.QueryUtil;
+import org.janusgraph.graphdb.query.ResultMergeSortIterator;
+import org.janusgraph.graphdb.query.ResultSetIterator;
+import org.janusgraph.graphdb.query.condition.And;
+import org.janusgraph.graphdb.query.condition.Condition;
+import org.janusgraph.graphdb.query.condition.DirectionCondition;
+import org.janusgraph.graphdb.query.condition.IncidenceCondition;
+import org.janusgraph.graphdb.query.condition.Or;
+import org.janusgraph.graphdb.query.condition.PredicateCondition;
+import org.janusgraph.graphdb.query.condition.RelationTypeCondition;
+import org.janusgraph.graphdb.query.condition.VisibilityFilterCondition;
 import org.janusgraph.graphdb.query.profile.QueryProfiler;
 import org.janusgraph.graphdb.relations.StandardVertexProperty;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
-import org.janusgraph.core.schema.SchemaStatus;
 import org.janusgraph.graphdb.types.system.ImplicitKey;
 import org.janusgraph.graphdb.types.system.SystemRelationType;
-import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.util.datastructures.Interval;
 import org.janusgraph.util.datastructures.PointInterval;
 import org.janusgraph.util.datastructures.RangeInterval;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nullable;
-import java.util.*;
 
 /**
  * Builds a {@link BaseVertexQuery}, optimizes the query and compiles the result into
@@ -493,13 +524,13 @@ public abstract class BasicVertexCentricQueryBuilder<Q extends BaseVertexQuery<Q
                 Direction typeDir = dir;
                 if (type.isPropertyKey()) {
                     Preconditions.checkArgument(returnType != RelationCategory.EDGE,
-                            "Querying for edges but including a property key: " + type.name());
+                            "Querying for edges but including a property key: %s", type.name());
                     returnType = RelationCategory.PROPERTY;
                     typeDir = Direction.OUT;
                 }
                 if (type.isEdgeLabel()) {
                     Preconditions.checkArgument(returnType != RelationCategory.PROPERTY,
-                        "Querying for properties but including an edge label: " + type.name());
+                        "Querying for properties but including an edge label: %s", type.name());
                     returnType = RelationCategory.EDGE;
                     if (!type.isUnidirected(Direction.BOTH)) {
                         //Make sure unidirectionality lines up
@@ -538,6 +569,7 @@ public abstract class BasicVertexCentricQueryBuilder<Q extends BaseVertexQuery<Q
                         InternalRelationType bestCandidate = null;
                         double bestScore = Double.NEGATIVE_INFINITY;
                         boolean bestCandidateSupportsOrder = false;
+                        PropertyKey[] bestCandidateExtendedSortKey = null;
                         for (InternalRelationType candidate : type.getRelationIndexes()) {
                             //Filter out those that don't apply
                             if (!candidate.isUnidirected(Direction.BOTH) && !candidate.isUnidirected(direction)) {
@@ -570,6 +602,7 @@ public abstract class BasicVertexCentricQueryBuilder<Q extends BaseVertexQuery<Q
                                 bestScore=score;
                                 bestCandidate=candidate;
                                 bestCandidateSupportsOrder=supportsOrder && currentOrder==orders.size();
+                                bestCandidateExtendedSortKey = extendedSortKey;
                             }
                         }
                         Preconditions.checkArgument(bestCandidate != null,
@@ -578,10 +611,9 @@ public abstract class BasicVertexCentricQueryBuilder<Q extends BaseVertexQuery<Q
 
                         //Construct sort key constraints for the best candidate and then serialize into a SliceQuery
                         //that is wrapped into a BackendQueryHolder
-                        PropertyKey[] extendedSortKey = getExtendedSortKey(bestCandidate,direction,tx);
                         EdgeSerializer.TypedInterval[] sortKeyConstraints
-                                = new EdgeSerializer.TypedInterval[extendedSortKey.length];
-                        constructSliceQueries(extendedSortKey, sortKeyConstraints, 0, bestCandidate, direction,
+                                = new EdgeSerializer.TypedInterval[bestCandidateExtendedSortKey.length];
+                        constructSliceQueries(bestCandidateExtendedSortKey, sortKeyConstraints, 0, bestCandidate, direction,
                                 intervalConstraints, sliceLimit, isIntervalFittedConditions, bestCandidateSupportsOrder,
                                 queries);
                     }

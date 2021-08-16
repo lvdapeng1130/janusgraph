@@ -22,10 +22,9 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.LockMode;
 import com.sleepycat.je.Transaction;
 import org.janusgraph.diskstorage.BackendException;
-import org.janusgraph.diskstorage.PermanentBackendException;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
+import org.janusgraph.diskstorage.PermanentBackendException;
 import org.janusgraph.diskstorage.common.AbstractStoreTransaction;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,7 +92,7 @@ public class BerkeleyJETx extends AbstractStoreTransaction {
         super.rollback();
         if (tx == null) return;
         if (log.isTraceEnabled())
-            log.trace("{} rolled back", this.toString(), new TransactionClose(this.toString()));
+            log.trace("{} rolled back", this, new TransactionClose(this.toString()));
         try {
             isOpen = false;
             closeOpenCursors();
@@ -109,7 +108,7 @@ public class BerkeleyJETx extends AbstractStoreTransaction {
         super.commit();
         if (tx == null) return;
         if (log.isTraceEnabled())
-            log.trace("{} committed", this.toString(), new TransactionClose(this.toString()));
+            log.trace("{} committed", this, new TransactionClose(this.toString()));
         try {
             isOpen = false;
             closeOpenCursors();

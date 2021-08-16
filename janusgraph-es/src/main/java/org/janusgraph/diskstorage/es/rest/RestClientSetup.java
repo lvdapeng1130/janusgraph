@@ -28,6 +28,11 @@ import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.es.ElasticSearchClient;
 import org.janusgraph.diskstorage.es.ElasticSearchIndex;
 import org.janusgraph.diskstorage.es.rest.util.*;
+import org.janusgraph.diskstorage.es.rest.util.BasicAuthHttpClientConfigCallback;
+import org.janusgraph.diskstorage.es.rest.util.ConnectionKeepAliveConfigCallback;
+import org.janusgraph.diskstorage.es.rest.util.HttpAuthTypes;
+import org.janusgraph.diskstorage.es.rest.util.RestClientAuthenticator;
+import org.janusgraph.diskstorage.es.rest.util.SSLConfigurationCallback;
 import org.janusgraph.diskstorage.es.rest.util.SSLConfigurationCallback.Builder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +70,7 @@ public class RestClientSetup {
             log.debug("Configured remote host: {} : {}", hostname, hostPort);
             hosts.add(new HttpHost(hostname, hostPort, httpScheme));
         }
+
         final RestClient rc = getRestClient(hosts.toArray(new HttpHost[hosts.size()]), config);
 
         final int scrollKeepAlive = config.get(ElasticSearchIndex.ES_SCROLL_KEEP_ALIVE);
@@ -131,11 +137,18 @@ public class RestClientSetup {
      * @return callback or null if the request customization is not needed
      */
     protected RequestConfigCallback getRequestConfigCallback(Configuration config) {
-        Integer connectTimeOut = config.get(ElasticSearchIndex.ES_CONNECT_TIMEOUT);
-        Integer socketTimeOut = config.get(ElasticSearchIndex.ES_SOCKET_TIMEOUT);
+        final List<RequestConfigCallback> callbackList = new LinkedList<>();
+        final Integer connectTimeout = config.get(ElasticSearchIndex.CONNECT_TIMEOUT);
+        final Integer socketTimeout = config.get(ElasticSearchIndex.SOCKET_TIMEOUT);
+
+        callbackList.add((requestConfigBuilder) ->
+            requestConfigBuilder.setConnectTimeout(connectTimeout).setSocketTimeout(socketTimeout));
+
+        // will execute the chain of individual callbacks
         return requestConfigBuilder -> {
-            requestConfigBuilder.setConnectTimeout(connectTimeOut);
-            requestConfigBuilder.setSocketTimeout(socketTimeOut);
+            for(RequestConfigCallback cb: callbackList) {
+                cb.customizeRequestConfig(requestConfigBuilder);
+            }
             return requestConfigBuilder;
         };
     }
@@ -247,8 +260,8 @@ public class RestClientSetup {
 
         try {
             final Class<?> c = Class.forName(authClassName);
-            Preconditions.checkArgument(RestClientAuthenticator.class.isAssignableFrom(c), "Authenticator class "
-                    + authClassName + " must be a subclass of " + RestClientAuthenticator.class.getName());
+            Preconditions.checkArgument(RestClientAuthenticator.class.isAssignableFrom(c),
+                "Authenticator class %s must be a subclass of %s", authClassName, RestClientAuthenticator.class.getName());
             @SuppressWarnings("unchecked")
             final Constructor<RestClientAuthenticator> ctr = ((Class<RestClientAuthenticator>)c).getConstructor(String[].class);
             authenticator = ctr.newInstance((Object)authClassConstructorArgList);

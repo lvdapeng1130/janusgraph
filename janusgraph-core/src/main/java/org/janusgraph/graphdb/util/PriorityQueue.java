@@ -28,6 +28,7 @@ package org.janusgraph.graphdb.util;
  * <code>prepopulate</code> set to <code>true</code>.
  * 
 */
+@Deprecated
 public abstract class PriorityQueue<T> {
   private int size;
   private final int maxSize;
@@ -79,7 +80,7 @@ public abstract class PriorityQueue<T> {
 
   /** Determines the ordering of objects in this priority queue.  Subclasses
    *  must define this one method.
-   *  @return <code>true</code> iff parameter <tt>a</tt> is less than parameter <tt>b</tt>.
+   *  @return <code>true</code> iff parameter <code>a</code> is less than parameter <code>b</code>.
    */
   protected abstract boolean lessThan(T a, T b);
 

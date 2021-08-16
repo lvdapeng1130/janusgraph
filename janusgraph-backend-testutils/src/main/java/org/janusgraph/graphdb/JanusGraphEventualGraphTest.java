@@ -22,7 +22,16 @@ import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.TestCategory;
-import org.janusgraph.core.*;
+import org.janusgraph.core.Cardinality;
+import org.janusgraph.core.EdgeLabel;
+import org.janusgraph.core.JanusGraphEdge;
+import org.janusgraph.core.JanusGraphException;
+import org.janusgraph.core.JanusGraphRelation;
+import org.janusgraph.core.JanusGraphTransaction;
+import org.janusgraph.core.JanusGraphVertex;
+import org.janusgraph.core.JanusGraphVertexProperty;
+import org.janusgraph.core.Multiplicity;
+import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.attribute.Cmp;
 import org.janusgraph.core.schema.ConsistencyModifier;
 import org.janusgraph.core.schema.JanusGraphIndex;
@@ -38,7 +47,13 @@ import java.util.Iterator;
 import static org.apache.tinkerpop.gremlin.structure.Direction.IN;
 import static org.apache.tinkerpop.gremlin.structure.Direction.OUT;
 import static org.janusgraph.testutil.JanusGraphAssert.assertCount;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -337,10 +352,9 @@ public abstract class JanusGraphEventualGraphTest extends JanusGraphBaseTest {
         e = Iterables.getOnlyElement(v.query().direction(OUT).labels("em").edges());
         assertEquals(wintx,e.<Integer>value("sig").intValue());
         assertEquals(rs[4].longId(), getId(e));
-        for (Object o : v.query().direction(OUT).labels("emf").edges()) {
-            Edge ee = (Edge) o;
-            assertNotEquals(rs[5].longId(),getId(ee));
-            assertEquals(uid,ee.inVertex().id());
+        for (Edge o : v.query().direction(OUT).labels("emf").edges()) {
+            assertNotEquals(rs[5].longId(),getId(o));
+            assertEquals(uid, o.inVertex().id());
         }
     }
 
@@ -364,13 +378,13 @@ public abstract class JanusGraphEventualGraphTest extends JanusGraphBaseTest {
             sign((JanusGraphVertexProperty)p,transactionId);
         }
 
-        Edge e = Iterables.getOnlyElement(v.query().direction(OUT).labels("es").edges());
+        JanusGraphEdge e = Iterables.getOnlyElement(v.query().direction(OUT).labels("es").edges());
         assertEquals(1,e.<Integer>value("sig").intValue());
         e.remove();
         sign(v.addEdge("es",u),transactionId);
         e = Iterables.getOnlyElement(v.query().direction(OUT).labels("o2o").edges());
         assertEquals(1,e.<Integer>value("sig").intValue());
-        sign((JanusGraphEdge)e,transactionId);
+        sign(e,transactionId);
         e = Iterables.getOnlyElement(v.query().direction(OUT).labels("o2m").edges());
         assertEquals(1,e.<Integer>value("sig").intValue());
         e.remove();
@@ -378,7 +392,7 @@ public abstract class JanusGraphEventualGraphTest extends JanusGraphBaseTest {
         for (String label : new String[]{"em","emf"}) {
             e = Iterables.getOnlyElement(v.query().direction(OUT).labels(label).edges());
             assertEquals(1,e.<Integer>value("sig").intValue());
-            sign((JanusGraphEdge)e,transactionId);
+            sign(e,transactionId);
         }
     }
 

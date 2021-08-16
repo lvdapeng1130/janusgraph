@@ -21,6 +21,7 @@ import com.google.common.cache.RemovalCause;
 import com.google.common.cache.RemovalListener;
 import org.apache.commons.lang.StringUtils;
 import org.cliffc.high_scale_lib.NonBlockingHashMap;
+import org.cliffc.high_scale_lib.NonBlockingHashMapLong;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.vertices.AbstractVertex;
 import org.janusgraph.util.datastructures.Retriever;

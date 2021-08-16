@@ -14,24 +14,30 @@
 
 package org.janusgraph.diskstorage.util;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
+import com.google.common.base.Preconditions;
+import org.janusgraph.diskstorage.BackendException;
+import org.janusgraph.diskstorage.Entry;
+import org.janusgraph.diskstorage.EntryList;
+import org.janusgraph.diskstorage.StaticBuffer;
+import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStore;
+import org.janusgraph.diskstorage.keycolumnvalue.KeyIterator;
+import org.janusgraph.diskstorage.keycolumnvalue.KeyRangeQuery;
+import org.janusgraph.diskstorage.keycolumnvalue.KeySliceQuery;
+import org.janusgraph.diskstorage.keycolumnvalue.KeySlicesIterator;
+import org.janusgraph.diskstorage.keycolumnvalue.MultiSlicesQuery;
+import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
+import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
+import org.janusgraph.util.stats.MetricManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import org.janusgraph.diskstorage.BackendException;
-import org.janusgraph.diskstorage.Entry;
-import org.janusgraph.diskstorage.EntryList;
-import org.janusgraph.diskstorage.keycolumnvalue.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
-import com.google.common.base.Preconditions;
-import org.janusgraph.diskstorage.StaticBuffer;
-import org.janusgraph.util.stats.MetricManager;
 
 /**
  * This class instruments an arbitrary KeyColumnValueStore backend with Metrics.
@@ -162,6 +168,18 @@ public class MetricInstrumentedStore implements KeyColumnValueStore {
             final KeyIterator ki = backend.getKeys(query, txh);
             if (txh.getConfiguration().hasGroupName()) {
                 return MetricInstrumentedIterator.of(ki, txh.getConfiguration().getGroupName(), metricsStoreName, M_GET_KEYS, M_ITERATOR);
+            } else {
+                return ki;
+            }
+        });
+    }
+
+    @Override
+    public KeySlicesIterator getKeys(MultiSlicesQuery queries, StoreTransaction txh) throws BackendException {
+        return runWithMetrics(txh, metricsStoreName, M_GET_KEYS, () -> {
+            final KeySlicesIterator ki = backend.getKeys(queries, txh);
+            if (txh.getConfiguration().hasGroupName()) {
+                return MetricInstrumentedSlicesIterator.of(ki, txh.getConfiguration().getGroupName(), metricsStoreName, M_GET_KEYS, M_ITERATOR);
             } else {
                 return ki;
             }

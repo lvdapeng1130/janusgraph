@@ -31,8 +31,8 @@ import org.janusgraph.graphdb.query.profile.QueryProfiler;
 import org.janusgraph.graphdb.transaction.RelationConstructor;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 
-import javax.annotation.Nullable;
 import java.util.Iterator;
+import javax.annotation.Nullable;
 
 /**
  * This is an optimization of specifically for {@link VertexCentricQuery} that addresses the special but

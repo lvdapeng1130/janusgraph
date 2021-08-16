@@ -14,8 +14,9 @@
 
 package org.janusgraph.core;
 
-import java.time.Instant;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
+
+import java.time.Instant;
 
 /**
  * Constructor returned by {@link org.janusgraph.core.JanusGraph#buildTransaction()} to build a new transaction.
@@ -34,6 +35,13 @@ public interface TransactionBuilder {
     TransactionBuilder readOnly();
 
     /**
+     * A shortcut for a number of configs that are commonly used by read-only OLAP jobs.
+     *
+     * @return Object containing a number of properties optimized for read-only OLAP jobs
+     */
+    TransactionBuilder readOnlyOLAP();
+
+    /**
      * Enabling batch loading disables a number of consistency checks inside JanusGraph to speed up the ingestion of
      * data under the assumptions that inconsistencies are resolved prior to loading.
      *
@@ -49,6 +57,22 @@ public interface TransactionBuilder {
      * @return Object containing properties that will disable batch loading
      */
     TransactionBuilder disableBatchLoading();
+
+    /**
+     * Enable or disable property pre-fetching, i.e. query.fast-property option.
+     *
+     * @param enabled
+     * @return Object containing properties that will enable/disable property pre-fetching
+     */
+    TransactionBuilder propertyPrefetching(boolean enabled);
+
+    /**
+     * Enable or disable multi-query, i.e. query.batch
+     *
+     * @param enabled
+     * @return Object containing properties that will enable/disable multi-query
+     */
+    TransactionBuilder multiQuery(boolean enabled);
 
     /**
      * Configures the size of the internal caches used in the transaction.

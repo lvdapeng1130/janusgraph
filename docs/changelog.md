@@ -27,7 +27,7 @@ All currently supported verions of JanusGraph are listed below.
 | JanusGraph | Storage Version | Cassandra | HBase | Bigtable | Elasticsearch | Solr | TinkerPop | Spark | Scala |
 | ----- | ---- | ---- | ---- | ---- | ---- | ---- | --- | ---- | ---- |
 | 0.5.z | 2 | 2.1.z, 2.2.z, 3.0.z, 3.11.z | 1.2.z, 1.3.z, 1.4.z, 2.1.z | 1.3.0, 1.4.0, 1.5.z, 1.6.z, 1.7.z, 1.8.z, 1.9.z, 1.10.z, 1.11.z, 1.14.z | 6.y, 7.y | 7.y | 3.4.z | 2.2.z | 2.11.z | 
-| 0.6.z | 2 | 3.0.z, 3.11.z | 1.2.z, 1.3.z, 1.4.z, 2.1.z | 1.3.0, 1.4.0, 1.5.z, 1.6.z, 1.7.z, 1.8.z, 1.9.z, 1.10.z, 1.11.z, 1.14.z | 6.y, 7.y | 7.y, 8.y | 3.4.z | 2.2.z | 2.11.z | 
+| 0.6.z | 2 | 3.0.z, 3.11.z | 1.6.z, 2.2.z | 1.3.0, 1.4.0, 1.5.z, 1.6.z, 1.7.z, 1.8.z, 1.9.z, 1.10.z, 1.11.z, 1.14.z | 6.y, 7.y | 7.y, 8.y | 3.5.z | 2.2.z | 2.11.z | 
 
 #### End-of-Life
 The versions of JanusGraph listed below are outdated and will no longer receive bugfixes.
@@ -41,7 +41,7 @@ The versions of JanusGraph listed below are outdated and will no longer receive 
 
 ## Release Notes
 
-### Version 0.6.0 (Release Date: X, 2020)
+### Version 0.6.0 (Release Date: August 11, 2021)
 
 ```xml tab='Maven'
 <dependency>
@@ -57,29 +57,117 @@ compile "org.janusgraph:janusgraph-core:0.6.0"
 
 **Tested Compatibility:**
 
-* Apache Cassandra 2.2.10, 3.0.14, 3.11.0
-* Apache HBase 1.2.6, 1.3.1, 1.4.10, 2.1.5
+* Apache Cassandra 3.0.14, 3.11.10
+* Apache HBase 1.6.0, 2.2.7
 * Google Bigtable 1.3.0, 1.4.0, 1.5.0, 1.6.0, 1.7.0, 1.8.0, 1.9.0, 1.10.0, 1.11.0, 1.14.0
 * Oracle BerkeleyJE 7.5.11
-* Elasticsearch 6.0.1, 6.6.0, 7.6.2
-* Apache Lucene 8.6.0
-* Apache Solr 7.7.2, 8.5.2
-* Apache TinkerPop 3.4.6
+* Elasticsearch 6.0.1, 6.6.0, 7.14.0
+* Apache Lucene 8.9.0
+* Apache Solr 7.7.2, 8.9.0
+* Apache TinkerPop 3.5.1
 * Java 1.8
+
+#### Changes
 
 For more information on features and bug fixes in 0.6.0, see the GitHub milestone:
 
 -   <https://github.com/JanusGraph/janusgraph/milestone/17?closed=1>
 
+#### Assets
+
+* [JavaDoc](https://javadoc.io/doc/org.janusgraph/janusgraph-core/0.6.0)
+* [GitHub Release](https://github.com/JanusGraph/janusgraph/releases/tag/v0.6.0)
+* [JanusGraph zip](https://github.com/JanusGraph/janusgraph/releases/download/v0.6.0/janusgraph-0.6.0.zip)
+* [JanusGraph zip with embedded Cassandra and ElasticSearch](https://github.com/JanusGraph/janusgraph/releases/download/v0.6.0/janusgraph-full-0.6.0.zip)
+
 #### Upgrade Instructions
+
+##### Experimental support for Amazon Keyspaces
+
+[Amazon Keyspaces](https://aws.amazon.com/keyspaces/) is a serverless managed Apache Cassandra-compatible
+database service provided by Amazon. See [Deploying on Amazon Keyspaces](https://docs.janusgraph.org/storage-backend/cassandra/#deploying-on-amazon-keyspaces-experimental)
+for more details.
+
+##### Breaking change for Configuration objects
+
+Prior to JanusGraph 0.6.0, `Configuration` objects were from the Apache `commons-configuration` library.
+To comply with the [TinkerPop change](http://tinkerpop.apache.org/docs/3.5.0-SNAPSHOT/upgrade/#_versions_and_dependencies),
+JanusGraph now uses the `commons-configuration2` library. A typical usage of configuration object is to
+create configuration using `ConfigurationGraphFactory`. Now you would need to use the new configuration2 library.
+Please refer to the
+[commons-configuration 2.0 migration guide](https://commons.apache.org/proper/commons-configuration/userguide/upgradeto2_0.html)
+for details. Note that this very likely does not affect gremlin console usage, since the new library
+is auto-imported, and the basic APIs remain the same. For java code usage, you need to import
+configuration2 library rather than the old configuration library.
+
+##### Breaking change for gremlin server configs
+
+`scriptEvaluationTimeout` is renamed to `evaluationTimeout`. You can refer to `conf/gremlin-server/gremlin-server.yaml`
+for example.
+
+##### Breaking change for gremlin EventStrategy usage
+
+If you are using [EventStrategy](https://tinkerpop.apache.org/javadocs/current/full/org/apache/tinkerpop/gremlin/process/traversal/strategy/decoration/EventStrategy.html),
+please note that now you need to register it every time you start a new transaction.
+An example is available at [ThreadLocalTxLeakTest::eventListenersCanBeReusedAcrossTx](https://github.com/JanusGraph/janusgraph/blob/master/janusgraph-test/src/test/java/org/janusgraph/core/ThreadLocalTxLeakTest.java)
+See more background of this breaking change in this
+[pull request](https://github.com/JanusGraph/janusgraph/pull/2472).
+
+##### Disable smart-limit by default and change HARD_MAX_LIMIT
+
+Prior to 0.6.0, `smart-limit` is enabled by default. It tries to guess a small limit
+for each graph centric query (e.g. `g.V().has("prop", "value")`) internally, and if more
+results are required by user, it queries backend again with a larger limit, and repeats
+until either results are exhausted or user stops the query. However, this is not the
+same as paging mechanism. All interim results will be fetched again in next round, making
+the whole query costly. Even worse, if your data backend does not return results in a consistent order,
+then some entries might be missing in the final results. Until JanusGraph can fully utilize
+the paging capacity provided by backends (e.g. Elasticsearch scroll), this option is
+recommended to be turned off. The exception is when you have a large number of results
+but you only need a few of them, then enabling `smart-limit` can reduce latency and memory
+usage. An example would be:
+
+```
+Iterator<Vertex> iter = graph.traversal().V().has("prop", "value");
+while (iter.hasNext()) {
+    Vertex v = iter.next();
+    if (canStop()) break;
+}
+```
+
+Prior to 0.6.0, even if `smart-limit` is disabled, JanusGraph adds a `HARD_MAX_LIMIT` that
+is equivalent to 100,000 to avoid fetching too many results at a time. This limit is now
+configurable, and by default, it's Integer.MAX_VALUE which can be interpreted as no limit.
+
+##### Add experimental support for Java 11
+
+We started to work on support for Java 11. We would like to get feedback,
+if everything is working as expected after upgrading to Java 11.
+
+##### Removal of LoggingSchemaMaker
+
+The `schema.default=logging` option is not valid anymore. Use `schema.default=default`
+and `schema.logging=true` options together to make application behaviour unaltered,
+if you are using `LoggingSchemaMaker`.
+
+##### Replacing the server startup script is replaced
+
+The `gremlin-server.sh` is placed by `janusgraph-server.sh`. The 
+`janusgraph-server.sh` brings some new functionality such as easy 
+configuration of Java options using the `jvm.options` file.
+
+The `jvm.options` file contains some default configurations for JVM based 
+on Cassandra's JVM configurations, Elasticsearch and the old gremlin-server.sh.
 
 ##### Serialization of JanusGraph predicates has changed
 
 The serialization of JanusGraph predicates has changed in this version for both 
-GraphSON and Gryo. It is therefore necessary to update both the client and 
-the server to this version in parallel as the server will not be able to 
-deserialize a JanusGraph predicate that was serialized by a client prior 
-to version 0.6.0 once it was updated to version 0.6.0.
+GraphSON and Gryo. The newest version of the JanusGraph Driver requires a JanusGraph 
+Server version of 0.6.0 and above. The server includes a fallback for clients with an 
+older driver to make the upgrade to version 0.6.0 easier. This means that the server 
+can be upgraded first without having to update all clients at the same time. The 
+fallback will however be removed in a future version of JanusGraph so clients should 
+also be upgraded.
 
 ##### GraphBinary is now supported
 
@@ -99,7 +187,7 @@ after the keyword `serializers`. This will add the support on the server site.
 ```
 !!! note 
     The java driver is the only driver that currently supports GraphBinary, 
-    see [Connecting to JanusGraph using Java](connecting/java.md).
+    see [Connecting to JanusGraph using Java](interactions/connecting/java.md).
 
 ##### New index selection algorithm
 In version 0.6.0, the index selection algorithm has changed. If the number of possible
@@ -107,7 +195,7 @@ indexes for a query is small enough, the new algorithm will perform an exhaustiv
 to minimize the number of indexes which need to be queried. The default limit is set to 10.
 In order to maintain the old selection algorithm regardless of the available indexes, set
 the key `query.index-select-threshold` to `0`.
-For more information, see [Configuration Reference](basics/configuration-reference.md#query)
+For more information, see [Configuration Reference](configs/configuration-reference.md#query)
     
 ##### Removal of Cassandra Thrift support
 
@@ -119,7 +207,7 @@ encouraging users to switch from Thrift to CQL since version 0.2.1.
 This means that the following backends were removed: 
 `cassandrathrift`, `cassandra`, `astyanax`, and `embeddedcassandra`.
 Users who still use one of these Thrift backends should migrate to CQL.
-[Our migration guide](advanced-topics/migrating-thrift.md) explains the 
+[Our migration guide](operations/migrating-thrift.md) explains the 
 necessary steps for this. The option to run Cassandra embedded 
 in the same JVM as JanusGraph is however no longer supported with CQL.
 
@@ -155,6 +243,129 @@ after a shiny new JanusGraph header.
 ##### Drop support for Ganglia metrics
 
 We are dropping Ganglia as we are using dropwizard for metrics. Dropwizard did drop Ganglia in the newest major version.
+
+##### DataStax cassandra driver upgrade from 3.9.0 to 4.13.0
+
+All DataStax cassandra driver metrics are now disabled by default. To enable DataStax driver metrics you need to provide 
+a list of Session level metrics and / or Node level metrics you want to enable. To provide a list of enabled metrics, 
+you can use the next configuration options: `storage.cql.metrics.session-enabled` and `storage.cql.metrics.node-enabled`. 
+Notice, DataStax metrics are enabled only when basic metrics are enabled (i.e. `metrics.enabled = true`).
+See configuration references `storage.cql.metrics` for additional DataStax metrics configuration.
+
+An example configuration which enables some CQL Session level and Node level metrics reporting by JMX:
+```properties
+metrics.enabled=true
+metrics.jmx.enabled=true
+metrics.jmx.domain=com.datastax.oss.driver
+metrics.jmx.agentid=agent
+storage.cql.metrics.session-enabled=bytes-sent,bytes-received,connected-nodes,cql-requests,throttling.delay
+storage.cql.metrics.node-enabled=pool.open-connections,pool.available-streams,bytes-sent,cql-messages
+```
+
+See `advanced.metrics.session.enabled` and `advanced.metrics.node.enabled` sections in 
+[DataStax Metrics Configuration](https://docs.datastax.com/en/developer/java-driver/4.13/manual/core/configuration/reference/) 
+for a complete list of available Session level and Node level metrics.
+
+Due to driver upgrade the next cql configuration options have been removed:
+
+* `local-core-connections-per-host`
+* `remote-core-connections-per-host`
+* `local-max-requests-per-connection`
+* `remote-max-requests-per-connection`
+* `cluster-name`
+
+New cql configuration options should be used for upgrade:
+
+* `max-requests-per-connection`
+* `session-name`
+
+`storage.cql.local-datacenter` is mandatory now and defaults to `datacenter1`.
+
+See more new cql configuration options in configuration references under `storage.cql` section.
+
+##### Automatic configurations of dynamic graph binding
+
+If the JanusGraphManager is configured, dynamic graph binding will be setup automatically, 
+see [Dynamic Graphs](operations/dynamic-graphs.md).
+
+!!! note 
+    Breaking changes in the config of the `gremlin-server.yaml`.
+
+Following, classes are removed and have to be replaced by tinkerpop equivalent:
+
+| removed class | replacement class|
+| --- | --- |
+| `org.janusgraph.channelizers.JanusGraphWebSocketChannelizer` | `org.apache.tinkerpop.gremlin.server.channel.WebSocketChannelizer` |
+| `org.janusgraph.channelizers.JanusGraphHttpChannelizer` | `org.apache.tinkerpop.gremlin.server.channel.HttpChannelizer` |
+| `org.janusgraph.channelizers.JanusGraphNioChannelizer` | `org.apache.tinkerpop.gremlin.server.channel.NioChannelizer` |
+| `org.janusgraph.channelizers.JanusGraphWsAndHttpChannelizer` | `org.apache.tinkerpop.gremlin.server.channel.WsAndHttpChannelizer` |
+
+##### Breaking change Lucene and Solr fuzzy predicates
+
+The text predicates `text.textFuzzy` and `text.textContainsFuzzy` have been updated in both the Lucene and Solr indexing
+backends to align with JanusGraph and Elastic. These predicates now inspect the query length to determine the Levenshtein
+distance, where previously they used the backend's default max distance of 2:
+
+- 0 for strings of one or two characters (exact match)
+- 1 for strings of three, four or five characters
+- 2 for strings of more than five characters
+
+**Change Matrix:**
+
+| text | query | previous result | new result |
+| --- | --- | --- | --- |
+| ah | ah | true | true |
+| ah | ai | true | **false** |
+| hop | hop | true | true |
+| hop | hap | true | true |
+| hop | hoop | true | true |
+| hop | hooop | true | **false** |
+| surprises | surprises | true | true |
+| surprises | surprizes | true | true |
+| surprises | surpprises | true | true |
+| surprises | surpprisess | false | false |
+
+
+### Version 0.5.3 (Release Date: December 24, 2020)
+
+=== "Maven"
+    ```xml
+    <dependency>
+        <groupId>org.janusgraph</groupId>
+        <artifactId>janusgraph-core</artifactId>
+        <version>0.5.3</version>
+    </dependency>
+    ```
+
+=== "Gradle"
+    ```groovy
+    compile "org.janusgraph:janusgraph-core:0.5.3"
+    ```
+
+**Tested Compatibility:**
+
+* Apache Cassandra 2.2.10, 3.0.14, 3.11.0
+* Apache HBase 1.2.6, 1.3.1, 1.4.10, 2.1.5
+* Google Bigtable 1.3.0, 1.4.0, 1.5.0, 1.6.0, 1.7.0, 1.8.0, 1.9.0, 1.10.0, 1.11.0, 1.14.0
+* Oracle BerkeleyJE 7.5.11
+* Elasticsearch 6.0.1, 6.6.0, 7.6.2
+* Apache Lucene 7.0.0
+* Apache Solr 7.0.0
+* Apache TinkerPop 3.4.6
+* Java 1.8
+
+#### Changes
+
+For more information on features and bug fixes in 0.5.3, see the GitHub milestone:
+
+-   <https://github.com/JanusGraph/janusgraph/milestone/20?closed=1>
+
+#### Assets
+
+* [JavaDoc](https://javadoc.io/doc/org.janusgraph/janusgraph-core/0.5.3)
+* [GitHub Release](https://github.com/JanusGraph/janusgraph/releases/tag/v0.5.3)
+* [JanusGraph zip](https://github.com/JanusGraph/janusgraph/releases/download/v0.5.3/janusgraph-0.5.3.zip)
+* [JanusGraph zip with embedded Cassandra and ElasticSearch](https://github.com/JanusGraph/janusgraph/releases/download/v0.5.3/janusgraph-full-0.5.3.zip)
 
 ### Version 0.5.2 (Release Date: May 3, 2020)
 
@@ -563,7 +774,7 @@ For more information on features and bug fixes in 0.3.0, see the GitHub mileston
 !!! important
     You should back-up your data prior to attempting an upgrade! Also please note that once an upgrade has been completed you will no longer be able to connect to your graph with client versions prior to 0.3.0.
 
-JanusGraph 0.3.0 implements [Schema Constraints](./basics/schema.md#schema-constraints) which made it necessary to also introduce the concept of a schema version. There is a check to prevent client connections that either expect a different schema version or have no concept of a schema version. To perform an upgrade, the configuration option `graph.allow-upgrade=true` must be set on each graph you wish to upgrade. The graph must be opened with a 0.3.0 or greater version of JanusGraph since older versions have no concept of `graph.storage-version` and will not allow for it to be set.
+JanusGraph 0.3.0 implements [Schema Constraints](./schema/index.md#schema-constraints) which made it necessary to also introduce the concept of a schema version. There is a check to prevent client connections that either expect a different schema version or have no concept of a schema version. To perform an upgrade, the configuration option `graph.allow-upgrade=true` must be set on each graph you wish to upgrade. The graph must be opened with a 0.3.0 or greater version of JanusGraph since older versions have no concept of `graph.storage-version` and will not allow for it to be set.
 
 Example excerpt from `janusgraph.properties` file
 ```properties
@@ -930,4 +1141,4 @@ adjust your code and configuration accordingly:
     `JanusGraph` rather than `JanusGraphGraph`
 
 For more information on how to configure JanusGraph to read data which
-had previously been written by Titan refer to [Migration from titan](advanced-topics/migrating-titan.md).
+had previously been written by Titan refer to [Migration from titan](operations/migrating-titan.md).

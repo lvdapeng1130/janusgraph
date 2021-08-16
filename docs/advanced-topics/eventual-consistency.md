@@ -44,19 +44,15 @@ optimizations (e.g. local conflict detection) and detection of failure
 scenarios (e.g. expired locks).
 
 The actual lock application mechanism is abstracted such that JanusGraph
-can use multiple implementations of a locking provider. Currently, two
-locking providers are supported in the JanusGraph distribution:
+can use multiple implementations of a locking provider. Currently, only one
+locking provider is included in the JanusGraph distribution:
 
-1.  A locking implementation based on key-consistent read and write
-    operations that is agnostic to the underlying storage backend as
-    long as it supports key-consistent operations (which includes
-    Cassandra and HBase). This is the default implementation and uses
-    timestamp based lock applications to determine which transaction
-    holds the lock.
-2.  A Cassandra specific locking implementation based on the Astyanax
-    locking recipe.
-
-Both locking providers require that clocks are synchronized across all
+A locking implementation based on key-consistent read and write
+operations that is agnostic to the underlying storage backend as
+long as it supports key-consistent operations (which includes
+Cassandra and HBase). This is the default implementation and uses
+timestamp based lock applications to determine which transaction
+holds the lock. It requires that clocks are synchronized across all
 machines in the cluster.
 
 !!! warning
@@ -124,7 +120,7 @@ one reads multiple properties. Since JanusGraph allows properties on
 properties, provenance information like `author` can be added to the
 properties to facilitate resolution at read time.
 
-See [multi-properties](../basics/schema.md#property-key-cardinality) to learn how to define
+See [multi-properties](../schema/index.md#property-key-cardinality) to learn how to define
 those.
 
 ## Data Inconsistency
@@ -158,7 +154,7 @@ to the edge not being or incorrectly being retrieved.
     that support batch write atomicity and to ensure that write atomicity
     is enabled. To get the benefit of write atomicity, the number
     modifications made in a single transaction must be smaller than the
-    configured `buffer-size` option documented in [Configuration Reference](../basics/configuration-reference.md). The
+    configured `buffer-size` option documented in [Configuration Reference](../configs/configuration-reference.md). The
     buffer size defines the maximum number of modifications that
     JanusGraph will persist in a single batch. If a transaction has more
     modifications, the persistence will be split into multiple batches
@@ -176,7 +172,7 @@ The following strategies can be used to mitigate this issue:
 
 **Existence checks**  
 Configure transactions to (double) check for the existence of vertices
-prior to returning them. Please see [Transaction Configuration](../basics/transactions.md#transaction-configuration) for more
+prior to returning them. Please see [Transaction Configuration](../interactions/transactions.md#transaction-configuration) for more
 information and note that this can significantly decrease performance.
 Note, that this does not fix the inconsistencies but hides some of them
 from the user.
@@ -185,8 +181,7 @@ from the user.
 Run regular batch-jobs to repair inconsistencies in the graph using
 [JanusGraph with TinkerPop’s Hadoop-Gremlin](hadoop.md). 
 This is the only strategy that can address all
-inconsistencies and effectively repair them. We will provide increasing
-support for such repairs in future versions of Faunus.
+inconsistencies and effectively repair them.
 
 **Soft Deletes**  
 Instead of deleting vertices, they are marked as deleted which keeps

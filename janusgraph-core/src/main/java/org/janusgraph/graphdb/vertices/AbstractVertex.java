@@ -22,6 +22,17 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 import org.janusgraph.core.*;
+import org.apache.tinkerpop.gremlin.structure.Property;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.structure.VertexProperty;
+import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
+import org.janusgraph.core.InvalidElementException;
+import org.janusgraph.core.JanusGraphEdge;
+import org.janusgraph.core.JanusGraphRelation;
+import org.janusgraph.core.JanusGraphVertex;
+import org.janusgraph.core.JanusGraphVertexProperty;
+import org.janusgraph.core.PropertyKey;
+import org.janusgraph.core.VertexLabel;
 import org.janusgraph.graphdb.internal.AbstractElement;
 import org.janusgraph.graphdb.internal.ElementLifeCycle;
 import org.janusgraph.graphdb.internal.InternalVertex;
@@ -36,6 +47,7 @@ import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.Note;
 
 import java.util.Iterator;
+import javax.annotation.Nullable;
 
 public abstract class AbstractVertex extends AbstractElement implements InternalVertex, Vertex {
 
@@ -182,21 +194,11 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
 	 */
 
     public<V> JanusGraphVertexProperty<V> property(final String key, final V value, final Object... keyValues) {
-        if(key.equals(BaseKey.VertexAttachment.name())) {
-            JanusGraphVertexProperty p = tx().addAttachment(it(), BaseKey.VertexAttachment, value);
-            return p;
-        }else if(key.equals(BaseKey.VertexNote.name())) {
-            JanusGraphVertexProperty p =  tx().addNote(it(), BaseKey.VertexNote, value);
-            return p;
-        }else{
-            JanusGraphVertexProperty<V> p = tx().addProperty(it(), tx().getOrCreatePropertyKey(key, value), value);
-            ElementHelper.attachProperties(p, keyValues);
-            return p;
-        }
+        return property(null, key, value, keyValues);
     }
 
     @Override
-    public <V> JanusGraphVertexProperty<V> property(final VertexProperty.Cardinality cardinality, final String key, final V value, final Object... keyValues) {
+    public <V> JanusGraphVertexProperty<V> property(@Nullable final VertexProperty.Cardinality cardinality, final String key, final V value, final Object... keyValues) {
         if(key.equals(BaseKey.VertexAttachment.name())) {
             JanusGraphVertexProperty p = tx().addAttachment(cardinality, it(), BaseKey.VertexAttachment, value);
             return p;
@@ -204,8 +206,23 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
             JanusGraphVertexProperty p = tx().addNote(cardinality, it(), BaseKey.VertexNote, value);
             return p;
         }else{
-            JanusGraphVertexProperty<V> p = tx().addProperty(cardinality, it(), tx().getOrCreatePropertyKey(key, value, cardinality), value);
-            ElementHelper.attachProperties(p, keyValues);
+            PropertyKey propertyKey = tx().getOrCreatePropertyKey(key, value, cardinality);
+            if (propertyKey == null) {
+                return JanusGraphVertexProperty.empty();
+            }
+            VertexProperty.Cardinality vCardinality = cardinality == null ? propertyKey.cardinality().convert() : cardinality;
+            if (value == null) {
+                if (vCardinality.equals(VertexProperty.Cardinality.single)) {
+                    // putting null value with SINGLE cardinality is equivalent to removing existing value
+                    properties(key).forEachRemaining(Property::remove);
+                } else {
+                    // simply ignore this mutation
+                    assert vCardinality.equals(VertexProperty.Cardinality.list) || vCardinality.equals(VertexProperty.Cardinality.set);
+                }
+                return JanusGraphVertexProperty.empty();
+            }
+            JanusGraphVertexProperty<V> p = tx().addProperty(vCardinality, it(), propertyKey, value);
+            ElementHelper.attachProperties(p,keyValues);
             return p;
         }
     }

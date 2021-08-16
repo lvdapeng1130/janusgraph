@@ -14,9 +14,21 @@
 
 package org.janusgraph.diskstorage.es;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpHost;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIBuilder;
-import org.janusgraph.core.JanusGraphFactory;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+import org.apache.tinkerpop.shaded.jackson.core.type.TypeReference;
+import org.apache.tinkerpop.shaded.jackson.databind.ObjectMapper;
 import org.janusgraph.core.JanusGraph;
+import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.core.attribute.Text;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
@@ -28,25 +40,16 @@ import org.janusgraph.diskstorage.configuration.backend.CommonsConfiguration;
 import org.janusgraph.diskstorage.es.mapping.TypedIndexMappings;
 import org.janusgraph.diskstorage.es.mapping.TypelessIndexMappings;
 import org.janusgraph.diskstorage.es.rest.RestElasticSearchClient;
-import org.janusgraph.diskstorage.indexing.*;
+import org.janusgraph.diskstorage.indexing.IndexProvider;
+import org.janusgraph.diskstorage.indexing.IndexProviderTest;
+import org.janusgraph.diskstorage.indexing.IndexQuery;
+import org.janusgraph.diskstorage.indexing.IndexTransaction;
+import org.janusgraph.diskstorage.indexing.KeyInformation;
 import org.janusgraph.diskstorage.util.StandardBaseTransactionConfig;
-
 import org.janusgraph.diskstorage.util.time.TimestampProviders;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.query.condition.PredicateCondition;
-import org.apache.commons.configuration.BaseConfiguration;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpHost;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
-import org.apache.tinkerpop.shaded.jackson.core.type.TypeReference;
-import org.apache.tinkerpop.shaded.jackson.databind.ObjectMapper;
+import org.janusgraph.util.system.ConfigurationUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,10 +71,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
-import static org.janusgraph.diskstorage.es.ElasticSearchIndex.*;
+import static org.janusgraph.diskstorage.es.ElasticSearchIndex.ALLOW_MAPPING_UPDATE;
+import static org.janusgraph.diskstorage.es.ElasticSearchIndex.USE_EXTERNAL_MAPPINGS;
+import static org.janusgraph.diskstorage.es.ElasticSearchIndex.USE_MAPPING_FOR_ES7;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_HOSTS;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.INDEX_PORT;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test behavior JanusGraph ConfigOptions governing ES client setup.
@@ -144,7 +152,7 @@ public class ElasticsearchConfigTest {
     public void testIndexCreationOptions(Boolean useMappingsForES7) throws InterruptedException, BackendException, IOException {
         final int shards = 7;
 
-        final CommonsConfiguration cc = new CommonsConfiguration(new BaseConfiguration());
+        final CommonsConfiguration cc = new CommonsConfiguration(ConfigurationUtil.createBaseConfiguration());
         cc.set("index." + INDEX_NAME + ".elasticsearch.create.ext.number_of_shards", String.valueOf(shards));
         if(useMappingsForES7){
             cc.set("index." + INDEX_NAME + ".elasticsearch.use-mapping-for-es7", String.valueOf(true));

@@ -14,6 +14,13 @@
 
 package org.janusgraph.graphdb.olap.computer;
 
+import org.apache.tinkerpop.gremlin.process.computer.MessageScope;
+import org.apache.tinkerpop.gremlin.process.computer.VertexProgram;
+import org.apache.tinkerpop.gremlin.process.computer.clustering.connected.ConnectedComponentVertexProgram;
+import org.apache.tinkerpop.gremlin.process.computer.search.path.ShortestPathVertexProgram;
+import org.apache.tinkerpop.gremlin.process.computer.traversal.TraversalVertexProgram;
+import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.JanusGraph;
 import org.janusgraph.core.JanusGraphVertex;
 import org.janusgraph.core.ReadOnlyTransactionException;
@@ -28,16 +35,8 @@ import org.janusgraph.graphdb.internal.RelationCategory;
 import org.janusgraph.graphdb.olap.QueryContainer;
 import org.janusgraph.graphdb.olap.VertexJobConverter;
 import org.janusgraph.graphdb.olap.VertexScanJob;
-import org.janusgraph.graphdb.tinkerpop.optimize.JanusGraphVertexStep;
+import org.janusgraph.graphdb.tinkerpop.optimize.step.JanusGraphVertexStep;
 import org.janusgraph.graphdb.vertices.PreloadedVertex;
-
-import org.apache.tinkerpop.gremlin.process.computer.MessageScope;
-import org.apache.tinkerpop.gremlin.process.computer.VertexProgram;
-import org.apache.tinkerpop.gremlin.process.computer.clustering.connected.ConnectedComponentVertexProgram;
-import org.apache.tinkerpop.gremlin.process.computer.search.path.ShortestPathVertexProgram;
-import org.apache.tinkerpop.gremlin.process.computer.traversal.TraversalVertexProgram;
-import org.apache.tinkerpop.gremlin.structure.Direction;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
 
 import java.io.Closeable;
 import java.util.List;
@@ -48,7 +47,7 @@ import java.util.Set;
  */
 public class VertexProgramScanJob<M> implements VertexScanJob {
 
-    private final static MessageScope.Global globalScope = MessageScope.Global.instance();
+    private static final MessageScope.Global globalScope = MessageScope.Global.instance();
     private final IDManager idManager;
     private final FulgoraMemory memory;
     private final FulgoraVertexMemory<M> vertexMemory;

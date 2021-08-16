@@ -58,6 +58,9 @@ public class InMemoryGraphTest extends JanusGraphTest {
     public void testLocalGraphConfiguration() {}
 
     @Override @Test @Disabled
+    public void testLimitBatchSizeForMultiQuery() {}
+
+    @Override @Test @Disabled
     public void testMaskableGraphConfig() {}
 
     @Override @Test @Disabled
@@ -76,7 +79,7 @@ public class InMemoryGraphTest extends JanusGraphTest {
     public void testTransactionConfiguration() {}
 
     @Override @Test @Disabled
-    public void testTinkerPopOptimizationStrategies() {}
+    public void testMultiQueryMetricsWhenReadingFromBackend() {}
 
     @Override @Test @Disabled
     public void testDataTypes() {}
@@ -85,7 +88,7 @@ public class InMemoryGraphTest extends JanusGraphTest {
     public void testForceIndexUsage() {}
 
     @Override @Test @Disabled
-    public void testAutomaticTypeCreation() {}
+    public void testDisableDefaultSchemaMaker () {}
 
     @Override @Test @Disabled
     public void simpleLogTest() {}
