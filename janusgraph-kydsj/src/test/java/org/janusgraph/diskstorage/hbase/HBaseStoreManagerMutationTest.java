@@ -14,13 +14,6 @@
 
 package org.janusgraph.diskstorage.hbase;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Delete;
@@ -35,6 +28,13 @@ import org.janusgraph.diskstorage.keycolumnvalue.KCVMutation;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.janusgraph.diskstorage.util.StaticArrayEntry;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -90,7 +90,7 @@ public class HBaseStoreManagerMutationTest {
         storeMutationMap.put("store1", rowkeyMutationMap);
         HBaseStoreManager manager = new HBaseStoreManager(HBaseStorageSetup.getHBaseConfiguration());
         final Map<StaticBuffer, Pair<List<Put>, Delete>> commandsPerRowKey
-            = manager.convertToCommands(storeMutationMap, 0, 0);
+            = manager.convertToCommands(storeMutationMap, 0L, 0L);
 
         // 2 rows
         assertEquals(commandsPerRowKey.size(), 2);
@@ -158,7 +158,7 @@ public class HBaseStoreManagerMutationTest {
         storeMutationMap.put("store1", rowkeyMutationMap);
         HBaseStoreManager manager = new HBaseStoreManager(HBaseStorageSetup.getHBaseConfiguration());
         final Map<StaticBuffer, Pair<List<Put>, Delete>> commandsPerRowKey
-            = manager.convertToCommands(storeMutationMap, 0, 0);
+            = manager.convertToCommands(storeMutationMap, 0L, 0L);
         Pair<List<Put>, Delete> commands = commandsPerRowKey.values().iterator().next();
 
         //Verify Put TTL

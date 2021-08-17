@@ -1,6 +1,5 @@
 package org.janusgraph.kydsj;
 
-import com.google.common.base.Stopwatch;
 import org.apache.janusgraph.spark.computer.SparkJanusGraphComputer;
 import org.apache.janusgraph.spark.mapreduce.CombineObjectByConditionMapper;
 import org.apache.janusgraph.spark.mapreduce.CombineObjectMakerMapper;
@@ -13,6 +12,7 @@ import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__;
 import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
+import org.janusgraph.graphdb.database.idassigner.Stopwatch;
 import org.janusgraph.hadoop.formats.hbase.HBaseInputFormat;
 import org.janusgraph.hadoop.serialize.JanusGraphKryoRegistrator;
 import org.slf4j.Logger;
