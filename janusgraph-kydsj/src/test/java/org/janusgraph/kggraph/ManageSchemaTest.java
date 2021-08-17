@@ -29,7 +29,7 @@ public class ManageSchemaTest extends AbstractKGgraphTest{
     @Test
     public void printSchema(){
         final JanusGraphManagement management = getJanusGraph().openManagement();
-        String printSchemaStr = management.printVertexLabels();
+        String printSchemaStr = management.printSchema();
         LOGGER.info(printSchemaStr);
         management.rollback();
     }
