@@ -29,7 +29,7 @@ public class ManageSchemaTest extends AbstractKGgraphTest{
     @Test
     public void printSchema(){
         final JanusGraphManagement management = getJanusGraph().openManagement();
-        String printSchemaStr = management.printSchema();
+        String printSchemaStr = management.printVertexLabels();
         LOGGER.info(printSchemaStr);
         management.rollback();
     }
@@ -38,6 +38,21 @@ public class ManageSchemaTest extends AbstractKGgraphTest{
     public void deleteGraph() throws BackendException {
         if (graph != null) {
             JanusGraphFactory.drop(getJanusGraph());
+        }
+    }
+
+    @Test
+    public void createObjectLabel(){
+        final JanusGraphManagement management = getJanusGraph().openManagement();
+        try {
+            management.makeVertexLabel("object_qq").make();
+            String s = management.printVertexLabels();
+            LOGGER.info(s);
+            management.commit();
+            this.printSchema();
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage(),e);
+            management.rollback();
         }
     }
 

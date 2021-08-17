@@ -17,13 +17,6 @@ package org.janusgraph.graphdb.database.idassigner;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
-import org.janusgraph.core.*;
-import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
-import org.janusgraph.graphdb.internal.InternalRelationType;
-import org.janusgraph.graphdb.relations.EdgeDirection;
-import org.janusgraph.graphdb.relations.ReassignableRelation;
-import org.janusgraph.util.stats.NumberUtil;
-
 import org.janusgraph.core.EdgeLabel;
 import org.janusgraph.core.JanusGraphRelation;
 import org.janusgraph.core.JanusGraphVertex;
@@ -316,7 +309,7 @@ public class VertexIDAssigner implements AutoCloseable {
     private void assignID(final InternalElement element, final long partitionIDl, final IDManager.VertexIDType userVertexIDType) {
         Preconditions.checkNotNull(element);
         //Preconditions.checkArgument(!element.hasId());
-        if (element.hasId()) return;
+        //if (element.hasId()) return;
         Preconditions.checkArgument((element instanceof JanusGraphRelation) ^ (userVertexIDType!=null));
         Preconditions.checkArgument(partitionIDl >= 0 && partitionIDl < partitionIdBound, partitionIDl);
         final int partitionID = (int) partitionIDl;
