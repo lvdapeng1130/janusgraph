@@ -33,7 +33,7 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
      */
     @Test
     public void selectByTid1(){
-        String tid="00ArOpllXcc";
+        String tid="tid004";
         Vertex next = g.T(tid).next();
         Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
         while (qq_num_properties.hasNext()){
@@ -57,7 +57,7 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
      */
     @Test
     public void selectByTid2(){
-        String tid="tid001";
+        String tid="tid003";
         String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
         Vertex next = g.V(graphId).next();
         Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
@@ -89,6 +89,35 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
         started.stop();
         LOGGER.info("条数："+label.size()+"用时："+started.elapsed(TimeUnit.MILLISECONDS));
     }
+    @Test
+    public void count(){
+        //Long next = g.V().hasLabel("object_qq").has(DefaultTextField.TITLE.getName(), "我是测试标签").count().next();
+        Long next = g.V().hasLabel("object_qq").has(DefaultTextField.TITLE.getName(),"我是测试标签").count().next();
+        LOGGER.info("数量："+next);
+    }
+    @Test
+    public void selectBothLink(){
+        Optional<Vertex> vertex = g.V().hasLabel("object_qq").has(DefaultTextField.TITLE.getName(), "我是测试标签").both().tryNext();
+        if(vertex.isPresent()){
+            Vertex next = vertex.get();
+            Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
+            while (qq_num_properties.hasNext()){
+                VertexProperty<Object> vertexProperty = qq_num_properties.next();
+                if(vertexProperty.isPresent()){
+                    Object value = vertexProperty.value();
+                    System.out.println(vertexProperty.key()+"->"+value);
+                    Iterator<Property<Object>> properties = vertexProperty.properties();
+                    while (properties.hasNext()){
+                        Property<Object> property = properties.next();
+                        if(property.isPresent()){
+                            Object value1 = property.value();
+                            System.out.println(property.key()+"<->"+value1);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     public void selectLinkId(){
@@ -105,6 +134,8 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
             }
         }
     }
+
+
 
     @Test
     public void selectTid() {

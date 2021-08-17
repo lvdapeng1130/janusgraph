@@ -1043,7 +1043,9 @@ public class KGElasticSearchIndex implements IndexProvider {
                 queryField = this.getQueryFieldName(atom.getKey());
             }
             final JanusGraphPredicate predicate = atom.getPredicate();
-            if (value instanceof Number) {
+            if (value == null && predicate == Cmp.NOT_EQUAL) {
+                return compat.exists(key);
+            } else if (value instanceof Number) {
                 Preconditions.checkArgument(predicate instanceof Cmp,
                         "Relation not supported on numeric types: " + predicate);
                 return getRelationFromCmp((Cmp) predicate, queryField, value);
