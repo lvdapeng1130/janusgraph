@@ -15,9 +15,6 @@
 package org.janusgraph.graphdb.internal;
 
 import org.apache.commons.lang3.StringUtils;
-import org.janusgraph.core.*;
-import org.janusgraph.graphdb.idmanagement.IDManager;
-import org.janusgraph.graphdb.relations.RelationIdentifier;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Element;
 import org.apache.tinkerpop.gremlin.structure.Vertex;

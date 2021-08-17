@@ -21,13 +21,6 @@ import com.carrotsearch.hppc.ObjectSet;
 import com.google.common.base.Preconditions;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Property;
-import org.janusgraph.core.*;
-import com.carrotsearch.hppc.LongArrayList;
-import com.carrotsearch.hppc.LongHashSet;
-import com.carrotsearch.hppc.LongObjectHashMap;
-import com.carrotsearch.hppc.LongSet;
-import com.google.common.base.Preconditions;
-import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.JanusGraphVertexProperty;
 import org.janusgraph.core.Multiplicity;
@@ -59,9 +52,15 @@ import org.janusgraph.util.datastructures.Interval;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
-import static org.janusgraph.graphdb.database.idhandling.IDHandler.*;
+import static org.janusgraph.graphdb.database.idhandling.IDHandler.DirectionID;
+import static org.janusgraph.graphdb.database.idhandling.IDHandler.RelationTypeParse;
+import static org.janusgraph.graphdb.database.idhandling.IDHandler.getBounds;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -366,8 +365,8 @@ public class EdgeSerializer implements RelationReader {
 
 
     public List<StaticArrayEntry> writeMulitPropertyProperties(AbstractVertexProperty vertexProperty,
-                                                          InternalRelationType type,
-                                                          StandardJanusGraphTx tx) {
+                                                               InternalRelationType type,
+                                                               StandardJanusGraphTx tx) {
         Iterator<? extends Property<Object>> properties = vertexProperty.properties();
         List<StaticArrayEntry> entries=new ArrayList<>();
         String typeId = type.longId();
