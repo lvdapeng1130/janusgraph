@@ -1,6 +1,6 @@
 package org.apache.janusgraph.spark.mapreduce;
 
-import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.janusgraph.spark.computer.SparkConstants;
 import org.apache.tinkerpop.gremlin.process.computer.util.StaticMapReduce;

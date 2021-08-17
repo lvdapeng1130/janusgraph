@@ -20,7 +20,7 @@ package org.apache.janusgraph.spark.computer;
 
 import org.apache.janusgraph.spark.mapreduce.JanusgraphConnectionUtils;
 import org.apache.spark.api.java.Optional;
-import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration2.Configuration;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
@@ -43,7 +43,6 @@ import org.apache.tinkerpop.gremlin.structure.util.detached.DetachedFactory;
 import org.apache.tinkerpop.gremlin.structure.util.detached.DetachedVertexProperty;
 import org.apache.tinkerpop.gremlin.structure.util.star.StarGraph;
 import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
-import org.janusgraph.core.JanusGraphFactory;
 import scala.Tuple2;
 
 import java.util.ArrayList;
@@ -91,14 +90,14 @@ public final class SparkExecutor {
                 graphRDD.leftOuterJoin(viewIncomingRDD))                                                   // every other iteration may have views and messages
                 // for each partition of vertices emit a view and their outgoing messages
                 .mapPartitionsToPair(partitionIterator -> {
-                    KryoShimServiceLoader.applyConfiguration((org.apache.commons.configuration.Configuration)graphComputerConfiguration);
+                    KryoShimServiceLoader.applyConfiguration((org.apache.commons.configuration2.Configuration)graphComputerConfiguration);
 
                     // if the partition is empty, return without starting a new VP iteration
                     if (!partitionIterator.hasNext())
                         return Collections.emptyIterator();
 
                     final VertexProgram<M> workerVertexProgram = VertexProgram.createVertexProgram(JanusgraphConnectionUtils.createInstance()
-                        .janusGraphConnection((org.apache.commons.configuration.Configuration)graphComputerConfiguration), (org.apache.commons.configuration.Configuration)vertexProgramConfiguration); // each partition(Spark)/worker(TP3) has a local copy of the vertex program (a worker's task)
+                        .janusGraphConnection((org.apache.commons.configuration2.Configuration)graphComputerConfiguration), (org.apache.commons.configuration2.Configuration)vertexProgramConfiguration); // each partition(Spark)/worker(TP3) has a local copy of the vertex program (a worker's task)
                     final String[] vertexComputeKeysArray = VertexProgramHelper.vertexComputeKeysAsArray(workerVertexProgram.getVertexComputeKeys()); // the compute keys as an array
                     final SparkMessenger<M> messenger = new SparkMessenger<>();
 

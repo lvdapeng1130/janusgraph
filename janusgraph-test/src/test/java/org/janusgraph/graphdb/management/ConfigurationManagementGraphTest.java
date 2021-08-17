@@ -14,7 +14,6 @@
 
 package org.janusgraph.graphdb.management;
 
-import org.apache.commons.configuration.MapConfiguration;
 import org.apache.commons.configuration2.MapConfiguration;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.JanusGraphFactory;

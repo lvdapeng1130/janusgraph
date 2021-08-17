@@ -19,8 +19,8 @@
 
 package org.apache.janusgraph.spark.process.computer;
 
-import org.apache.commons.configuration.BaseConfiguration;
-import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration2.BaseConfiguration;
+import org.apache.commons.configuration2.Configuration;
 import org.apache.janusgraph.spark.AbstractSparkTest;
 import org.apache.janusgraph.spark.computer.SparkJanusGraphComputer;
 import org.apache.janusgraph.spark.structure.Spark;

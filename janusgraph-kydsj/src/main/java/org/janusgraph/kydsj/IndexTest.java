@@ -1,8 +1,7 @@
 package org.janusgraph.kydsj;
 
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.core.JanusGraph;
 import org.janusgraph.core.JanusGraphFactory;
@@ -10,6 +9,7 @@ import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.core.schema.SchemaAction;
 import org.janusgraph.core.schema.SchemaStatus;
 import org.janusgraph.graphdb.database.management.ManagementSystem;
+import org.janusgraph.util.system.ConfigurationUtil;
 
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.ExecutionException;
@@ -22,7 +22,7 @@ import java.util.concurrent.ExecutionException;
 public class IndexTest {
     protected Configuration conf;
     public JanusGraph openGraph() throws ConfigurationException {
-        conf = new PropertiesConfiguration("D:\\github\\janusgraph\\janusgraph-kydsj\\src\\main\\resources\\jgex-hbase-es.properties");
+        conf = ConfigurationUtil.loadPropertiesConfig("D:\\github\\janusgraph\\janusgraph-kydsj\\src\\main\\resources\\jgex-hbase-es.properties");
         JanusGraph open = JanusGraphFactory.open(conf);
         return open;
     }

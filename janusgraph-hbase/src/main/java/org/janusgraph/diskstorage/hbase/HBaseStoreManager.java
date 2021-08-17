@@ -22,8 +22,6 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -43,13 +41,26 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.janusgraph.core.JanusGraphException;
-import org.janusgraph.diskstorage.*;
+import org.janusgraph.diskstorage.BackendException;
+import org.janusgraph.diskstorage.BaseTransactionConfig;
+import org.janusgraph.diskstorage.Entry;
+import org.janusgraph.diskstorage.EntryMetaData;
+import org.janusgraph.diskstorage.PermanentBackendException;
+import org.janusgraph.diskstorage.StaticBuffer;
+import org.janusgraph.diskstorage.StoreMetaData;
+import org.janusgraph.diskstorage.TemporaryBackendException;
 import org.janusgraph.diskstorage.common.DistributedStoreManager;
 import org.janusgraph.diskstorage.configuration.ConfigElement;
 import org.janusgraph.diskstorage.configuration.ConfigNamespace;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
-import org.janusgraph.diskstorage.keycolumnvalue.*;
+import org.janusgraph.diskstorage.keycolumnvalue.KCVMutation;
+import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStore;
+import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStoreManager;
+import org.janusgraph.diskstorage.keycolumnvalue.KeyRange;
+import org.janusgraph.diskstorage.keycolumnvalue.StandardStoreFeatures;
+import org.janusgraph.diskstorage.keycolumnvalue.StoreFeatures;
+import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
 import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.janusgraph.diskstorage.util.time.TimestampProviders;
@@ -65,9 +76,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -78,11 +86,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
-import static org.janusgraph.diskstorage.Backend.*;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
+import static org.janusgraph.diskstorage.Backend.ATTACHMENT_FAMILY_NAME;
 import static org.janusgraph.diskstorage.Backend.EDGESTORE_NAME;
 import static org.janusgraph.diskstorage.Backend.INDEXSTORE_NAME;
 import static org.janusgraph.diskstorage.Backend.LOCK_STORE_SUFFIX;
+import static org.janusgraph.diskstorage.Backend.NOTE_FAMILY_NAME;
+import static org.janusgraph.diskstorage.Backend.PROPERTY_PROPERTIES;
 import static org.janusgraph.diskstorage.Backend.SYSTEM_MGMT_LOG_NAME;
 import static org.janusgraph.diskstorage.Backend.SYSTEM_TX_LOG_NAME;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.DROP_ON_CLEAR;
@@ -499,33 +508,30 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         // deletion tombstone wins.
         // https://hbase.apache.org/book/versions.html#d244e4250
         final Map<StaticBuffer, Pair<List<Put>, Delete>> commandsPerKey =
-                convertToCommands(mutations, putTimestamp, delTimestamp);
+            convertToCommands(mutations, putTimestamp, delTimestamp);
 
         final List<Row> batch = new ArrayList<>(commandsPerKey.size()); // actual batch operation
 
-            final List<Row> batch = new ArrayList<>(commandsPerKey.size()); // actual batch operation
+        // convert sorted commands into representation required for 'batch' operation
+        for (Pair<List<Put>, Delete> commands : commandsPerKey.values()) {
+            if (commands.getFirst() != null && !commands.getFirst().isEmpty())
+                batch.addAll(commands.getFirst());
 
-            // convert sorted commands into representation required for 'batch' operation
-            for (Pair<List<Put>, Delete> commands : commandsPerKey.values()) {
-                if (commands.getFirst() != null && !commands.getFirst().isEmpty())
-                    batch.addAll(commands.getFirst());
+            if (commands.getSecond() != null)
+                batch.add(commands.getSecond());
+        }
 
-                if (commands.getSecond() != null)
-                    batch.add(commands.getSecond());
-            }
+        try {
+            TableMask table = null;
 
             try {
-                TableMask table = null;
-
-                try {
-                    table = cnx.getTable(entry.getKey());
-                    table.batch(batch, new Object[batch.size()]);
-                } finally {
-                    IOUtils.closeQuietly(table);
-                }
-            } catch (IOException | InterruptedException e) {
-                throw new TemporaryBackendException(e);
+                table = cnx.getTable(tableName);
+                table.batch(batch, new Object[batch.size()]);
+            } finally {
+                IOUtils.closeQuietly(table);
             }
+        } catch (IOException | InterruptedException e) {
+            throw new TemporaryBackendException(e);
         }
 
         if (commitTime != null) {

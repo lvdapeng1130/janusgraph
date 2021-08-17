@@ -74,7 +74,7 @@ public class SchemaManagerClientTest extends JanusGraphGrpcServerBaseTest {
         SchemaManagerClient schemaManagerClient = new SchemaManagerClient(getDefaultContext(), managedChannel);
 
         //create vertex
-        long id = createVertexLabel(defaultGraphName, VertexLabel.newBuilder()
+        String id = createVertexLabel(defaultGraphName, VertexLabel.newBuilder()
             .setName(vertexLabelName));
 
         VertexLabel vertexLabel = schemaManagerClient.getVertexLabelByName(vertexLabelName);
@@ -128,10 +128,10 @@ public class SchemaManagerClientTest extends JanusGraphGrpcServerBaseTest {
     @ValueSource(ints = {1, 4, 8, 16})
     public void testGetVertexLabels(int numberOfVertices) {
         SchemaManagerClient schemaManagerClient = new SchemaManagerClient(getDefaultContext(), managedChannel);
-        List<Long> createdIds = new ArrayList<>();
+        List<String> createdIds = new ArrayList<>();
 
         for (int i = 0; i < numberOfVertices; i++) {
-            long id = createVertexLabel(defaultGraphName, VertexLabel.newBuilder()
+            String id = createVertexLabel(defaultGraphName, VertexLabel.newBuilder()
                 .setName("testMultipleVertices"+i));
             createdIds.add(id);
         }
@@ -139,7 +139,7 @@ public class SchemaManagerClientTest extends JanusGraphGrpcServerBaseTest {
         List<VertexLabel> vertexLabels = schemaManagerClient.getVertexLabels();
 
         assertEquals(numberOfVertices, vertexLabels.size());
-        for (Long createdId : createdIds) {
+        for (String createdId : createdIds) {
             long count = vertexLabels.stream().filter(v -> v.getId().getValue() == createdId).count();
             assertEquals(1, count);
         }
@@ -176,7 +176,7 @@ public class SchemaManagerClientTest extends JanusGraphGrpcServerBaseTest {
         SchemaManagerClient schemaManagerClient = new SchemaManagerClient(getDefaultContext(), managedChannel);
 
         //create edge
-        long id = createEdgeLabel(defaultGraphName, EdgeLabel.newBuilder()
+        String id = createEdgeLabel(defaultGraphName, EdgeLabel.newBuilder()
             .setName(edgeLabelName));
 
         EdgeLabel edgeLabel = schemaManagerClient.getEdgeLabelByName(edgeLabelName);
@@ -231,10 +231,10 @@ public class SchemaManagerClientTest extends JanusGraphGrpcServerBaseTest {
     @ValueSource(ints = {1, 4, 8, 16})
     public void testGetEdgeLabels(int numberOfEdges) {
         SchemaManagerClient schemaManagerClient = new SchemaManagerClient(getDefaultContext(), managedChannel);
-        List<Long> createdIds = new ArrayList<>();
+        List<String> createdIds = new ArrayList<>();
 
         for (int i = 0; i < numberOfEdges; i++) {
-            long id = createEdgeLabel(defaultGraphName, EdgeLabel.newBuilder()
+            String id = createEdgeLabel(defaultGraphName, EdgeLabel.newBuilder()
                 .setName("testMultipleEdges"+i));
             createdIds.add(id);
         }
@@ -242,7 +242,7 @@ public class SchemaManagerClientTest extends JanusGraphGrpcServerBaseTest {
         List<EdgeLabel> edgeLabels = schemaManagerClient.getEdgeLabels();
 
         assertEquals(numberOfEdges, edgeLabels.size());
-        for (Long createdId : createdIds) {
+        for (String createdId : createdIds) {
             long count = edgeLabels.stream().filter(e -> e.getId().getValue() == createdId).count();
             assertEquals(1, count);
         }

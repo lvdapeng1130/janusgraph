@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class MetricInstrumentedIndexProvider implements IndexProvider {
@@ -58,7 +59,12 @@ public class MetricInstrumentedIndexProvider implements IndexProvider {
 
     @Override
     public void register(final String store, final String key, final KeyInformation information, final BaseTransaction tx) throws BackendException {
-        indexProvider.register(store, key, information, tx);
+        this.register(store,key,information,tx,null);
+    }
+
+    @Override
+    public void register(String store, String key, KeyInformation information, BaseTransaction tx, Set<String> aliases) throws BackendException {
+        indexProvider.register(store, key, information, tx,aliases);
     }
 
     @Override

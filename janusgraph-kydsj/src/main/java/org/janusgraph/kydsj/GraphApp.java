@@ -14,15 +14,15 @@
 
 package org.janusgraph.kydsj;
 
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.tinkerpop.gremlin.process.traversal.P;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.util.GraphFactory;
 import org.janusgraph.core.attribute.Geoshape;
+import org.janusgraph.util.system.ConfigurationUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +55,7 @@ public class GraphApp {
      */
     public GraphTraversalSource openGraph() throws ConfigurationException {
         LOGGER.info("opening graph");
-        conf = new PropertiesConfiguration(propFileName);
+        conf = ConfigurationUtil.loadPropertiesConfig(propFileName);
         graph = GraphFactory.open(conf);
         g = graph.traversal();
         return g;

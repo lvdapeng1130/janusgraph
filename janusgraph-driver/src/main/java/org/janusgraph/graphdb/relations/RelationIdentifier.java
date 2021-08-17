@@ -15,7 +15,7 @@
 package org.janusgraph.graphdb.relations;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.janusgraph.util.encoding.LongEncoding;
 
 import java.io.Serializable;

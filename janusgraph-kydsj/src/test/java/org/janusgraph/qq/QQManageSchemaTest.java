@@ -1,8 +1,7 @@
 package org.janusgraph.qq;
 
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
@@ -14,6 +13,7 @@ import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.kggraph.AbstractKGgraphTest;
+import org.janusgraph.util.system.ConfigurationUtil;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -36,7 +36,7 @@ public class QQManageSchemaTest extends AbstractKGgraphTest {
     @Before
     public void startHBase() throws IOException, ConfigurationException {
         LOGGER.info("opening graph");
-        conf = new PropertiesConfiguration("D:\\github\\janusgraph\\janusgraph-kydsj\\src\\test\\resources\\trsgraph-hbase-es-test-qq.properties");
+        conf=ConfigurationUtil.loadPropertiesConfig("D:\\github\\janusgraph\\janusgraph-kydsj\\src\\test\\resources\\trsgraph-hbase-es-test-qq.properties");
         graph = JanusGraphFactory.open(conf);
         g = graph.traversal();
     }

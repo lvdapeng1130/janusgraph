@@ -19,7 +19,7 @@
 
 package org.apache.janusgraph.spark.process.computer.traversal.strategy.optimization;
 
-import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration2.Configuration;
 import org.apache.janusgraph.spark.computer.traversal.strategy.optimization.SparkInterceptorStrategy;
 import org.apache.janusgraph.spark.computer.traversal.strategy.optimization.SparkSingleIterationStrategy;
 import org.apache.tinkerpop.gremlin.TestHelper;

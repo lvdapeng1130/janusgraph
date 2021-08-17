@@ -19,8 +19,8 @@
 
 package org.apache.janusgraph.spark;
 
-import org.apache.commons.configuration.BaseConfiguration;
-import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration2.BaseConfiguration;
+import org.apache.commons.configuration2.Configuration;
 import org.apache.janusgraph.spark.structure.Spark;
 import org.apache.janusgraph.spark.structure.io.gryo.GryoSerializer;
 import org.apache.spark.launcher.SparkLauncher;

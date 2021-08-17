@@ -56,7 +56,7 @@ public abstract class JanusGraphGrpcServerBaseTest {
         return new DefaultGraphManager(settings);
     }
 
-    public long createVertexLabel(String graph, VertexLabelOrBuilder vertexLabel) {
+    public String createVertexLabel(String graph, VertexLabelOrBuilder vertexLabel) {
         JanusGraphManagement management = ((JanusGraph) graphManager.getGraph(graph)).openManagement();
         VertexLabelMaker vertexLabelMaker = management.makeVertexLabel(vertexLabel.getName());
         if (vertexLabel.getReadOnly()) {
@@ -71,7 +71,7 @@ public abstract class JanusGraphGrpcServerBaseTest {
         return createdVertexLabel.longId();
     }
 
-    public long createEdgeLabel(String graph, EdgeLabelOrBuilder edgeLabel) {
+    public String createEdgeLabel(String graph, EdgeLabelOrBuilder edgeLabel) {
         JanusGraphManagement management = ((JanusGraph) graphManager.getGraph(graph)).openManagement();
         EdgeLabelMaker edgeLabelMaker = management.makeEdgeLabel(edgeLabel.getName());
         if (edgeLabel.getDirection() == EdgeLabel.Direction.BOTH) {

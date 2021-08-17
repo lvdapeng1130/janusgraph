@@ -204,7 +204,7 @@ public abstract class AbstractJanusGraphComputer implements GraphComputer {
             return false;
         }
 
-        public <A> Class<A> getGraphWriter(org.apache.commons.configuration.Configuration configuration) {
+        public <A> Class<A> getGraphWriter(org.apache.commons.configuration2.Configuration configuration) {
             try {
                 return (Class) Class.forName(configuration.getString(Constants.GREMLIN_HADOOP_GRAPH_WRITER));
             } catch (final ClassNotFoundException e) {

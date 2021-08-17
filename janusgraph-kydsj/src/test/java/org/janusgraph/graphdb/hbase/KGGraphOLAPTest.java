@@ -302,7 +302,6 @@ public class KGGraphOLAPTest extends JanusGraphBaseTest {
         private Graph graph;
         private Configuration configuration;
 
-        @Override
         public void loadState(Graph graph, Configuration configuration) {
             this.graph=graph;
             this.configuration=configuration;

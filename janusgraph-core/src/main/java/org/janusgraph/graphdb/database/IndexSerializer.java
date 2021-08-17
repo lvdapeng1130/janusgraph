@@ -16,26 +16,20 @@ package org.janusgraph.graphdb.database;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
 import org.apache.commons.lang.StringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.Order;
 import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.util.empty.EmptyProperty;
-import org.janusgraph.core.*;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.schema.Parameter;
 import org.janusgraph.core.schema.SchemaStatus;
-import org.janusgraph.diskstorage.*;
 import org.janusgraph.diskstorage.configuration.Configuration;
-import org.janusgraph.diskstorage.indexing.*;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.tinkerpop.gremlin.process.traversal.Order;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.JanusGraphElement;
 import org.janusgraph.core.JanusGraphException;
@@ -44,9 +38,6 @@ import org.janusgraph.core.JanusGraphVertex;
 import org.janusgraph.core.JanusGraphVertexProperty;
 import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.SchemaViolationException;
-import org.janusgraph.core.attribute.Geoshape;
-import org.janusgraph.core.schema.Parameter;
-import org.janusgraph.core.schema.SchemaStatus;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BackendTransaction;
 import org.janusgraph.diskstorage.Entry;
@@ -55,7 +46,6 @@ import org.janusgraph.diskstorage.EntryMetaData;
 import org.janusgraph.diskstorage.MetaAnnotatable;
 import org.janusgraph.diskstorage.ReadBuffer;
 import org.janusgraph.diskstorage.StaticBuffer;
-import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.indexing.IndexEntry;
 import org.janusgraph.diskstorage.indexing.IndexFeatures;
 import org.janusgraph.diskstorage.indexing.IndexInformation;
@@ -73,7 +63,6 @@ import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.database.serialize.InternalAttributeUtil;
 import org.janusgraph.graphdb.database.serialize.Serializer;
 import org.janusgraph.graphdb.idmanagement.IDManager;
-import org.janusgraph.graphdb.internal.*;
 import org.janusgraph.graphdb.internal.ElementCategory;
 import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.internal.InternalRelationType;
@@ -104,6 +93,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -341,6 +331,7 @@ public class IndexSerializer {
         final int ttl = updateType==IndexUpdate.Type.ADD?StandardJanusGraph.getTTL(relation):0;
         for (final PropertyKey type : relation.getPropertyKeysDirect()) {
             if (type == null) continue;
+            final PropertyKey key = (PropertyKey)type;
             for (final IndexType index : ((InternalRelationType) type).getKeyIndexes()) {
                 if (!indexAppliesTo(index,relation)) continue;
                 IndexUpdate update;
@@ -352,7 +343,7 @@ public class IndexSerializer {
                 } else {
                     assert relation.valueOrNull(type)!=null;
                     if (((MixedIndexType)index).getField(type).getStatus()== SchemaStatus.DISABLED) continue;
-                    update = getMixedIndexUpdate(relation, type, relation.valueOrNull(type), (MixedIndexType) index, updateType);
+                    update = getMixedIndexUpdate(relation, null,key, relation.valueOrNull(key), (MixedIndexType) index, updateType);
                 }
                 if (ttl>0) update.setTTL(ttl);
                 updates.add(update);
@@ -402,7 +393,7 @@ public class IndexSerializer {
                         throw new SchemaViolationException(p.propertyKey() + " is not available in mixed index " + index);
                     }
                     if (field.getStatus() == SchemaStatus.DISABLED) continue;
-                    final IndexUpdate update = getMixedIndexUpdate(vertex, p.propertyKey(), p.value(), (MixedIndexType) index, updateType);
+                    final IndexUpdate update = getMixedIndexUpdate(vertex,p, p.propertyKey(), p.value(), (MixedIndexType) index, updateType);
                     final int ttl = getIndexTTL(vertex,p.propertyKey());
                     if (ttl>0 && updateType== IndexUpdate.Type.ADD) update.setTTL(ttl);
                     updates.add(update);

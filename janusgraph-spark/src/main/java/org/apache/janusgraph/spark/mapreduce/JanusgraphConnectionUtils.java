@@ -1,7 +1,7 @@
 package org.apache.janusgraph.spark.mapreduce;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration2.Configuration;
 import org.janusgraph.core.JanusGraph;
 import org.janusgraph.core.JanusGraphFactory;
 

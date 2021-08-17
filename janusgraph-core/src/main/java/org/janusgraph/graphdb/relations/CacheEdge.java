@@ -87,7 +87,7 @@ public class CacheEdge extends AbstractEdge {
         copyProperties(copy);
         copy.remove();
 
-        Long id = type.getConsistencyModifier() != ConsistencyModifier.FORK ? longId() : null;
+        String id = type.getConsistencyModifier() != ConsistencyModifier.FORK ? longId() : null;
         StandardEdge u = (StandardEdge) tx().addEdge(id, getVertex(0), getVertex(1), edgeLabel());
         u.setPreviousID(longId());
         copyProperties(u);

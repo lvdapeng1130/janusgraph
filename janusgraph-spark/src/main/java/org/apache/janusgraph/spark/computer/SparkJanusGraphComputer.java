@@ -18,7 +18,7 @@
  */
 package org.apache.janusgraph.spark.computer;
 
-import org.apache.commons.configuration.ConfigurationUtils;
+import org.apache.commons.configuration2.ConfigurationUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -78,7 +78,7 @@ import static org.apache.tinkerpop.gremlin.hadoop.Constants.*;
  */
 public final class SparkJanusGraphComputer extends AbstractJanusGraphComputer {
 
-    private final org.apache.commons.configuration.Configuration sparkConfiguration;
+    private final org.apache.commons.configuration2.Configuration sparkConfiguration;
     private final org.janusgraph.diskstorage.configuration.Configuration janusGraphConfiguration;
     private boolean workersSet = false;
     private final ThreadFactory threadFactoryBoss = new BasicThreadFactory.Builder().namingPattern(SparkJanusGraphComputer.class.getSimpleName() + "-boss").build();
@@ -260,7 +260,7 @@ public final class SparkJanusGraphComputer extends AbstractJanusGraphComputer {
             //////////////////////////////////////////////////
             //////////////////////////////////////////////////
             // apache and hadoop configurations that are used throughout the graph computer computation
-            final org.apache.commons.configuration.Configuration graphComputerConfiguration = new HadoopConfiguration(this.sparkConfiguration);
+            final org.apache.commons.configuration2.Configuration graphComputerConfiguration = new HadoopConfiguration(this.sparkConfiguration);
             if (!graphComputerConfiguration.containsKey(Constants.SPARK_SERIALIZER)) {
                 graphComputerConfiguration.setProperty(Constants.SPARK_SERIALIZER, KryoSerializer.class.getCanonicalName());
                 if (!graphComputerConfiguration.containsKey(Constants.SPARK_KRYO_REGISTRATOR))

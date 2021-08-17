@@ -20,9 +20,12 @@
 package org.apache.janusgraph.spark.structure.io.gryo;
 
 
-import org.apache.commons.configuration.BaseConfiguration;
-import org.apache.commons.configuration.Configuration;
-import org.apache.janusgraph.spark.structure.io.gryo.CompactBufferSerializer;
+import org.apache.commons.configuration2.BaseConfiguration;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.janusgraph.spark.computer.payload.MessagePayload;
+import org.apache.janusgraph.spark.computer.payload.ViewIncomingPayload;
+import org.apache.janusgraph.spark.computer.payload.ViewOutgoingPayload;
+import org.apache.janusgraph.spark.computer.payload.ViewPayload;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.python.PythonBroadcast;
 import org.apache.spark.broadcast.TorrentBroadcast;
@@ -38,10 +41,6 @@ import org.apache.tinkerpop.gremlin.hadoop.Constants;
 import org.apache.tinkerpop.gremlin.hadoop.structure.io.HadoopPools;
 import org.apache.tinkerpop.gremlin.hadoop.structure.io.ObjectWritable;
 import org.apache.tinkerpop.gremlin.hadoop.structure.io.VertexWritable;
-import org.apache.janusgraph.spark.computer.payload.MessagePayload;
-import org.apache.janusgraph.spark.computer.payload.ViewIncomingPayload;
-import org.apache.janusgraph.spark.computer.payload.ViewOutgoingPayload;
-import org.apache.janusgraph.spark.computer.payload.ViewPayload;
 import org.apache.tinkerpop.gremlin.structure.io.AbstractIoRegistry;
 import org.apache.tinkerpop.gremlin.structure.io.IoRegistry;
 import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoIo;

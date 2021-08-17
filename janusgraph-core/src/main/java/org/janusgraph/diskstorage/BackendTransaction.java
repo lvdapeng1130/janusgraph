@@ -16,7 +16,6 @@ package org.janusgraph.diskstorage;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.util.TraversalInterruptedException;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.diskstorage.indexing.IndexQuery;
@@ -513,14 +512,16 @@ public class BackendTransaction implements LoggableTransaction {
         return executeRead(new Callable<EntryList>() {
             @Override
             public EntryList call() throws Exception {
-                return cacheEnabled?propertyPopertiesStore.getSlice(query, storeTx):
+                return cacheEnabled ? propertyPopertiesStore.getSlice(query, storeTx) :
                     propertyPopertiesStore.getSliceNoCache(query, storeTx);
             }
+
             @Override
             public String toString() {
                 return "PropertyPropertiesQuery";
             }
         });
+    }
     public Long indexQueryCount(final String index, final IndexQuery query) {
         final IndexTransaction indexTx = getIndexTransaction(index);
         return executeRead(new Callable<Long>() {

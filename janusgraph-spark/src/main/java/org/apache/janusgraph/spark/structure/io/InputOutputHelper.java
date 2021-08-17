@@ -19,8 +19,8 @@
 
 package org.apache.janusgraph.spark.structure.io;
 
-import org.apache.commons.configuration.BaseConfiguration;
-import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration2.BaseConfiguration;
+import org.apache.commons.configuration2.Configuration;
 import org.apache.janusgraph.spark.mapreduce.JanusgraphConnectionUtils;
 import org.apache.tinkerpop.gremlin.hadoop.Constants;
 import org.apache.tinkerpop.gremlin.hadoop.structure.HadoopConfiguration;

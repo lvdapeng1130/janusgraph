@@ -35,6 +35,11 @@ public final class EmptyJanusGraphVertexProperty<V> implements JanusGraphVertexP
     }
 
     @Override
+    public Property<V> lastProperty(String key) {
+        return Property.<V>empty();
+    }
+
+    @Override
     public <U> Iterator<Property<U>> properties(String... propertyKeys) {
         return null;
     }
@@ -50,8 +55,8 @@ public final class EmptyJanusGraphVertexProperty<V> implements JanusGraphVertexP
     }
 
     @Override
-    public long longId() {
-        return 0;
+    public String longId() {
+        return "0";
     }
 
     @Override

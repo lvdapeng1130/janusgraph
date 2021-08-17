@@ -1,11 +1,11 @@
 package org.janusgraph.kggraph;
 
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.janusgraph.core.JanusGraph;
 import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.dsl.KydsjTraversalSource;
+import org.janusgraph.util.system.ConfigurationUtil;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +25,7 @@ public class AbstractKGgraphTest {
     @Before
     public void startHBase() throws IOException, ConfigurationException {
         LOGGER.info("opening graph");
-        conf = new PropertiesConfiguration("C:\\work\\kggraph\\trunk\\janusgraph-kydsj\\src\\main\\resources\\trsgraph-hbase-es-test.properties");
+        conf = ConfigurationUtil.loadPropertiesConfig("C:\\work\\kggraph\\trunk\\janusgraph-kydsj\\src\\main\\resources\\trsgraph-hbase-es-test.properties");
         graph = JanusGraphFactory.open(conf);
         g = graph.traversal(KydsjTraversalSource.class);
     }

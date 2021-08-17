@@ -412,6 +412,10 @@
                         <phase>clean</phase>
                         <goals>
                             <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
@@ -1003,8 +1007,8 @@
                 -->
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>11.0.2</version>
-                <!--<version>29.0-jre</version>-->
+                <!--<version>11.0.2</version>-->
+                <version>29.0-jre</version>
             </dependency>
             <dependency>
                 <groupId>com.google.errorprone</groupId>
@@ -1161,7 +1165,7 @@
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
                 <version>${protobuf.version}</version>
-            <!--</dependency>
+            </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java-util</artifactId>
@@ -1190,7 +1194,7 @@
             <dependency>
                 <groupId>io.grpc</groupId>
                 <artifactId>grpc-netty-shaded</artifactId>
-                <version>${grpc.version}</version>-->
+                <version>${grpc.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.velocity</groupId>
@@ -1351,6 +1355,7 @@
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-yarn-common</artifactId>
                 <version>${hadoop2.version}</version>
+            </dependency>
             <dependency>
                 <groupId>io.github.artsok</groupId>
                 <artifactId>rerunner-jupiter</artifactId>
@@ -1417,6 +1422,7 @@
                 <protobuf.version>2.5.0</protobuf.version>
             </properties>
         </profile>
+        <profile>
             <id>java-11</id>
             <properties>
                 <compiler.source>11</compiler.source>

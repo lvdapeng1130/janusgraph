@@ -28,7 +28,7 @@ import org.janusgraph.graphdb.types.system.BaseKey;
 public abstract class AbstractScanJob implements ScanJob {
     protected final GraphProvider graph;
     protected StandardJanusGraphTx tx;
-    private IDManager idManager;
+    protected IDManager idManager;
 
     public AbstractScanJob(JanusGraph graph) {
         this.graph = new GraphProvider();
@@ -55,7 +55,7 @@ public abstract class AbstractScanJob implements ScanJob {
         graph.close();
     }
 
-    protected boolean isGhostVertex(long vertexId, EntryList firstEntries) {
+    protected boolean isGhostVertex(String vertexId, EntryList firstEntries) {
         if (idManager.isPartitionedVertex(vertexId) && !idManager.isCanonicalVertexId(vertexId)) return false;
 
         RelationCache relCache = tx.getEdgeSerializer().parseRelation(
@@ -63,7 +63,7 @@ public abstract class AbstractScanJob implements ScanJob {
         return relCache.typeId != BaseKey.VertexExists.longId();
     }
 
-    protected long getVertexId(StaticBuffer key) {
+    protected String getVertexId(StaticBuffer key) {
         return idManager.getKeyID(key);
     }
 

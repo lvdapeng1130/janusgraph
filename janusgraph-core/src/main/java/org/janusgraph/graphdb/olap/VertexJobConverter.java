@@ -16,9 +16,11 @@ package org.janusgraph.graphdb.olap;
 
 import com.google.common.base.Preconditions;
 import org.janusgraph.core.JanusGraph;
+import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.core.JanusGraphVertex;
 import org.janusgraph.diskstorage.EntryList;
 import org.janusgraph.diskstorage.StaticBuffer;
+import org.janusgraph.diskstorage.configuration.BasicConfiguration;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.diskstorage.keycolumnvalue.scan.ScanJob;
@@ -27,7 +29,9 @@ import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.query.Query;
+import org.janusgraph.graphdb.relations.RelationCache;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
+import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.graphdb.vertices.PreloadedVertex;
 
 import java.util.ArrayList;

@@ -133,5 +133,5 @@ public interface JanusGraphTransaction extends Transaction {
      */
     boolean hasModifications();
 
-    void expireSchemaElement(final long id);
+    void expireSchemaElement(final String id);
 }

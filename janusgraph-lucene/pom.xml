@@ -4,7 +4,6 @@
         <groupId>org.janusgraph</groupId>
         <artifactId>janusgraph</artifactId>
         <version>KGYY_R3.01_20210326-hbase1</version>
-        <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>janusgraph-lucene</artifactId>
     <name>JanusGraph-Lucene: Indexing Support</name>
