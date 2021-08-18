@@ -49,6 +49,7 @@ import org.janusgraph.graphdb.types.TypeInspector;
 import org.janusgraph.graphdb.types.system.ImplicitKey;
 import org.janusgraph.graphdb.util.MD5Util;
 import org.janusgraph.util.datastructures.Interval;
+import org.janusgraph.util.system.DefaultKeywordField;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -344,9 +345,17 @@ public class EdgeSerializer implements RelationReader {
             for (String id : signature) writtenTypes.add(id);
         }
         ObjectArrayList<String> remainingTypes = new ObjectArrayList(8);
-        for (PropertyKey t : relation.getPropertyKeysDirect()) {
-            if (!(t instanceof ImplicitKey) && !writtenTypes.contains(t.longId())) {
-                remainingTypes.add(t.longId());
+        if(relation.isEdge()){
+            for (PropertyKey t : relation.getPropertyKeysDirect()) {
+                if (!(t instanceof ImplicitKey) && !writtenTypes.contains(t.longId())&&!DefaultKeywordField.isKeyWordField(t.name())) {
+                    remainingTypes.add(t.longId());
+                }
+            }
+        }else{
+            for (PropertyKey t : relation.getPropertyKeysDirect()) {
+                if (!(t instanceof ImplicitKey) && !writtenTypes.contains(t.longId())) {
+                    remainingTypes.add(t.longId());
+                }
             }
         }
         //Sort types before writing to ensure that value is always written the same way

@@ -128,6 +128,8 @@ public class TypeUtil {
 
 
     public static ConsistencyModifier getConsistencyModifier(SchemaSource schema) {
+        TypeDefinitionCategory typeDefinitionCategory= TypeDefinitionCategory.CONSISTENCY_LEVEL;
+        TypeDefinitionCategory ttl=TypeDefinitionCategory.TTL;
         return getTypeModifier(schema, ModifierType.CONSISTENCY, ConsistencyModifier.DEFAULT);
     }
 

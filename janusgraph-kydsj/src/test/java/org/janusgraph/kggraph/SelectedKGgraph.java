@@ -121,7 +121,7 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
 
     @Test
     public void selectLinkId(){
-        Optional<Edge> optionalEdge = g.E("5120016_28-tid003_28_000-416010101-tid004_27_000").tryNext();
+        Optional<Edge> optionalEdge = g.E("2560016_28-tid003_28_000-416010101-tid004_27_000").tryNext();
         if(optionalEdge.isPresent()){
             Edge edge = optionalEdge.get();
             Iterator<Property<Object>> edgeProperties = edge.properties();

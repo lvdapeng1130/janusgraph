@@ -45,7 +45,7 @@ public class ImplicitKey extends EmptyRelationType implements SystemRelationType
 
     public static final ImplicitKey ID = new ImplicitKey(1001, T.id.getAccessor() ,Object.class);
 
-    public static final ImplicitKey JANUSGRAPHID = new ImplicitKey(1002,Token.makeSystemName("nid"),Long.class);
+    public static final ImplicitKey JANUSGRAPHID = new ImplicitKey(1002,Token.makeSystemName("nid"),String.class);
 
     public static final ImplicitKey LABEL = new ImplicitKey(11, T.label.getAccessor() ,String.class);
 
@@ -53,7 +53,7 @@ public class ImplicitKey extends EmptyRelationType implements SystemRelationType
 
     public static final ImplicitKey VALUE = new ImplicitKey(13, T.value.getAccessor(), Object.class);
 
-    public static final ImplicitKey ADJACENT_ID = new ImplicitKey(1003,Token.makeSystemName("adjacent"),Long.class);
+    public static final ImplicitKey ADJACENT_ID = new ImplicitKey(1003,Token.makeSystemName("adjacent"),String.class);
 
     //######### IMPLICIT KEYS WITH ID ############
 
