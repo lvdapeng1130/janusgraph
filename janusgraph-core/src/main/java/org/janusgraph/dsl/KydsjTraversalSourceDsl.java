@@ -29,6 +29,7 @@ import org.apache.tinkerpop.gremlin.process.traversal.step.map.GraphStep;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
+import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,8 +59,15 @@ public class KydsjTraversalSourceDsl extends GraphTraversalSource {
             if (graph!=null) {
                 for (String tid : tids) {
                     if (StringUtils.isNotBlank(tid)) {
-                        String graphId = ((StandardJanusGraph) graph).getIDManager().toVertexId(tid);
-                        graphIds.add(graphId);
+                        if(graph instanceof StandardJanusGraph) {
+                            String graphId = ((StandardJanusGraph) graph).getIDManager().toVertexId(tid);
+                            graphIds.add(graphId);
+                        }else if(graph instanceof StandardJanusGraphTx){
+                            String graphId = ((StandardJanusGraphTx) graph).getIdInspector().toVertexId(tid);
+                            graphIds.add(graphId);
+                        }else{
+                            graphIds.add(tid);
+                        }
                     }
                 }
             }

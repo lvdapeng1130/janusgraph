@@ -5,8 +5,10 @@ import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
+import org.janusgraph.dsl.KydsjTraversalSource;
 import org.janusgraph.dsl.__;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
+import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.util.encoding.LongEncoding;
 import org.janusgraph.util.system.DefaultKeywordField;
 import org.janusgraph.util.system.DefaultTextField;
@@ -72,6 +74,34 @@ public class SelectedKGgraph extends AbstractKGgraphTest{
                     if(property.isPresent()){
                         Object value1 = property.value();
                         System.out.println(property.key()+"<->"+value1);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void selectByTidOther(){
+        String tid="tid003";
+        StandardJanusGraphTx tx = (StandardJanusGraphTx) graph.buildTransaction().consistencyChecks(true)
+            .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start();
+        KydsjTraversalSource g = tx.traversal(KydsjTraversalSource.class);
+        Optional<Vertex> vertex = g.T(tid).tryNext();
+        if(vertex.isPresent()) {
+            Vertex next = vertex.get();
+            Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
+            while (qq_num_properties.hasNext()) {
+                VertexProperty<Object> vertexProperty = qq_num_properties.next();
+                if (vertexProperty.isPresent()) {
+                    Object value = vertexProperty.value();
+                    System.out.println(vertexProperty.key() + "->" + value);
+                    Iterator<Property<Object>> properties = vertexProperty.properties();
+                    while (properties.hasNext()) {
+                        Property<Object> property = properties.next();
+                        if (property.isPresent()) {
+                            Object value1 = property.value();
+                            System.out.println(property.key() + "<->" + value1);
+                        }
                     }
                 }
             }
