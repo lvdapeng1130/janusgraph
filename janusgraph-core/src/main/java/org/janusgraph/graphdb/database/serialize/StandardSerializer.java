@@ -79,7 +79,9 @@ import org.janusgraph.graphdb.types.ParameterType;
 import org.janusgraph.graphdb.types.TypeDefinitionCategory;
 import org.janusgraph.graphdb.types.TypeDefinitionDescription;
 import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.MediaDataRaw;
 import org.janusgraph.kydsj.serialize.Note;
+import org.janusgraph.kydsj.serialize.attribute.MediaDataRawSerializer;
 import org.janusgraph.kydsj.serialize.attribute.MediaDataSerializer;
 import org.janusgraph.kydsj.serialize.attribute.NoteSerializer;
 
@@ -181,6 +183,7 @@ public class StandardSerializer implements AttributeHandler, Serializer {
         registerClassInternal(72, MediaData.class, new MediaDataSerializer());
         registerClassInternal(73, Note.class, new NoteSerializer());
         registerClassInternal(74, HashSet.class, new SerializableSerializer());
+        registerClassInternal(75, MediaDataRaw.class, new MediaDataRawSerializer());
     }
 
     @Override

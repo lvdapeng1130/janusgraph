@@ -16,6 +16,7 @@ package org.janusgraph.core;
 
 import org.janusgraph.graphdb.relations.RelationIdentifier;
 import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.MediaDataRaw;
 import org.janusgraph.kydsj.serialize.Note;
 
 import java.util.Iterator;
@@ -85,6 +86,14 @@ public interface JanusGraphTransaction extends Transaction {
     Iterator<Note> getNotes(String vertexId, String ...keys);
 
     Iterator<MediaData> getMediaDatas(String vertexId, String ...keys);
+
+    /**
+     * 查询对象附件对应的标题
+     * @param vertexId 对象ID
+     * @param keys 附件ID
+     * @return
+     */
+    Iterator<MediaDataRaw> getMediaDataRaws(String vertexId, String ...keys);
 
    /* ---------------------------------------------------------------
     * Closing and admin

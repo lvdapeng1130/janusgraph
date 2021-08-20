@@ -41,6 +41,7 @@ public class SliceQuery extends BaseQuery implements BackendQuery<SliceQuery> {
 
     private final StaticBuffer sliceStart;
     private final StaticBuffer sliceEnd;
+    private boolean maxColumnInclusive=false;
     private String type;
 
     public SliceQuery(final StaticBuffer sliceStart, final StaticBuffer sliceEnd, final String type) {
@@ -76,6 +77,14 @@ public class SliceQuery extends BaseQuery implements BackendQuery<SliceQuery> {
      */
     public StaticBuffer getSliceEnd() {
         return sliceEnd;
+    }
+
+    public boolean isMaxColumnInclusive() {
+        return maxColumnInclusive;
+    }
+
+    public void setMaxColumnInclusive(boolean maxColumnInclusive) {
+        this.maxColumnInclusive = maxColumnInclusive;
     }
 
     @Override

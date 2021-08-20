@@ -19,6 +19,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Property;
@@ -148,6 +149,7 @@ import org.janusgraph.graphdb.vertices.StandardVertex;
 import org.janusgraph.kydsj.SimpleAttachment;
 import org.janusgraph.kydsj.SimpleNote;
 import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.MediaDataRaw;
 import org.janusgraph.kydsj.serialize.Note;
 import org.janusgraph.util.datastructures.Retriever;
 import org.janusgraph.util.stats.MetricManager;
@@ -852,6 +854,11 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
                             throw new SchemaViolationException("An edge with the given label already exists on the in-vertex and the label [%s] is in-unique", label.name());
                 }
             }
+            if(StringUtils.isNotBlank(id)){
+                long partition= getPartitionID((InternalVertex)outVertex);
+                id = idManager.getRelationID(id, partition);
+                //vertexId=IDManager.VertexIDType.NormalVertex.addPadding(vertexId);
+            }
             String edgeId = id == null ? IDManager.getTemporaryRelationID(temporaryIds.nextID()) : id;
             StandardEdge edge = new StandardEdge(edgeId, label, (InternalVertex) outVertex, (InternalVertex) inVertex, ElementLifeCycle.New);
             if (config.hasAssignIDsImmediately() && id == null) graph.assignID(edge);
@@ -860,6 +867,12 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         } finally {
             uniqueLock.unlock();
         }
+    }
+
+    private long getPartitionID(final InternalVertex v) {
+        String vid = v.longId();
+        if (IDManager.VertexIDType.Schema.is(vid)) return IDManager.SCHEMA_PARTITION;
+        else return idManager.getPartitionId(vid);
     }
 
     private void connectRelation(InternalRelation r) {
@@ -1091,33 +1104,92 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
     public Iterator<MediaData> getMediaDatas(String vertexId,String ... keys) {
         try {
             StaticBuffer rowkey = this.getHBaseTableRowkey(vertexId);
-            KeySliceQuery keySliceQuery=new KeySliceQuery(rowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
-            EntryList entries = this.getTxHandle().attachmentQuery(keySliceQuery);
-            Iterator<Entry> iterator = entries.iterator();
-            Set<String> keySet=null;
             if(keys!=null&&keys.length>0){
-                keySet=Sets.newHashSet(keys);
+                List<MediaData> mediaDataList=new ArrayList<>();
+                for(String colName:keys){
+                    Iterator<MediaData> mediaDataIterator = getMediaDataIterator(rowkey, colName,MediaData.class);
+                    List<MediaData> list = IteratorUtils.toList(mediaDataIterator);
+                    mediaDataList.addAll(list);
+                }
+                return mediaDataList.iterator();
+            }else {
+                KeySliceQuery keySliceQuery = new KeySliceQuery(rowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
+                EntryList entries = this.getTxHandle().attachmentQuery(keySliceQuery);
+                Iterator<Entry> iterator = entries.iterator();
+                Set<String> keySet = null;
+                Iterable<Entry> iterable = () -> iterator;
+                Iterator<MediaData> noteIterator = StreamSupport.stream(iterable.spliterator(), true).filter(entry -> {
+                    ReadBuffer buffer = entry.asReadBuffer();
+                    String col = graph.getDataSerializer().readObjectNotNull(buffer, String.class);
+                    if (col.startsWith(MediaDataRaw.PREFIX_COL)) {
+                        return false;
+                    }
+                    return true;
+                }).map(entry -> {
+                    ReadBuffer buffer = entry.asReadBuffer();
+                    String col = graph.getDataSerializer().readObjectNotNull(buffer, String.class);
+                    MediaData mediaData = graph.getDataSerializer().readObjectNotNull(buffer, MediaData.class);
+                    return mediaData;
+                }).iterator();
+                return noteIterator;
             }
-            Iterable<Entry> iterable=()->iterator;
-            final Set<String> finalKeySet = keySet;
-            Iterator<MediaData> noteIterator = StreamSupport.stream(iterable.spliterator(), true).map(entry -> {
-                ReadBuffer buffer = entry.asReadBuffer();
-                String col =  graph.getDataSerializer().readObjectNotNull(buffer, String.class);
-                MediaData mediaData =  graph.getDataSerializer().readObjectNotNull(buffer, MediaData.class);
-                return mediaData;
-            }).filter(mediaData -> {
-                if(mediaData!=null) {
-                    if (finalKeySet != null) {
-                        if (finalKeySet.contains(mediaData.getKey())) {
-                            return true;
-                        }
-                    } else {
+        }finally {
+
+        }
+    }
+
+    private <V> Iterator<V> getMediaDataIterator(StaticBuffer rowkey, String colName,Class<V> classes) {
+        final DataOutput out = graph.getDataSerializer().getDataOutput(10);
+        out.writeObjectNotNull(colName);
+        StaticBuffer staticBuffer = out.getStaticBuffer();
+        //StaticBuffer slice = StaticArrayBuffer.of(colName.getBytes());
+        KeySliceQuery keySliceQuery = new KeySliceQuery(rowkey, staticBuffer, staticBuffer);
+        keySliceQuery.setMaxColumnInclusive(true);
+        EntryList entries = this.getTxHandle().attachmentQuery(keySliceQuery);
+        Iterator<Entry> iterator = entries.iterator();
+        Iterable<Entry> iterable = () -> iterator;
+        Iterator<V> noteIterator = StreamSupport.stream(iterable.spliterator(), true).map(entry -> {
+            ReadBuffer buffer = entry.asReadBuffer();
+            String col = graph.getDataSerializer().readObjectNotNull(buffer, String.class);
+            V mediaData = graph.getDataSerializer().readObjectNotNull(buffer, classes);
+            return mediaData;
+        }).iterator();
+        return noteIterator;
+    }
+
+    @Override
+    public Iterator<MediaDataRaw> getMediaDataRaws(String vertexId,String ... keys) {
+        try {
+            StaticBuffer rowkey = this.getHBaseTableRowkey(vertexId);
+            if(keys!=null&&keys.length>0){
+                List<MediaDataRaw> mediaDataList=new ArrayList<>();
+                for(String colName:keys){
+                    String col=MediaDataRaw.PREFIX_COL+colName;
+                    Iterator<MediaDataRaw> mediaDataIterator = getMediaDataIterator(rowkey, col,MediaDataRaw.class);
+                    List<MediaDataRaw> list = IteratorUtils.toList(mediaDataIterator);
+                    mediaDataList.addAll(list);
+                }
+                return mediaDataList.iterator();
+            }else {
+                KeySliceQuery keySliceQuery = new KeySliceQuery(rowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
+                EntryList entries = this.getTxHandle().attachmentQuery(keySliceQuery);
+                Iterator<Entry> iterator = entries.iterator();
+                Iterable<Entry> iterable = () -> iterator;
+                Iterator<MediaDataRaw> noteIterator = StreamSupport.stream(iterable.spliterator(), true).filter(entry -> {
+                    ReadBuffer buffer = entry.asReadBuffer();
+                    String col = graph.getDataSerializer().readObjectNotNull(buffer, String.class);
+                    if (col.startsWith(MediaDataRaw.PREFIX_COL)) {
                         return true;
                     }
-                }
-                return false;
-            }).iterator();
-            return noteIterator;
+                    return false;
+                }).map(entry -> {
+                    ReadBuffer buffer = entry.asReadBuffer();
+                    String col = graph.getDataSerializer().readObjectNotNull(buffer, String.class);
+                    MediaDataRaw mediaData = graph.getDataSerializer().readObjectNotNull(buffer, MediaDataRaw.class);
+                    return mediaData;
+                }).iterator();
+                return noteIterator;
+            }
         } finally {
         }
     }

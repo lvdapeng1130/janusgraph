@@ -3,7 +3,6 @@
  */
 package org.janusgraph.kydsj.serialize;
 
-import com.google.common.collect.Sets;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.lang.builder.ToStringStyle;
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -18,36 +17,26 @@ import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 
 import java.io.Serializable;
 import java.util.Iterator;
-import java.util.Set;
 
 /**
  * 顶点的多媒体类型
  */
 
-public class MediaData extends AbstractElement implements JanusGraphElement, Serializable
+public class MediaDataRaw extends AbstractElement implements JanusGraphElement, Serializable
 {
-    private static final long serialVersionUID = 1226171500784936834L;
-    private Set<String> dsr = Sets.newHashSet();
-	
-	private String mediaType;
-	
+    public static final String  PREFIX_COL="RAW__";
+    private static final long serialVersionUID = 9186714731047801226L;
+    private String mediaType;
 	private String linkType;
-	
 	private String mimeType;
-	
 	private String filename;
-	
 	private String mediaTitle;
-	
-	private byte[] mediaData;
-	
 	private String key;
-
 	private String desc;
 
     private transient InternalVertex vertex;
 
-    public MediaData(String id) {
+    public MediaDataRaw(String id) {
         super(id);
         this.key=id;
     }
@@ -58,14 +47,6 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
 
     public void setDesc(String desc) {
         this.desc = desc;
-    }
-
-    public Set<String> getDsr() {
-        return dsr;
-    }
-
-    public void setDsr(Set<String> dsr) {
-        this.dsr = dsr;
     }
 
     public String getMediaType() {
@@ -108,16 +89,12 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
         this.mediaTitle = mediaTitle;
     }
 
-    public byte[] getMediaData() {
-        return mediaData;
-    }
-
-    public void setMediaData(byte[] mediaData) {
-        this.mediaData = mediaData;
-    }
-
     public String getKey() {
         return key;
+    }
+
+    public String cellName(){
+        return PREFIX_COL+this.getKey();
     }
 
     public void setKey(String key) {
@@ -130,6 +107,18 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
 
     public void setVertex(InternalVertex vertex) {
         this.vertex = vertex;
+    }
+
+    public MediaData mediaData(){
+        MediaData mediaData=new MediaData(this.key);
+        mediaData.setVertex(this.vertex);
+        mediaData.setFilename(this.getFilename());
+        mediaData.setKey(this.getKey());
+        mediaData.setLinkType(this.getLinkType());
+        mediaData.setMediaTitle(this.getMediaTitle());
+        mediaData.setMimeType(this.getMimeType());
+        mediaData.setDesc(this.getDesc());
+        return mediaData;
     }
 
     @Override
@@ -149,7 +138,7 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
 
     @Override
     public void remove() {
-        tx().removeAttachment(this);
+        tx().removeAttachment(this.mediaData());
     }
 
     @Override
@@ -172,37 +161,23 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
         return null;
     }
 
-    public MediaDataRaw mediaDataRaw(){
-        MediaDataRaw mediaDataRaw=new MediaDataRaw(this.key);
-        mediaDataRaw.setVertex(this.vertex);
-        mediaDataRaw.setFilename(this.getFilename());
-        mediaDataRaw.setKey(this.getKey());
-        mediaDataRaw.setLinkType(this.getLinkType());
-        mediaDataRaw.setMediaTitle(this.getMediaTitle());
-        mediaDataRaw.setMimeType(this.getMimeType());
-        mediaDataRaw.setDesc(this.getDesc());
-        return mediaDataRaw;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
 
         if (o == null || getClass() != o.getClass()) return false;
 
-        MediaData mediaData1 = (MediaData) o;
+        MediaDataRaw that = (MediaDataRaw) o;
 
         return new EqualsBuilder()
             .appendSuper(super.equals(o))
-            .append(dsr, mediaData1.dsr)
-            .append(mediaType, mediaData1.mediaType)
-            .append(linkType, mediaData1.linkType)
-            .append(mimeType, mediaData1.mimeType)
-            .append(filename, mediaData1.filename)
-            .append(mediaTitle, mediaData1.mediaTitle)
-            .append(mediaData, mediaData1.mediaData)
-            .append(key, mediaData1.key)
-            .append(desc, mediaData1.desc)
+            .append(mediaType, that.mediaType)
+            .append(linkType, that.linkType)
+            .append(mimeType, that.mimeType)
+            .append(filename, that.filename)
+            .append(mediaTitle, that.mediaTitle)
+            .append(key, that.key)
+            .append(desc, that.desc)
             .isEquals();
     }
 
@@ -210,13 +185,11 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
     public int hashCode() {
         return new HashCodeBuilder(17, 37)
             .appendSuper(super.hashCode())
-            .append(dsr)
             .append(mediaType)
             .append(linkType)
             .append(mimeType)
             .append(filename)
             .append(mediaTitle)
-            .append(mediaData)
             .append(key)
             .append(desc)
             .toHashCode();
@@ -226,13 +199,12 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
     public String toString() {
         return  new ToStringBuilder( this, ToStringStyle.MULTI_LINE_STYLE)
             .append( "key", key)
-            .append( "dsr", dsr)
             .append( "mediaType", mediaType)
             .append( "linkType", linkType)
             .append( "mimeType", mimeType)
             .append( "filename", filename)
             .append( "mediaTitle", mediaTitle)
-            .append( "mediaData", mediaData)
+            .append("desc",desc)
             .toString();
     }
 

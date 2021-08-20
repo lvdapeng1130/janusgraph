@@ -106,6 +106,7 @@ import org.janusgraph.graphdb.types.system.BaseRelationType;
 import org.janusgraph.graphdb.types.vertices.JanusGraphSchemaVertex;
 import org.janusgraph.graphdb.util.ExceptionFactory;
 import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.MediaDataRaw;
 import org.janusgraph.kydsj.serialize.Note;
 import org.janusgraph.util.system.IOUtils;
 import org.janusgraph.util.system.TXUtils;
@@ -126,6 +127,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.StreamSupport;
 
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.REGISTRATION_TIME;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.REPLACE_INSTANCE_IF_EXISTS;
@@ -724,7 +726,9 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                     StaticBuffer key= tx.getHBaseTableRowkey(rowkey);
                     List<Entry> addList = Lists.newArrayList();
                     for(MediaData mediaData:mediaDatas){
-                        Entry entry = this.getMediaDataTableEntry(mediaData);
+                        Entry entry = this.getMediaDataEntry(mediaData);
+                        Entry mediaDataRawEntry = this.getMediaDataRawEntry(mediaData);
+                        addList.add(mediaDataRawEntry);
                         addList.add(entry);
                     }
                     mutator.mutateAttachment(key,addList,KCVSCache.NO_DELETIONS);
@@ -739,7 +743,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                     StaticBuffer key=tx.getHBaseTableRowkey(rowkey);
                     List<Entry> addList = Lists.newArrayList();
                     for(Note note:noteSet){
-                        Entry entry = this.getNoteTableEntry(note);
+                        Entry entry = this.getNoteEntry(note);
                         addList.add(entry);
                     }
                     mutator.mutateNote(key,addList,KCVSCache.NO_DELETIONS);
@@ -753,7 +757,9 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                 Set<MediaData> mediaDatas = deletedAttachments.get(vertexId);
                 List<Entry> deleteList = Lists.newArrayList();
                 for(MediaData mediaData:mediaDatas){
-                    Entry entry = this.getMediaDataTableEntry(mediaData);
+                    Entry entry = this.getMediaDataEntry(mediaData);
+                    Entry mediaDataRawEntry = this.getMediaDataRawEntry(mediaData);
+                    deleteList.add(mediaDataRawEntry);
                     deleteList.add(entry);
                 }
                 mutator.mutateAttachment(key,KCVSCache.NO_ADDITIONS,deleteList);
@@ -767,7 +773,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                 Set<Note> noteSet = deletedNotes.get(vertexId);
                 List<Entry> deleteList = Lists.newArrayList();
                 for(Note note:noteSet){
-                    Entry entry = this.getNoteTableEntry(note);
+                    Entry entry = this.getNoteEntry(note);
                     deleteList.add(entry);
                 }
                 mutator.mutateNote(key,KCVSCache.NO_ADDITIONS,deleteList);
@@ -808,14 +814,23 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         return new ModificationSummary(!mutations.isEmpty(),has2iMods);
     }
 
-    public Entry getMediaDataTableEntry(MediaData mediaData){
+    public Entry getMediaDataEntry(MediaData mediaData){
         final DataOutput out = this.getDataSerializer().getDataOutput(10);
         out.writeObjectNotNull(mediaData.getKey());
         final int valuePosition=out.getPosition();
         out.writeObjectNotNull(mediaData);
         return new StaticArrayEntry(out.getStaticBuffer(),valuePosition);
     }
-    public Entry getNoteTableEntry(Note note){
+    public Entry getMediaDataRawEntry(MediaData mediaData){
+        final DataOutput out = this.getDataSerializer().getDataOutput(10);
+        MediaDataRaw mediaDataRaw = mediaData.mediaDataRaw();
+        out.writeObjectNotNull(mediaDataRaw.cellName());
+        final int valuePosition=out.getPosition();
+        out.writeObjectNotNull(mediaDataRaw);
+        return new StaticArrayEntry(out.getStaticBuffer(),valuePosition);
+    }
+
+    public Entry getNoteEntry(Note note){
         final DataOutput out = this.getDataSerializer().getDataOutput(10);
         out.writeObjectNotNull(note.getId());
         final int valuePosition=out.getPosition();
@@ -1021,12 +1036,23 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
             EntryList entries = consistentTx.getTxHandle().attachmentQuery(keySliceQuery);
             Iterator<Entry> iterator = entries.iterator();
-            List<MediaData> mediaDataList=new ArrayList<>();
-            while (iterator.hasNext()){
-                Entry entry = iterator.next();
+            Iterable<Entry> iterable=()->iterator;
+            Iterator<MediaData> noteIterator = StreamSupport.stream(iterable.spliterator(), true).filter(entry->{
                 ReadBuffer buffer = entry.asReadBuffer();
-                String col = this.serializer.readObjectNotNull(buffer, String.class);
-                MediaData mediaData = this.serializer.readObjectNotNull(buffer, MediaData.class);
+                String col =  serializer.readObjectNotNull(buffer, String.class);
+                if(col.startsWith(MediaDataRaw.PREFIX_COL)){
+                    return false;
+                }
+                return true;
+            }) .map(entry -> {
+                ReadBuffer buffer = entry.asReadBuffer();
+                String col =  serializer.readObjectNotNull(buffer, String.class);
+                MediaData mediaData = serializer.readObjectNotNull(buffer, MediaData.class);
+                return mediaData;
+            }).iterator();
+            List<MediaData> mediaDataList=new ArrayList<>();
+            while (noteIterator.hasNext()){
+                MediaData mediaData = noteIterator.next();
                 mediaDataList.add(mediaData);
             }
             return mediaDataList;

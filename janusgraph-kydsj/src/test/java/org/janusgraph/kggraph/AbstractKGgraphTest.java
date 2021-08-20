@@ -25,7 +25,7 @@ public class AbstractKGgraphTest {
     @Before
     public void startHBase() throws IOException, ConfigurationException {
         LOGGER.info("opening graph");
-        conf = ConfigurationUtil.loadPropertiesConfig("D:\\github\\janusgraph\\janusgraph-kydsj\\src\\main\\resources\\trsgraph-hbase-es-test.properties");
+        conf = ConfigurationUtil.loadPropertiesConfig("C:\\work\\kggraph\\trunk\\janusgraph-kydsj\\src\\main\\resources\\trsgraph-hbase-es-test.properties");
         graph = JanusGraphFactory.open(conf);
         g = graph.traversal(KydsjTraversalSource.class);
     }

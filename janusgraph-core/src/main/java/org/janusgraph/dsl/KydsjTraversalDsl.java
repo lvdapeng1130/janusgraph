@@ -29,11 +29,13 @@ import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.janusgraph.dsl.step.AddAttachmentStep;
 import org.janusgraph.dsl.step.AddNoteStep;
+import org.janusgraph.dsl.step.AttachmentRawsStep;
 import org.janusgraph.dsl.step.AttachmentsStep;
 import org.janusgraph.dsl.step.KydsjDropStep;
 import org.janusgraph.dsl.step.NotesStep;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.MediaDataRaw;
 import org.janusgraph.kydsj.serialize.Note;
 
 import java.util.ArrayList;
@@ -120,6 +122,15 @@ public interface KydsjTraversalDsl<S, E> extends GraphTraversal.Admin<S, E> {
         return this.asAdmin().addStep(new AttachmentsStep(this.asAdmin(),keys));
     }
 
+    /**
+     * 查询对象的所有附件的标题
+     * @return
+     */
+    public default GraphTraversal<S, MediaDataRaw> attachmentRaws(final String... keys) {
+        this.asAdmin().getBytecode().addStep(Symbols.attachmentRaws,keys);
+        return this.asAdmin().addStep(new AttachmentRawsStep(this.asAdmin(),keys));
+    }
+
     @AnonymousMethod(returnTypeParameters = {"A", "A"}, methodTypeParameters = {"A"})
     public default GraphTraversal<S, E> dropExpand() {
         this.asAdmin().getBytecode().addStep(Symbols.dropExpand);
@@ -170,6 +181,7 @@ public interface KydsjTraversalDsl<S, E> extends GraphTraversal.Admin<S, E> {
         public static final String notes = "notes";
         public static final String attachment = "attachment";
         public static final String attachments = "attachments";
+        public static final String attachmentRaws = "attachmentRaws";
         public static final String dropExpand = "dropExpand";
     }
 }

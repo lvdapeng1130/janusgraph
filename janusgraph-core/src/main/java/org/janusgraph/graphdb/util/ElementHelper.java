@@ -21,6 +21,7 @@ import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Element;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.T;
+import org.janusgraph.core.JanusGraphEdge;
 import org.janusgraph.core.JanusGraphElement;
 import org.janusgraph.core.JanusGraphRelation;
 import org.janusgraph.core.JanusGraphVertex;
@@ -85,6 +86,16 @@ public class ElementHelper {
         for (int i = 0; i < propertyKeyValues.length; i = i + 2) {
             if (!propertyKeyValues[i].equals(T.id) && !propertyKeyValues[i].equals(T.label))
                 vertex.property((String) propertyKeyValues[i], propertyKeyValues[i + 1]);
+        }
+    }
+
+    public static void attachProperties(final JanusGraphEdge edge, final Object... propertyKeyValues) {
+        if (null == edge)
+            throw Graph.Exceptions.argumentCanNotBeNull("edge");
+
+        for (int i = 0; i < propertyKeyValues.length; i = i + 2) {
+            if (!propertyKeyValues[i].equals(T.id) && !propertyKeyValues[i].equals(T.label))
+                edge.property((String) propertyKeyValues[i], propertyKeyValues[i + 1]);
         }
     }
 

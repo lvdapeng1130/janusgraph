@@ -162,7 +162,7 @@ public class HBaseKeyColumnValueStore implements KeyColumnValueStore {
         byte[] colStartBytes = query.getSliceStart().length() > 0 ? query.getSliceStart().as(StaticBuffer.ARRAY_FACTORY) : null;
         byte[] colEndBytes = query.getSliceEnd().length() > 0 ? query.getSliceEnd().as(StaticBuffer.ARRAY_FACTORY) : null;
 
-        Filter filter = new ColumnRangeFilter(colStartBytes, true, colEndBytes, false);
+        Filter filter = new ColumnRangeFilter(colStartBytes, true, colEndBytes, query.isMaxColumnInclusive());
 
         if (query.hasLimit()) {
             filter = new FilterList(FilterList.Operator.MUST_PASS_ALL,

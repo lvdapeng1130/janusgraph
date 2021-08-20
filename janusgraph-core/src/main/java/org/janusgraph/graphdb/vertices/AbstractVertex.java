@@ -18,10 +18,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Edge;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.apache.tinkerpop.gremlin.structure.VertexProperty;
-import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
-import org.janusgraph.core.*;
 import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
@@ -44,9 +40,11 @@ import org.janusgraph.graphdb.types.system.BaseLabel;
 import org.janusgraph.graphdb.types.system.BaseVertexLabel;
 import org.janusgraph.graphdb.util.ElementHelper;
 import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.MediaDataRaw;
 import org.janusgraph.kydsj.serialize.Note;
 
 import java.util.Iterator;
+import java.util.Optional;
 import javax.annotation.Nullable;
 
 public abstract class AbstractVertex extends AbstractElement implements InternalVertex, Vertex {
@@ -230,7 +228,9 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
     @Override
     public JanusGraphEdge addEdge(String label, Vertex vertex, Object... keyValues) {
         Preconditions.checkArgument(vertex instanceof JanusGraphVertex,"Invalid vertex provided: %s",vertex);
-        JanusGraphEdge edge = tx().addEdge(it(), (JanusGraphVertex) vertex, tx().getOrCreateEdgeLabel(label));
+        final Optional<Object> idValue = org.apache.tinkerpop.gremlin.structure.util.ElementHelper.getIdValue(keyValues);
+        final String id = idValue.map(String.class::cast).orElse(null);
+        JanusGraphEdge edge = tx().addEdge(id,it(), (JanusGraphVertex) vertex, tx().getOrCreateEdgeLabel(label));
         ElementHelper.attachProperties(edge,keyValues);
         return edge;
     }
@@ -271,6 +271,22 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
             @Override
             public MediaData next() {
                 MediaData next = iterator.next();
+                next.setVertex(it());
+                return next;
+            }
+        };
+    }
+    public Iterator<MediaDataRaw> attachmentRaws(String ... keys) {
+        Iterator<MediaDataRaw> iterator = tx().getMediaDataRaws(longId(),keys);
+        return new Iterator<MediaDataRaw>() {
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            @Override
+            public MediaDataRaw next() {
+                MediaDataRaw next = iterator.next();
                 next.setVertex(it());
                 return next;
             }

@@ -128,17 +128,66 @@ public class ManageDataTest extends AbstractKGgraphTest{
             String tid2="tid003";
             String graphId2 = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid2);
             String uuid = "link_tid_1";
-            Edge next = threadedTx.traversal().V(graphId1).as("a").V(graphId2)
+            Edge next = threadedTx.traversal().V(graphId1).as("a")
+                .V(graphId2)
                 .addE("link_simple")
+                .property(T.id,"linkIDTest")
                 .property("link_tid", uuid)
-                .property("left_tid", "left_tid1")
-                .property("right_tid", "right_tid1")
+                .property("left_tid", "left_tid1_new")
+                .property("right_tid", "right_tid1_new")
                 .property("dsr", RandomStringUtils.randomAlphabetic(4))
                 .to("a").next();
             Object id = next.id();
             threadedTx.commit();
         }
     }
+
+    @Test
+    public void insertEdgeOther(){
+        try(StandardJanusGraphTx threadedTx = (StandardJanusGraphTx) this.getJanusGraph().buildTransaction()
+            .consistencyChecks(true)
+            .checkInternalVertexExistence(true).checkExternalVertexExistence(true).start()) {
+            String tid="tid006";
+            GraphTraversal<Vertex, Vertex> qqTraversal = threadedTx.traversal()
+                .addV("object_qq")
+                .property("name", "我是测试qq6",
+                    "startDate", new Date(),
+                    "endDate", new Date(),
+                    "dsr", "程序导入1222",
+                    "geo", Geoshape.point(22.22, 113.1122))
+                .property(DefaultKeywordField.TID.getName(),tid)
+                .property(DefaultTextField.TITLE.getName(),"我是测试标签")
+                .property("qq_num","111111","dsr","程序导入")
+                .property(T.id, tid);
+            String tid1="tid007";
+            GraphTraversal<Vertex, Vertex> qqTraversal1 = threadedTx.traversal()
+                .addV("object_qq")
+                .property("name", "我是测试qq7",
+                    "startDate", new Date(),
+                    "endDate", new Date(),
+                    "dsr", "程序导入1222",
+                    "geo", Geoshape.point(22.22, 113.1122))
+                .property(DefaultKeywordField.TID.getName(),tid)
+                .property(DefaultTextField.TITLE.getName(),"我是测试标签")
+                .property("qq_num","111111","dsr","程序导入")
+                .property(T.id, tid1);
+            Vertex qq1 = qqTraversal.next();
+            Vertex qq2 = qqTraversal1.next();
+            String uuid = "link_tid_1";
+            Edge next = threadedTx.traversal().V(qq1).as("a")
+                .V(qq2)
+                .addE("link_simple")
+                .property(T.id,"linkIDTest")
+                .property("link_tid", uuid)
+                .property("left_tid", "left_tid1_new")
+                .property("right_tid", "right_tid1_new")
+                .property("dsr", RandomStringUtils.randomAlphabetic(4))
+                .to("a").next();
+            Object id = next.id();
+            threadedTx.commit();
+        }
+    }
+
 
     @Test
     public void updateProperty(){

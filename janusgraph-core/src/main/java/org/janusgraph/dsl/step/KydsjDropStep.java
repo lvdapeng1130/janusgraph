@@ -34,6 +34,7 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.MediaDataRaw;
 import org.janusgraph.kydsj.serialize.Note;
 
 /**
@@ -92,6 +93,10 @@ public class KydsjDropStep<S> extends FilterStep<S> implements Mutating<Event> {
             MediaData mediaData=(MediaData)s;
             InternalVertex vertex = mediaData.getVertex();
             vertex.tx().removeAttachment(mediaData);
+        }else if(s instanceof MediaDataRaw) {
+            MediaDataRaw mediaDataRaw=(MediaDataRaw)s;
+            InternalVertex vertex = mediaDataRaw.getVertex();
+            vertex.tx().removeAttachment(mediaDataRaw.mediaData());
         }else {
             throw new IllegalStateException("The incoming object is not removable: " + s);
         }
