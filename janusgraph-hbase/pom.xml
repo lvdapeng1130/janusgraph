@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.janusgraph</groupId>
         <artifactId>janusgraph</artifactId>
-        <version>KGYY_R3.01_20210326-hbase1</version>
+        <version>1.0.1-SNAPSHOT</version>
     </parent>
     <artifactId>janusgraph-hbase</artifactId>
     <name>JanusGraph-HBase: Distributed Graph Database</name>
