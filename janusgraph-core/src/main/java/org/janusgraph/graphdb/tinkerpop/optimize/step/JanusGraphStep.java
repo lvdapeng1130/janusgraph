@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.tinkerpop.optimize.step;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import org.apache.tinkerpop.gremlin.process.traversal.Order;

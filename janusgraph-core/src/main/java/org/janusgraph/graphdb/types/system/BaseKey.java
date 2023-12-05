@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.types.system;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.Multiplicity;

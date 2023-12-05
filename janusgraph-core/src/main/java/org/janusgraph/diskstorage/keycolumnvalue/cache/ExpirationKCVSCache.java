@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.keycolumnvalue.cache;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.janusgraph.core.JanusGraphException;

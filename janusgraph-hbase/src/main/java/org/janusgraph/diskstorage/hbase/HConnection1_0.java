@@ -32,6 +32,11 @@ public class HConnection1_0 implements ConnectionMask
     }
 
     @Override
+    public Connection getConnection(){
+        return this.cnx;
+    }
+
+    @Override
     public TableMask getTable(String name) throws IOException
     {
         return new HTable1_0(cnx.getTable(TableName.valueOf(name)));

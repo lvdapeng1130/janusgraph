@@ -15,7 +15,7 @@
 package org.janusgraph.graphdb.database.idassigner;
 
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.janusgraph.core.EdgeLabel;
 import org.janusgraph.core.JanusGraphRelation;

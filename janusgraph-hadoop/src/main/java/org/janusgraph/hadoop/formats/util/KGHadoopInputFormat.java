@@ -14,7 +14,7 @@
 
 package org.janusgraph.hadoop.formats.util;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
@@ -37,7 +37,7 @@ public abstract class KGHadoopInputFormat extends InputFormat<NullWritable, Vert
 
     static {
         refCounter = new HadoopInputFormat.RefCountedCloseable<>((conf) ->
-            new JanusGraphVertexDeserializer(new KGJanusGraphHadoopSetupImpl(null)));
+            new JanusGraphVertexDeserializer(new KGJanusGraphHadoopSetupImpl(conf)));
     }
 
     public KGHadoopInputFormat(InputFormat<StaticBuffer, Iterable<Entry>> inputFormat) {

@@ -14,9 +14,9 @@
 
 package org.janusgraph.graphdb.olap.job;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.diskstorage.PropertyEntry;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang.StringUtils;
-import org.janusgraph.core.JanusGraphException;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
 import org.janusgraph.core.JanusGraph;
@@ -117,7 +117,7 @@ public class IndexRemoveJob extends IndexUpdateJob implements ScanJob {
     }
 
     @Override
-    public void process(StaticBuffer key, Map<SliceQuery, EntryList> entries, ScanMetrics metrics) {
+    public void process(StaticBuffer key, Map<SliceQuery, EntryList> entries, ScanMetrics metrics, PropertyEntry propertyEntry) {
         //The queries are already tailored enough => everything should be removed
         try {
             BackendTransaction mutator = writeTx.getTxHandle();

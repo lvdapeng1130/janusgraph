@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.inmemory;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -33,6 +33,7 @@ import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
 import org.janusgraph.diskstorage.util.RecordIterator;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
+import org.janusgraph.kydsj.ContentStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,6 +105,16 @@ public class InMemoryKeyColumnValueStore implements KeyColumnValueStore {
         InMemoryColumnValueStore cvs = kcv.get(query.getKey());
         if (cvs == null) return EntryList.EMPTY_LIST;
         else return cvs.getSlice(query, txh);
+    }
+
+    @Override
+    public byte[] getLargeCellContent(String fileName){
+        return null;
+    }
+
+    @Override
+    public ContentStatus getContentStatus(String fileName){
+        return null;
     }
 
     @Override

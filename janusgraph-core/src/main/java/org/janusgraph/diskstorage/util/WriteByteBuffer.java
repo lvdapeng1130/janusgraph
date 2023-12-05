@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.util;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.WriteBuffer;
 
@@ -36,7 +36,7 @@ import static org.janusgraph.diskstorage.util.StaticArrayBuffer.SHORT_LEN;
 public class WriteByteBuffer implements WriteBuffer {
 
     public static final int DEFAULT_CAPACITY = 64;
-    public static final int MAX_BUFFER_CAPACITY = 128 * 1024 * 1024; //128 MB
+    //public static final int MAX_BUFFER_CAPACITY = 128 * 1024 * 1024; //128 MB
 
     private ByteBuffer buffer;
 
@@ -45,7 +45,7 @@ public class WriteByteBuffer implements WriteBuffer {
     }
 
     public WriteByteBuffer(int capacity) {
-        Preconditions.checkArgument(capacity<=MAX_BUFFER_CAPACITY,"Capacity exceeds max buffer capacity: %s",MAX_BUFFER_CAPACITY);
+        //Preconditions.checkArgument(capacity<=MAX_BUFFER_CAPACITY,"Capacity exceeds max buffer capacity: %s",MAX_BUFFER_CAPACITY);
         buffer = ByteBuffer.allocate(capacity);
     }
 
@@ -53,7 +53,7 @@ public class WriteByteBuffer implements WriteBuffer {
         if (buffer.capacity()-buffer.position()<size) {
             //Need to resize
             int newCapacity = buffer.position() + size + buffer.capacity(); //extra capacity as buffer
-            Preconditions.checkArgument(newCapacity<=MAX_BUFFER_CAPACITY,"Capacity exceeds max buffer capacity: %s",MAX_BUFFER_CAPACITY);
+            //Preconditions.checkArgument(newCapacity<=MAX_BUFFER_CAPACITY,"Capacity exceeds max buffer capacity: %s",MAX_BUFFER_CAPACITY);
             ByteBuffer newBuffer = ByteBuffer.allocate(newCapacity);
             buffer.flip();
             newBuffer.put(buffer);

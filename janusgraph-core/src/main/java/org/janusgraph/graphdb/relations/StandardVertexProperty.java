@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.relations;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.core.JanusGraphVertexProperty;
@@ -26,7 +26,9 @@ import org.janusgraph.graphdb.types.system.ImplicitKey;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -41,10 +43,37 @@ public class StandardVertexProperty extends AbstractVertexProperty implements St
     private byte lifecycle;
     private String previousID;
     private volatile Map<PropertyKey, Object> properties = EMPTY_PROPERTIES;
+    private volatile Map<PropertyKey, Set<Object>> multiValueProperties;
 
     public StandardVertexProperty(String id, PropertyKey type, InternalVertex vertex, Object value, byte lifecycle) {
         super(id, type, vertex, value);
         this.lifecycle = lifecycle;
+    }
+
+    public void setMultiPropertyDirect(PropertyKey key, Object value) {
+        Preconditions.checkArgument(!(key instanceof ImplicitKey), "Cannot use implicit type [%s] when setting property", key.name());
+        if(value!=null) {
+            if (multiValueProperties == null) {
+                multiValueProperties = new HashMap<>(2);
+            }
+            Set<Object> objects = multiValueProperties.get(key);
+            if (objects == null) {
+                objects=new HashSet<>();
+                multiValueProperties.put(key,objects);
+            }
+            objects.add(value);
+        }
+    }
+
+    public Set<Object> dsrProperties() {
+        if(multiValueProperties!=null){
+            PropertyKey dsr = tx().getPropertyKey("dsr");
+            if(dsr!=null) {
+                Set<Object> objects = multiValueProperties.get(dsr);
+                return objects;
+            }
+        }
+        return null;
     }
 
     /**
@@ -78,13 +107,19 @@ public class StandardVertexProperty extends AbstractVertexProperty implements St
         if (properties == EMPTY_PROPERTIES) {
             if (tx().getConfiguration().isSingleThreaded()) {
                 properties = new HashMap<>(5);
+                multiValueProperties=new HashMap<>(2);
             } else {
                 synchronized (this) {
                     if (properties == EMPTY_PROPERTIES) {
                         properties = Collections.synchronizedMap(new HashMap<>(5));
+                        multiValueProperties=Collections.synchronizedMap(new HashMap<>(2));
                     }
                 }
             }
+        }
+        //多值dsr
+        if(key.name().equals("dsr")){
+            this.setMultiPropertyDirect(key,value);
         }
         properties.put(key, value);
     }
@@ -99,6 +134,23 @@ public class StandardVertexProperty extends AbstractVertexProperty implements St
         if (!properties.isEmpty())
             return (O) properties.remove(key);
         else return null;
+    }
+
+    @Override
+    public <O> O removePropertyDsr(PropertyKey key, Object value) {
+        if (multiValueProperties!=null&&!multiValueProperties.isEmpty()){
+            Set<Object> objects = multiValueProperties.get(key);
+            boolean success=objects.remove(value);
+            if(success){
+                if(objects.size()==0) {
+                    this.removePropertyDirect(key);
+                }else{
+                    this.setPropertyDirect(key,objects.iterator().next());
+                }
+                return (O)value;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -117,6 +169,10 @@ public class StandardVertexProperty extends AbstractVertexProperty implements St
                 element().query().types(type.name()).properties().forEach(propertyRemover);
             }
         } //else throw InvalidElementException.removedException(this);
+    }
+
+    public Map<PropertyKey, Set<Object>> getMultiValueProperties() {
+        return multiValueProperties;
     }
 
 }

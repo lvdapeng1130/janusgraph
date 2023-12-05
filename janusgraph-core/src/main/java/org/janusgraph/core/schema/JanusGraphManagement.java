@@ -23,8 +23,10 @@ import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.RelationType;
 import org.janusgraph.core.VertexLabel;
 import org.janusgraph.diskstorage.keycolumnvalue.scan.ScanMetrics;
+import org.janusgraph.graphdb.types.vertices.JanusGraphSchemaVertex;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -156,6 +158,17 @@ public interface JanusGraphManagement extends JanusGraphConfiguration, SchemaMan
     JanusGraphIndex getGraphIndex(String name);
 
     /**
+     * 删除混合索引【外部索引需手动删除】
+     * @param name
+     */
+    void deleteMixedIndex(String name);
+
+    /**
+     * 删除混合索引定义重复的字段
+     * @param index 混合索引名称
+     */
+    void removeIndexDuplicateFields(String index);
+    /**
      * Returns all graph indexes that index the given element type.
      *
      * @param elementType
@@ -185,6 +198,8 @@ public interface JanusGraphManagement extends JanusGraphConfiguration, SchemaMan
     void addIndexKey(final JanusGraphIndex index, final PropertyKey key, Parameter... parameters);
 
     void addKGIndexKey(final JanusGraphIndex index, final PropertyKey key, Parameter... parameters);
+
+    void registerMixedIndexField(final JanusGraphIndex index,final Set<PropertyKey> keys);
 
     /**
      * Builder for {@link JanusGraphIndex}. Allows for the configuration of a graph index prior to its construction.
@@ -251,6 +266,8 @@ public interface JanusGraphManagement extends JanusGraphConfiguration, SchemaMan
          * @return the created mixed {@link JanusGraphIndex}
          */
         JanusGraphIndex buildKGMixedIndex(String backingIndex,String ... aliases);
+
+        JanusGraphIndex buildKGMixedIndex(String backingIndex, Map<String,Object> settings, String ... aliases);
 
     }
 
@@ -459,5 +476,7 @@ public interface JanusGraphManagement extends JanusGraphConfiguration, SchemaMan
      * @return String with graph index and relation index information
      */
     String printIndexes();
+
+    JanusGraphSchemaVertex getSchemaVertex(JanusGraphSchemaElement element);
 
 }

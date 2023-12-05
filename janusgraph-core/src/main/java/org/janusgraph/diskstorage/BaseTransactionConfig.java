@@ -14,11 +14,13 @@
 
 package org.janusgraph.diskstorage;
 
+import org.janusgraph.core.TransactionCustom;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.util.time.TimestampProvider;
 
 import java.time.Instant;
+import java.util.Set;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -82,4 +84,15 @@ public interface BaseTransactionConfig {
      * @return options for this tx
      */
     Configuration getCustomOptions();
+
+
+    boolean isIndexMode();
+
+    TransactionCustom getTransactionCustom();
+
+    /**
+     * skip index type
+     * @return
+     */
+    Set<String> getSkipIndexes();
 }

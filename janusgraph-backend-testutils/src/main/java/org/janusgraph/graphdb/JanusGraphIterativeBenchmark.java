@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.Iterators;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.core.JanusGraphEdge;

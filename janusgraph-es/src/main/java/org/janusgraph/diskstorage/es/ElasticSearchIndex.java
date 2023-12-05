@@ -14,15 +14,12 @@
 
 package org.janusgraph.diskstorage.es;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import org.elasticsearch.client.RestClientBuilder;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.core.attribute.Cmp;
@@ -31,7 +28,12 @@ import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.attribute.Text;
 import org.janusgraph.core.schema.Mapping;
 import org.janusgraph.core.schema.Parameter;
-import org.janusgraph.diskstorage.*;
+import org.janusgraph.diskstorage.BackendException;
+import org.janusgraph.diskstorage.BaseTransaction;
+import org.janusgraph.diskstorage.BaseTransactionConfig;
+import org.janusgraph.diskstorage.BaseTransactionConfigurable;
+import org.janusgraph.diskstorage.PermanentBackendException;
+import org.janusgraph.diskstorage.TemporaryBackendException;
 import org.janusgraph.diskstorage.configuration.ConfigNamespace;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
@@ -40,7 +42,6 @@ import org.janusgraph.diskstorage.es.compat.ESCompatUtils;
 import org.janusgraph.diskstorage.es.mapping.IndexMapping;
 import org.janusgraph.diskstorage.es.rest.util.HttpAuthTypes;
 import org.janusgraph.diskstorage.es.script.ESScriptResponse;
-import org.janusgraph.diskstorage.indexing.*;
 import org.janusgraph.diskstorage.indexing.IndexEntry;
 import org.janusgraph.diskstorage.indexing.IndexFeatures;
 import org.janusgraph.diskstorage.indexing.IndexMutation;
@@ -50,9 +51,14 @@ import org.janusgraph.diskstorage.indexing.KeyInformation;
 import org.janusgraph.diskstorage.indexing.RawQuery;
 import org.janusgraph.diskstorage.util.DefaultTransaction;
 import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.graphdb.database.serialize.AttributeUtils;
 import org.janusgraph.graphdb.query.JanusGraphPredicate;
-import org.janusgraph.graphdb.query.condition.*;
+import org.janusgraph.graphdb.query.condition.And;
+import org.janusgraph.graphdb.query.condition.Condition;
+import org.janusgraph.graphdb.query.condition.Not;
+import org.janusgraph.graphdb.query.condition.Or;
+import org.janusgraph.graphdb.query.condition.PredicateCondition;
 import org.janusgraph.graphdb.types.ParameterType;
 import org.locationtech.spatial4j.shape.Rectangle;
 import org.slf4j.Logger;
@@ -82,8 +88,6 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static org.janusgraph.diskstorage.configuration.ConfigOption.disallowEmpty;
-import static org.janusgraph.diskstorage.es.ElasticSearchConstants.*;
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
 import static org.janusgraph.diskstorage.es.ElasticSearchConstants.ES_DOC_KEY;
 import static org.janusgraph.diskstorage.es.ElasticSearchConstants.ES_GEO_COORDS_KEY;
 import static org.janusgraph.diskstorage.es.ElasticSearchConstants.ES_LANG_KEY;
@@ -127,6 +131,10 @@ public class ElasticSearchIndex implements IndexProvider {
             "Elasticsearch bulk API refresh setting used to control when changes made by this request are made " +
             "visible to search", ConfigOption.Type.MASKABLE, "false");
 
+    public static final ConfigOption<Boolean> BULK_WRITE_COSTS =
+            new ConfigOption<>(ELASTICSEARCH_NS, "show-bulk-write-costs",
+            "显示bulk批量向elasticsearch提交数据耗时大于等于400毫秒的请求具体所用时间", ConfigOption.Type.LOCAL, false);
+
     public static final ConfigNamespace ES_CREATE_NS =
             new ConfigNamespace(ELASTICSEARCH_NS, "create", "Settings related to index creation");
 
@@ -169,14 +177,14 @@ public class ElasticSearchIndex implements IndexProvider {
 
     public static final ConfigOption<Integer> ES_CONNECT_TIMEOUT =
         new ConfigOption<>(ELASTICSEARCH_NS, "el-cs-connect-timeout",
-            "Controls the amount of time, in milliseconds, before a timeout occurs when trying to connect.", ConfigOption.Type.MASKABLE, 5000);
+            "Controls the amount of time, in milliseconds, before a timeout occurs when trying to connect.", ConfigOption.Type.MASKABLE, 300000);
 
     public static final ConfigOption<Integer> ES_SOCKET_TIMEOUT =
         new ConfigOption<>(ELASTICSEARCH_NS, "el-cs-socket-timeout",
-            "Controls the amount of time, in milliseconds, before a timeout occurs when waiting for a response.", ConfigOption.Type.MASKABLE, 60000);
+            "Controls the amount of time, in milliseconds, before a timeout occurs when waiting for a response.", ConfigOption.Type.MASKABLE, 300000);
     public static final ConfigOption<Integer> EL_RETRY_TIMEOUT =
         new ConfigOption<>(ELASTICSEARCH_NS, "el-cs-retry-timeout",
-            "Controls the amount of time, in milliseconds, before a timeout occurs when waiting for a response.", ConfigOption.Type.MASKABLE, 60000);
+            "Controls the amount of time, in milliseconds, before a timeout occurs when waiting for a response.", ConfigOption.Type.MASKABLE, 300000);
 
     public static final ConfigOption<Integer> ES_SCROLL_KEEP_ALIVE =
             new ConfigOption<>(ELASTICSEARCH_NS, "scroll-keep-alive",
@@ -294,15 +302,17 @@ public class ElasticSearchIndex implements IndexProvider {
                 "It is recommended to always enable index store names cache unless you have more then 50000 indexes " +
                 "per index store.", ConfigOption.Type.MASKABLE, true);
 
+    //RestClientBuilder.DEFAULT_CONNECT_TIMEOUT_MILLIS
     public static final ConfigOption<Integer> CONNECT_TIMEOUT =
         new ConfigOption<>(ELASTICSEARCH_NS, "connect-timeout",
             "Sets the maximum connection timeout (in milliseconds).", ConfigOption.Type.MASKABLE,
-            Integer.class, RestClientBuilder.DEFAULT_CONNECT_TIMEOUT_MILLIS);
+            Integer.class, 300000);
 
+    //RestClientBuilder.DEFAULT_SOCKET_TIMEOUT_MILLIS
     public static final ConfigOption<Integer> SOCKET_TIMEOUT =
         new ConfigOption<>(ELASTICSEARCH_NS, "socket-timeout",
             "Sets the maximum socket timeout (in milliseconds).", ConfigOption.Type.MASKABLE,
-            Integer.class, RestClientBuilder.DEFAULT_SOCKET_TIMEOUT_MILLIS);
+            Integer.class, 300000);
 
     public static final int HOST_PORT_DEFAULT = 9200;
 
@@ -471,7 +481,7 @@ public class ElasticSearchIndex implements IndexProvider {
 
         // Create index if it does not useExternalMappings and if it does not already exist
         if (!useExternalMappings && !client.indexExists(index)) {
-            client.createIndex(index, indexSetting);
+            client.createIndex(index, indexSetting,null);
             client.updateIndexSettings(index, MAX_RESULT_WINDOW);
             try {
                 log.debug("Sleeping {} ms after {} index creation returned from actionGet()", createSleep, index);
@@ -535,6 +545,17 @@ public class ElasticSearchIndex implements IndexProvider {
     public void register(String store, String key, KeyInformation information,
                          BaseTransaction tx,Set<String> aliases) throws BackendException {
         this.register(store,key,information,tx);
+    }
+
+    @Override
+    public void register(String store, String key, KeyInformation information,
+                         BaseTransaction tx,Map<String,Object> settings,Set<String> aliases) throws BackendException {
+        this.register(store,key,information,tx);
+    }
+    @Override
+    public void register(String store, List<String> keys, List<KeyInformation> informations,
+                         BaseTransaction tx,Map<String,Object> settings,Set<String> aliases) throws BackendException {
+        //this.register(store,key,information,tx);
     }
 
     @Override
@@ -1288,6 +1309,10 @@ public class ElasticSearchIndex implements IndexProvider {
         }
     }
 
+    @Override
+    public void deleteDocument(String index,String ... ids) throws BackendException{
+
+    }
     @Override
     public Stream<RawQuery.Result<String>> query(RawQuery query, KeyInformation.IndexRetriever information,
                                                  BaseTransaction tx) throws BackendException {

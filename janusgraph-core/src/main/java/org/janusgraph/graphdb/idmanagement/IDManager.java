@@ -15,7 +15,7 @@
 package org.janusgraph.graphdb.idmanagement;
 
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.janusgraph.core.InvalidIDException;
 import org.janusgraph.diskstorage.StaticBuffer;
@@ -382,8 +382,8 @@ public class IDManager {
          * @return
          */
         public final boolean is(String id) {
-            int start=id.length()-(int)offset();
-            int end=start+(int) offset();
+            int end=id.length();
+            int start=end-(int)offset();
             String suffix = id.substring(start, end);
             return suffix().equals(suffix);
            // return (id & ((1L << offset()) - 1)) == suffix();
@@ -484,7 +484,7 @@ public class IDManager {
       *  [ 0 | count | partition | ID padding (if any) ]
      */
 
-    private String constructId(String count, long partition, VertexIDType type) {
+    public String constructId(String count, long partition, VertexIDType type) {
         /*Preconditions.checkArgument(partition<partitionIDBound && partition>=0,"Invalid partition: %s",partition);
         Preconditions.checkArgument(count>=0);
         Preconditions.checkArgument(VariableLong.unsignedBitLength(count)+partitionBits+
@@ -493,14 +493,12 @@ public class IDManager {
         long id = (count<<partitionBits)+partition;
         if (type!=null) id = type.addPadding(id);
         return id;*/
-        String id=count;
-        String newid=id+"_"+partition;
-        if (type!=null){
-            newid=newid+"_";
-            newid = type.addPadding(newid);
+        StringBuilder stringBuilder=new StringBuilder(count);
+        stringBuilder.append("_").append(partition);
+        if(type!=null){
+            stringBuilder.append("_").append(type.suffix());
         }
-        return newid;
-
+        return stringBuilder.toString();
     }
 
     private static VertexIDType getUserVertexIDType(String vertexId) {
@@ -524,7 +522,7 @@ public class IDManager {
         long partition = (vertexId>>>USERVERTEX_PADDING_BITWIDTH) & (partitionIDBound-1);
         assert partition>=0;*/
         //long partition=Math.abs(vertexId.hashCode())%partitionIDBound;
-        String[] strings = vertexId.split("_");
+        String[] strings =StringUtils.split(vertexId,"_");
         if(strings!=null&&strings.length>=2){
             long partition = Long.parseLong(strings[1]);
             return partition;
@@ -597,7 +595,7 @@ public class IDManager {
         }
         assert result>=0 && result<partitionIDBound;
         return result;*/
-        String[] strings = id.split("_");
+        String[] strings = StringUtils.split(id,"_");
         if(strings!=null&&strings.length>=2){
             long partition = Long.parseLong(strings[1]);
             return partition;
@@ -672,7 +670,7 @@ public class IDManager {
             && id <= (vertexCountBound-1)<<USERVERTEX_PADDING_BITWIDTH+partitionBits, "Invalid vertex id provided: %s", id);*/
         //return id>>USERVERTEX_PADDING_BITWIDTH+partitionBits;
         //return VertexIDType.NormalVertex.removePadding(id);
-        String[] strings = id.split("_");
+        String[] strings = StringUtils.split(id,"_");
         if(strings!=null&&strings.length>=1){
             return strings[0];
         }else {
@@ -681,7 +679,7 @@ public class IDManager {
     }
 
     public boolean isPartitionedVertex(String id) {
-        return isUserVertexId(id) && VertexIDType.PartitionedVertex.is(id);
+        return VertexIDType.PartitionedVertex.is(id)&&isUserVertexId(id);
     }
 
     public long getRelationCountBound() {

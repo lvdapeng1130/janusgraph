@@ -36,6 +36,7 @@ import org.janusgraph.diskstorage.util.StaticArrayEntry;
 import org.janusgraph.diskstorage.util.WriteByteBuffer;
 import org.janusgraph.diskstorage.util.time.TimestampProvider;
 import org.janusgraph.diskstorage.util.time.TimestampProviders;
+import org.janusgraph.kydsj.ContentStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -208,6 +209,16 @@ public abstract class KCVSCacheTest {
         public Map<StaticBuffer, EntryList> getSlice(List<StaticBuffer> keys, SliceQuery query, StoreTransaction txh) throws BackendException {
             getSliceCounter.incrementAndGet();
             return store.getSlice(keys,query,txh);
+        }
+
+        @Override
+        public byte[] getLargeCellContent(String fileName){
+            return store.getLargeCellContent(fileName);
+        }
+
+        @Override
+        public ContentStatus getContentStatus(String fileName){
+            return store.getContentStatus(fileName);
         }
 
         @Override

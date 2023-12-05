@@ -14,7 +14,7 @@
 
 package org.janusgraph;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

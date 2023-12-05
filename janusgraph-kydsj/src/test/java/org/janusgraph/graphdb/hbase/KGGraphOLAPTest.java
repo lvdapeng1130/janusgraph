@@ -1,6 +1,6 @@
 package org.janusgraph.graphdb.hbase;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang3.StringUtils;
@@ -50,7 +50,7 @@ public class KGGraphOLAPTest extends JanusGraphBaseTest {
     public WriteConfiguration getConfiguration() {
         String tableName="olap_test1";
         ModifiableConfiguration config = GraphDatabaseConfiguration.buildGraphConfiguration();
-        config.set(GraphDatabaseConfiguration.JANUSGRAPH_ZOOKEEPER_URI, "192.168.1.47:2181,192.168.1.48:2181,192.168.1.49:2181");
+        //config.set(GraphDatabaseConfiguration.JANUSGRAPH_ZOOKEEPER_URI, "192.168.1.47:2181,192.168.1.48:2181,192.168.1.49:2181");
         config.set(GraphDatabaseConfiguration.JANUSGRAPH_ZOOKEEPER_NAMESPACE, "trs-graph");
         config.set(GraphDatabaseConfiguration.GRAPH_NODE, tableName);
         config.set(GraphDatabaseConfiguration.ZOOKEEPER_SESSIONTIMEOUTMS, 5000);

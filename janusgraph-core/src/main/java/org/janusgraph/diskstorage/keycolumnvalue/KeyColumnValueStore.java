@@ -18,6 +18,7 @@ import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.EntryList;
 import org.janusgraph.diskstorage.StaticBuffer;
+import org.janusgraph.kydsj.ContentStatus;
 
 import java.util.Collections;
 import java.util.List;
@@ -201,5 +202,18 @@ public interface KeyColumnValueStore {
      */
     void close() throws BackendException;
 
+    /**
+     * 获取存储在外边系统的大文件内容,暂时只支持hdfs
+     * @param fileName
+     * @return
+     */
+    byte[] getLargeCellContent(String fileName);
+
+    /**
+     * 获取存储在外边系统的大文件信息,暂时只支持hdfs
+     * @param fileName
+     * @return
+     */
+    ContentStatus getContentStatus(String fileName);
 
 }

@@ -14,7 +14,7 @@
 
 package org.janusgraph.util.datastructures;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.commons.collections.comparators.ComparableComparator;

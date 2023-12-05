@@ -16,6 +16,7 @@ package org.janusgraph.diskstorage.indexing;
 
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.schema.Parameter;
+import org.janusgraph.graphdb.internal.ElementCategory;
 
 /**
  * Helper class that provides information on the data type and additional parameters that
@@ -63,6 +64,7 @@ public interface KeyInformation {
 
     interface StoreRetriever {
 
+        ElementCategory getCategory();
         /**
          * Returns the {@link KeyInformation} for a particular key for this store
          * @param key

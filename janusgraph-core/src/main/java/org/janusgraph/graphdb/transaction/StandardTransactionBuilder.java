@@ -14,7 +14,8 @@
 
 package org.janusgraph.graphdb.transaction;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.core.TransactionCustom;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.JanusGraphTransaction;
 import org.janusgraph.core.TransactionBuilder;
 import org.janusgraph.core.schema.DefaultSchemaMaker;
@@ -30,6 +31,7 @@ import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 
 import java.time.Instant;
+import java.util.Set;
 
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.ROOT_NS;
 
@@ -69,6 +71,8 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
 
     private boolean threadBound = false;
 
+    private boolean isAdd = false;
+
     private int vertexCacheSize;
 
     private int dirtyVertexSize;
@@ -90,6 +94,12 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
     private final Configuration customOptions;
 
     private final StandardJanusGraph graph;
+
+    private boolean indexMode = false;
+
+    private Set<String> skipIndexes;
+
+    private TransactionCustom transactionCustom;
 
     /**
      * Constructs a new JanusGraphTransaction configuration with default configuration parameters.
@@ -269,7 +279,7 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
                 propertyPrefetching, multiQuery, singleThreaded, threadBound, getTimestampProvider(), userCommitTime,
                 indexCacheWeight, getVertexCacheSize(), getDirtyVertexSize(),
                 logIdentifier, restrictedPartitions, groupName,
-                defaultSchemaMaker, hasDisabledSchemaConstraints, customOptions);
+                defaultSchemaMaker, hasDisabledSchemaConstraints, customOptions,indexMode,transactionCustom,skipIndexes);
         return graph.newTransaction(immutable);
     }
 
@@ -416,6 +426,39 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
         return graph.getConfiguration().getTimestampProvider();
     }
 
+    @Override
+    public TransactionBuilder setIndexMode(boolean indexMode) {
+        this.indexMode=indexMode;
+        return this;
+    }
+
+    @Override
+    public TransactionBuilder setSkipIndexes(Set<String> skipIndexes){
+        this.skipIndexes=skipIndexes;
+        return this;
+    }
+
+    @Override
+    public TransactionBuilder setTransactionCustom(TransactionCustom transactionCustom){
+        this.transactionCustom=transactionCustom;
+        return this;
+    }
+
+    @Override
+    public boolean isIndexMode() {
+        return indexMode;
+    }
+
+    @Override
+    public Set<String> getSkipIndexes(){
+        return skipIndexes;
+    }
+
+    @Override
+    public TransactionCustom getTransactionCustom() {
+        return transactionCustom;
+    }
+
     private static class ImmutableTxCfg implements TransactionConfiguration {
 
         private final boolean isReadOnly;
@@ -438,6 +481,10 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
         private final int[] restrictedPartitions;
         private final DefaultSchemaMaker defaultSchemaMaker;
         private boolean hasDisabledSchemaConstraints = true;
+        private boolean hasIndexMode;
+        private Set<String> skipIndexes;
+
+        private TransactionCustom transactionCustom;
 
         private final BaseTransactionConfig handleConfig;
 
@@ -456,7 +503,7 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
                 String groupName,
                 DefaultSchemaMaker defaultSchemaMaker,
                 boolean hasDisabledSchemaConstraints,
-                Configuration customOptions) {
+                Configuration customOptions,boolean indexMode,TransactionCustom transactionCustom,Set<String> skipIndexes) {
             this.isReadOnly = isReadOnly;
             this.hasEnabledBatchLoading = hasEnabledBatchLoading;
             this.hasAssignIDsImmediately = hasAssignIDsImmediately;
@@ -482,6 +529,9 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
                     .timestampProvider(times)
                     .groupName(groupName)
                     .customOptions(customOptions).build();
+            this.hasIndexMode=indexMode;
+            this.transactionCustom=transactionCustom;
+            this.skipIndexes=skipIndexes;
         }
 
         @Override
@@ -622,6 +672,21 @@ public class StandardTransactionBuilder implements TransactionConfiguration, Tra
         @Override
         public Configuration getCustomOptions() {
             return handleConfig.getCustomOptions();
+        }
+
+        @Override
+        public boolean isIndexMode() {
+            return hasIndexMode;
+        }
+
+        @Override
+        public Set<String> getSkipIndexes(){
+            return skipIndexes;
+        }
+
+        @Override
+        public TransactionCustom getTransactionCustom() {
+            return transactionCustom;
         }
 
         @Override

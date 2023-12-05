@@ -15,7 +15,6 @@
 package org.janusgraph.graphdb.database;
 
 import com.carrotsearch.hppc.ObjectArrayList;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ArrayListMultimap;
@@ -68,6 +67,7 @@ import org.janusgraph.diskstorage.util.StaticArrayEntry;
 import org.janusgraph.diskstorage.util.time.TimestampProvider;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.database.cache.SchemaCache;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.graphdb.database.idassigner.VertexIDAssigner;
 import org.janusgraph.graphdb.database.idhandling.IDHandler;
 import org.janusgraph.graphdb.database.leader.RegistryZookeeper;
@@ -105,6 +105,7 @@ import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.graphdb.types.system.BaseRelationType;
 import org.janusgraph.graphdb.types.vertices.JanusGraphSchemaVertex;
 import org.janusgraph.graphdb.util.ExceptionFactory;
+import org.janusgraph.kydsj.ContentStatus;
 import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.MediaDataRaw;
 import org.janusgraph.kydsj.serialize.Note;
@@ -129,8 +130,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.StreamSupport;
 
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.LARGE_CONTENT_UPLOAD_HDFS_ENABLED;
+import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.LARGE_CONTENT_UPLOAD_HDFS_SIZE;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.REGISTRATION_TIME;
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.REPLACE_INSTANCE_IF_EXISTS;
+import static org.janusgraph.graphdb.util.Constants.HDFS_MEDIA_MEDIATYPE;
 
 public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
 
@@ -192,6 +196,8 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
     private final RegistryZookeeper registryZookeeper;
 
     private final String uniqueInstanceId;
+    private final Boolean largeContentUploadHdfsEnabled;
+    private final Integer largeContentUploadHdfsSize;
 
     public StandardJanusGraph(GraphDatabaseConfiguration configuration) {
 
@@ -207,7 +213,9 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         StoreFeatures storeFeatures = backend.getStoreFeatures();
         this.indexSerializer = new IndexSerializer(configuration.getConfiguration(), this.serializer,
                 this.backend.getIndexInformation(), storeFeatures.isDistributed() && storeFeatures.isKeyOrdered());
-        this.edgeSerializer = new EdgeSerializer(this.serializer);
+        this.largeContentUploadHdfsEnabled= configuration.getConfiguration().get(LARGE_CONTENT_UPLOAD_HDFS_ENABLED);
+        this.largeContentUploadHdfsSize= configuration.getConfiguration().get(LARGE_CONTENT_UPLOAD_HDFS_SIZE);
+        this.edgeSerializer = new EdgeSerializer(this.serializer,this.largeContentUploadHdfsEnabled,this.largeContentUploadHdfsSize);
         this.vertexExistenceQuery = edgeSerializer.getQuery(BaseKey.VertexExists, Direction.OUT, new EdgeSerializer.TypedInterval[0]).setLimit(1);
         this.queryCache = new RelationQueryCache(this.edgeSerializer);
         this.schemaCache = configuration.getTypeCache(typeCacheRetrieval);
@@ -228,7 +236,9 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         } else if (instanceExists && replaceExistingInstance) {
             log.debug(String.format("Instance [%s] already exists. Opening the graph per " + REPLACE_INSTANCE_IF_EXISTS.getName() + " configuration.", uniqueInstanceId));
         }
-        globalConfig.set(REGISTRATION_TIME, times.getTime(), uniqueInstanceId);
+        if(!configuration.isReadOnly()) {
+            globalConfig.set(REGISTRATION_TIME, times.getTime(), uniqueInstanceId);
+        }
 
         Log managementLog = backend.getSystemMgmtLog();
         managementLogger = new ManagementLogger(this, managementLog, schemaCache, this.times);
@@ -242,9 +252,27 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         this.registryZookeeper.registry();
     }
 
+    public Boolean getLargeContentUploadHdfsEnabled() {
+        return largeContentUploadHdfsEnabled;
+    }
+
+    public Integer getLargeContentUploadHdfsSize() {
+        return largeContentUploadHdfsSize;
+    }
+
     @Override
     public String getUniqueInstanceId(){
         return this.uniqueInstanceId;
+    }
+
+    @Override
+    public void setReadOnly(boolean readOnly){
+        config.setReadOnly(readOnly);
+    }
+
+    @Override
+    public boolean isReadOnly(){
+       return config.isReadOnly();
     }
 
     public String getGraphName() {
@@ -282,7 +310,9 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             try {
                 uniqueId = config.getUniqueGraphId();
                 ModifiableConfiguration globalConfig = getGlobalSystemConfig(backend);
-                globalConfig.remove(REGISTRATION_TIME, uniqueId);
+                if(!config.isReadOnly()) {
+                    globalConfig.remove(REGISTRATION_TIME, uniqueId);
+                }
                 //关闭zookeeper连接
                 registryZookeeper.close();
             } catch (Exception e) {
@@ -620,7 +650,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                     mutator.acquireEdgeLock(idManager.getKey(vertex.longId()), entry);
                 }
             }
-            indexUpdates.addAll(indexSerializer.getIndexUpdates(del));
+            indexUpdates.addAll(indexSerializer.getIndexUpdates(this,tx,del));
         }
 
         //2) Collect added edges and their index updates and acquire edge locks
@@ -638,12 +668,12 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                     mutator.acquireEdgeLock(idManager.getKey(vertex.longId()), entry.getColumn());
                 }
             }
-            indexUpdates.addAll(indexSerializer.getIndexUpdates(add));
+            indexUpdates.addAll(indexSerializer.getIndexUpdates(this,tx,add));
         }
 
         //3) Collect all index update for vertices
         for (InternalVertex v : mutatedProperties.keySet()) {
-            indexUpdates.addAll(indexSerializer.getIndexUpdates(v,mutatedProperties.get(v)));
+            indexUpdates.addAll(indexSerializer.getIndexUpdates(this,tx,v,mutatedProperties.get(v)));
         }
         //4) Acquire index locks (deletions first)
         for (IndexSerializer.IndexUpdate update : indexUpdates) {
@@ -697,7 +727,81 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             mutator.mutateEdges(vertexKey, additions, deletions);
         }
 
-        //6) Add index updates
+        //6) 添加顶点的附件
+        if(attachments!=null&&!attachments.isEmpty()){
+            for(String rowkey:attachments.keySet()){
+                Set<MediaData> mediaDatas = attachments.get(rowkey);
+                if(mediaDatas!=null&&mediaDatas.size()>0){
+                    MediaData next = mediaDatas.iterator().next();
+                    indexUpdates.addAll(indexSerializer.getMediaIndexUpdates(this,tx,next.getVertex(),mediaDatas,true));
+                    StaticBuffer key= tx.getHBaseTableRowkey(rowkey);
+                    List<Entry> addList = Lists.newArrayList();
+                    for(MediaData mediaData:mediaDatas){
+                        Entry entry = this.getMediaDataEntry(mediaData);
+                        Entry mediaDataRawEntry = this.getMediaDataRawEntry(mediaData);
+                        addList.add(mediaDataRawEntry);
+                        addList.add(entry);
+                    }
+                    mutator.mutateAttachment(key,addList,KCVSCache.NO_DELETIONS);
+                }
+            }
+        }
+        //7)添加顶点的注释信息
+        if(notes!=null&&!notes.isEmpty()){
+            for(String rowkey:notes.keySet()){
+                Set<Note> noteSet = notes.get(rowkey);
+                if(noteSet!=null&&noteSet.size()>0){
+                    Note next = noteSet.iterator().next();
+                    indexUpdates.addAll(indexSerializer.getNoteIndexUpdates(this,tx,next.getVertex(),noteSet,true));
+                    StaticBuffer key=tx.getHBaseTableRowkey(rowkey);
+                    List<Entry> addList = Lists.newArrayList();
+                    for(Note note:noteSet){
+                        Entry entry = this.getNoteEntry(note);
+                        addList.add(entry);
+                    }
+                    mutator.mutateNote(key,addList,KCVSCache.NO_DELETIONS);
+                }
+            }
+        }
+        //8) 收集删除附件
+        if(deletedAttachments!=null&&!deletedAttachments.isEmpty()){
+            for(String vertexId:deletedAttachments.keySet()){
+                StaticBuffer key=tx.getHBaseTableRowkey(vertexId);
+                Set<MediaData> mediaDatas = deletedAttachments.get(vertexId);
+                if(mediaDatas!=null&&mediaDatas.size()>0) {
+                    MediaData next = mediaDatas.iterator().next();
+                    indexUpdates.addAll(indexSerializer.getMediaIndexUpdates(this, tx, next.getVertex(), mediaDatas, false));
+                }
+                List<Entry> deleteList = Lists.newArrayList();
+                for(MediaData mediaData:mediaDatas){
+                    Entry entry = this.getDeleteMediaDataEntry(mediaData);
+                    Entry mediaDataRawEntry = this.getMediaDataRawEntry(mediaData);
+                    deleteList.add(mediaDataRawEntry);
+                    deleteList.add(entry);
+                }
+                mutator.mutateAttachment(key,KCVSCache.NO_ADDITIONS,deleteList);
+            }
+        }
+
+        //9) 收集删除注释
+        if(deletedNotes!=null&&!deletedNotes.isEmpty()){
+            for(String vertexId:deletedNotes.keySet()){
+                StaticBuffer key=tx.getHBaseTableRowkey(vertexId);
+                Set<Note> noteSet = deletedNotes.get(vertexId);
+                if(noteSet!=null&&noteSet.size()>0) {
+                    Note next = noteSet.iterator().next();
+                    indexUpdates.addAll(indexSerializer.getNoteIndexUpdates(this, tx, next.getVertex(), noteSet, false));
+                }
+                List<Entry> deleteList = Lists.newArrayList();
+                for(Note note:noteSet){
+                    Entry entry = this.getNoteEntry(note);
+                    deleteList.add(entry);
+                }
+                mutator.mutateNote(key,KCVSCache.NO_ADDITIONS,deleteList);
+            }
+        }
+
+        //10) Add index updates
         boolean has2iMods = false;
         for (IndexSerializer.IndexUpdate indexUpdate : indexUpdates) {
             assert indexUpdate.isAddition() || indexUpdate.isDeletion();
@@ -715,68 +819,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                 if (update.isAddition())
                     itx.add(indexStore, update.getKey(), update.getEntry(), update.getElement().isNew());
                 else
-                    itx.delete(indexStore,update.getKey(),update.getEntry().field,update.getEntry().value,update.getElement().isRemoved());
-            }
-        }
-        //7) 添加顶点的附件
-        if(attachments!=null&&!attachments.isEmpty()){
-            for(String rowkey:attachments.keys()){
-                Set<MediaData> mediaDatas = attachments.get(rowkey);
-                if(mediaDatas!=null&&mediaDatas.size()>0){
-                    StaticBuffer key= tx.getHBaseTableRowkey(rowkey);
-                    List<Entry> addList = Lists.newArrayList();
-                    for(MediaData mediaData:mediaDatas){
-                        Entry entry = this.getMediaDataEntry(mediaData);
-                        Entry mediaDataRawEntry = this.getMediaDataRawEntry(mediaData);
-                        addList.add(mediaDataRawEntry);
-                        addList.add(entry);
-                    }
-                    mutator.mutateAttachment(key,addList,KCVSCache.NO_DELETIONS);
-                }
-            }
-        }
-        //8)添加顶点的注释信息
-        if(notes!=null&&!notes.isEmpty()){
-            for(String rowkey:notes.keys()){
-                Set<Note> noteSet = notes.get(rowkey);
-                if(noteSet!=null&&noteSet.size()>0){
-                    StaticBuffer key=tx.getHBaseTableRowkey(rowkey);
-                    List<Entry> addList = Lists.newArrayList();
-                    for(Note note:noteSet){
-                        Entry entry = this.getNoteEntry(note);
-                        addList.add(entry);
-                    }
-                    mutator.mutateNote(key,addList,KCVSCache.NO_DELETIONS);
-                }
-            }
-        }
-        //9) 收集删除附件
-        if(deletedAttachments!=null&&!deletedAttachments.isEmpty()){
-            for(String vertexId:deletedAttachments.keySet()){
-                StaticBuffer key=tx.getHBaseTableRowkey(vertexId);
-                Set<MediaData> mediaDatas = deletedAttachments.get(vertexId);
-                List<Entry> deleteList = Lists.newArrayList();
-                for(MediaData mediaData:mediaDatas){
-                    Entry entry = this.getMediaDataEntry(mediaData);
-                    Entry mediaDataRawEntry = this.getMediaDataRawEntry(mediaData);
-                    deleteList.add(mediaDataRawEntry);
-                    deleteList.add(entry);
-                }
-                mutator.mutateAttachment(key,KCVSCache.NO_ADDITIONS,deleteList);
-            }
-        }
-
-        //10) 收集删除注释
-        if(deletedNotes!=null&&!deletedNotes.isEmpty()){
-            for(String vertexId:deletedNotes.keySet()){
-                StaticBuffer key=tx.getHBaseTableRowkey(vertexId);
-                Set<Note> noteSet = deletedNotes.get(vertexId);
-                List<Entry> deleteList = Lists.newArrayList();
-                for(Note note:noteSet){
-                    Entry entry = this.getNoteEntry(note);
-                    deleteList.add(entry);
-                }
-                mutator.mutateNote(key,KCVSCache.NO_ADDITIONS,deleteList);
+                    itx.delete(indexStore,update.getKey(), update.getEntry(),update.getElement().isRemoved());
             }
         }
 
@@ -814,12 +857,40 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
         return new ModificationSummary(!mutations.isEmpty(),has2iMods);
     }
 
+    public Entry getDeleteMediaDataEntry(MediaData mediaData){
+        final DataOutput out = this.getDataSerializer().getDataOutput(10);
+        out.writeObjectNotNull(mediaData.getKey());
+        final int valuePosition=out.getPosition();
+        out.writeObjectNotNull(mediaData);
+        StaticArrayEntry entry = new StaticArrayEntry(out.getStaticBuffer(), valuePosition);
+        if(this.getLargeContentUploadHdfsEnabled()){
+            String hdfsFileName=mediaData.getLargeFileName(mediaData.getVertex().id().toString());
+            entry.setHdfsFileName(hdfsFileName);
+        }
+        return entry;
+    }
+
     public Entry getMediaDataEntry(MediaData mediaData){
         final DataOutput out = this.getDataSerializer().getDataOutput(10);
         out.writeObjectNotNull(mediaData.getKey());
         final int valuePosition=out.getPosition();
         out.writeObjectNotNull(mediaData);
-        return new StaticArrayEntry(out.getStaticBuffer(),valuePosition);
+        StaticArrayEntry entry = new StaticArrayEntry(out.getStaticBuffer(), valuePosition);
+        if(this.getLargeContentUploadHdfsEnabled()&&entry.length()>=this.getLargeContentUploadHdfsSize()){
+            final byte[] value = entry.getValueAs(StaticBuffer.ARRAY_FACTORY);
+            String hdfsFileName=mediaData.getLargeFileName(mediaData.getVertex().id().toString());
+            MediaData media = mediaData.smallMediaData(hdfsFileName);
+            final DataOutput sout = this.getDataSerializer().getDataOutput(10);
+            sout.writeObjectNotNull(media.getKey());
+            final int hdfsValuePosition=sout.getPosition();
+            sout.writeObjectNotNull(media);
+            StaticArrayEntry staticArrayEntry = new StaticArrayEntry(sout.getStaticBuffer(), hdfsValuePosition);
+            staticArrayEntry.setHdfsFileName(hdfsFileName);
+            staticArrayEntry.setHdfsContent(value);
+            return staticArrayEntry;
+        }else{
+            return entry;
+        }
     }
     public Entry getMediaDataRawEntry(MediaData mediaData){
         final DataOutput out = this.getDataSerializer().getDataOutput(10);
@@ -885,8 +956,53 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
             //    transactional isolation
             boolean hasSchemaElements = !Iterables.isEmpty(Iterables.filter(deletedRelations,SCHEMA_FILTER))
                     || !Iterables.isEmpty(Iterables.filter(addedRelations,SCHEMA_FILTER));
+            boolean error = !hasSchemaElements || (!tx.getConfiguration().hasEnabledBatchLoading() && acquireLocks);
+            if(!error){
+                Iterable<InternalRelation> addFilter = Iterables.filter(addedRelations, SCHEMA_FILTER);
+                if(addFilter!=null){
+                    for(InternalRelation relation:addFilter){
+                        for(int i=0;i<relation.getLen();i++)
+                        {
+                            InternalVertex vertex = relation.getVertex(i);
+                            if(vertex instanceof JanusGraphSchemaVertex){
+                                JanusGraphSchemaVertex schemaVertex=(JanusGraphSchemaVertex)vertex;
+                                String info=String.format("add数据中schema有新增->%s,%s,%s,%s,%s,%s,%s",
+                                    relation.getType().name(),
+                                    relation.getType().label(),
+                                    relation.getType().id(),
+                                    vertex.label(),
+                                    schemaVertex.name()
+                                    ,vertex.id(),
+                                    vertex.isNew());
+                                log.info(info);
+                            }
+                        }
+                    }
+                }
+                Iterable<InternalRelation> delFilter = Iterables.filter(deletedRelations, SCHEMA_FILTER);
+                if(delFilter!=null){
+                    for(InternalRelation relation:delFilter){
+                        for(int i=0;i<relation.getLen();i++)
+                        {
+                            InternalVertex vertex = relation.getVertex(i);
+                            if(vertex instanceof JanusGraphSchemaVertex) {
+                                JanusGraphSchemaVertex schemaVertex = (JanusGraphSchemaVertex) vertex;
+                                String info = String.format("del数据中schema有新增->%s,%s,%s,%s,%s,%s",
+                                    relation.getType().name(),
+                                    relation.getType().id(),
+                                    vertex.label(),
+                                    schemaVertex.name()
+                                    , vertex.id(),
+                                    vertex.isNew());
+                                log.info(info);
+                            }
+                        }
+                    }
+                }
+            }
             Preconditions.checkArgument(!hasSchemaElements || (!tx.getConfiguration().hasEnabledBatchLoading() && acquireLocks),
-                    "Attempting to create schema elements in inconsistent state");
+                    String.format("Attempting to create schema elements in inconsistent state,hasSchemaElements=%s," +
+                        "tx.getConfiguration().hasEnabledBatchLoading()=%s,acquireLocks=%s",hasSchemaElements,tx.getConfiguration().hasEnabledBatchLoading(),acquireLocks));
 
             if (hasSchemaElements && !hasTxIsolation) {
                 /*
@@ -954,6 +1070,7 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                             status = LogTxStatus.SECONDARY_FAILURE;
                             for (Map.Entry<String,Throwable> entry : indexFailures.entrySet()) {
                                 log.error("Error while committing index mutations for transaction ["+transactionId+"] on index: " +entry.getKey(),entry.getValue());
+                                throw new JanusGraphException(entry.getValue());
                             }
                         }
                         //3. Log transaction if configured - [FAILURE] is recorded but does not cause exception
@@ -1027,11 +1144,10 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
     @Override
     public List<MediaData> getMediaDatas(String vertexId){
         Configuration customTxOptions = backend.getStoreFeatures().getKeyConsistentTxConfig();
-        StandardJanusGraphTx consistentTx = null;
+        final StandardJanusGraphTx consistentTx = StandardJanusGraph.this.newTransaction(new StandardTransactionBuilder(getConfiguration(),
+            StandardJanusGraph.this, customTxOptions).groupName(GraphDatabaseConfiguration.METRICS_SCHEMA_PREFIX_DEFAULT));
+        consistentTx.getTxHandle().disableCache();
         try {
-            consistentTx = StandardJanusGraph.this.newTransaction(new StandardTransactionBuilder(getConfiguration(),
-                StandardJanusGraph.this, customTxOptions).groupName(GraphDatabaseConfiguration.METRICS_SCHEMA_PREFIX_DEFAULT));
-            consistentTx.getTxHandle().disableCache();
             StaticBuffer attachmentTableRowkey = consistentTx.getHBaseTableRowkey(vertexId);
             KeySliceQuery keySliceQuery=new KeySliceQuery(attachmentTableRowkey, BufferUtil.zeroBuffer(1), BufferUtil.oneBuffer(1));
             EntryList entries = consistentTx.getTxHandle().attachmentQuery(keySliceQuery);
@@ -1048,6 +1164,12 @@ public class StandardJanusGraph extends JanusGraphBlueprintsGraph {
                 ReadBuffer buffer = entry.asReadBuffer();
                 String col =  serializer.readObjectNotNull(buffer, String.class);
                 MediaData mediaData = serializer.readObjectNotNull(buffer, MediaData.class);
+                //附件内容在hdfs上,从hdfs下载附件内容并替换
+                if(this.getLargeContentUploadHdfsEnabled()&&HDFS_MEDIA_MEDIATYPE.equals(mediaData.getMediaType())){
+                    String hdfsFileName=mediaData.getLargeFileName(vertexId);
+                    ContentStatus contentStatus = consistentTx.getTxHandle().getContentStatus(hdfsFileName);
+                    mediaData.setStatus(contentStatus);
+                }
                 return mediaData;
             }).iterator();
             List<MediaData> mediaDataList=new ArrayList<>();

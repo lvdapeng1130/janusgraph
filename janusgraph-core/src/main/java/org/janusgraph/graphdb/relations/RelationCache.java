@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.relations;
 
-import com.carrotsearch.hppc.ObjectObjectIdentityHashMap;
+import com.carrotsearch.hppc.ObjectObjectHashMap;
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 
@@ -28,16 +28,16 @@ import java.util.Iterator;
  */
 public class RelationCache implements Iterable<ObjectObjectCursor<String,Object>> {
 
-    private static final ObjectObjectIdentityHashMap<String,Object> EMPTY = new ObjectObjectIdentityHashMap<>(0);
+    private static final ObjectObjectHashMap<String,Object> EMPTY = new ObjectObjectHashMap<>(0);
 
     public final Direction direction;
     public final String typeId;
     public final String relationId;
     private final Object other;
-    private final ObjectObjectIdentityHashMap<String,Object> properties;
+    private final ObjectObjectHashMap<String,Object> properties;
 
     public RelationCache(final Direction direction, final String typeId, final String relationId,
-                         final Object other, final ObjectObjectIdentityHashMap<String,Object> properties) {
+                         final Object other, final ObjectObjectHashMap<String,Object> properties) {
         this.direction = direction;
         this.typeId = typeId;
         this.relationId = relationId;

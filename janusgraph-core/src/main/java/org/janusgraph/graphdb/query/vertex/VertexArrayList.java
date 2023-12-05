@@ -15,7 +15,7 @@
 package org.janusgraph.graphdb.query.vertex;
 
 import com.carrotsearch.hppc.ObjectArrayList;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.Iterators;
 import org.janusgraph.core.JanusGraphElement;
 import org.janusgraph.core.JanusGraphVertex;

@@ -15,7 +15,7 @@
 package org.janusgraph.graphdb.relations;
 
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.core.EdgeLabel;
@@ -127,6 +127,11 @@ public class CacheEdge extends AbstractEdge {
     @Override
     public <O> O removePropertyDirect(PropertyKey key) {
         return update().removePropertyDirect(key);
+    }
+
+    @Override
+    public <O> O removePropertyDsr(PropertyKey key, Object value) {
+        return update().removePropertyDsr(key,value);
     }
 
     @Override

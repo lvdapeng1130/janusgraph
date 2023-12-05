@@ -25,6 +25,7 @@ import org.elasticsearch.client.RestClientBuilder.HttpClientConfigCallback;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -69,6 +70,41 @@ public class SSLConfigurationCallback implements HttpClientConfigCallback {
         this.allowSelfSignedCertificates = allowSelfSignedCertificates;
     }
 
+    private File loadFile(File file){
+        if(file.exists()){
+            return file;
+        }
+        String fileName=file.getName();
+        //加载conf目录
+        String userdir = System.getProperty("user.dir") + File.separator + "conf" + File.separator;
+        String filePath=userdir + fileName;
+        File f=new File(filePath);
+        if(f.exists()){
+            return f;
+        }else{
+            //加载config目录
+            userdir = System.getProperty("user.dir") + File.separator + "config" + File.separator;
+            filePath=userdir + fileName;
+            f=new File(filePath);
+            if(f.exists()){
+                return f;
+            }else{
+                //加载classpath目录
+                URL resource = this.getClass().getClassLoader().getResource(fileName);
+                if(resource!=null) {
+                    filePath = resource.getPath();
+                    if (StringUtils.isNotBlank(filePath)) {
+                        f = new File(filePath);
+                        if (f.exists()) {
+                            return f;
+                        }
+                    }
+                }
+            }
+        }
+        return file;
+    }
+
     @Override
     public HttpAsyncClientBuilder customizeHttpClient(HttpAsyncClientBuilder httpClientBuilder) {
         final SSLContext sslcontext;
@@ -77,7 +113,7 @@ public class SSLConfigurationCallback implements HttpClientConfigCallback {
 
         try {
             if (StringUtils.isNotEmpty(trustStoreFile)) {
-                sslContextBuilder.loadTrustMaterial(new File(trustStoreFile), trustStorePassword.toCharArray(), trustStrategy);
+                sslContextBuilder.loadTrustMaterial(loadFile(new File(trustStoreFile)), trustStorePassword.toCharArray(), trustStrategy);
             } else {
                 sslContextBuilder.loadTrustMaterial(trustStrategy);
             }
@@ -89,7 +125,7 @@ public class SSLConfigurationCallback implements HttpClientConfigCallback {
 
         try {
             if (StringUtils.isNotEmpty(keyStoreFile)) {
-                sslContextBuilder.loadKeyMaterial(new File(keyStoreFile), keyStorePassword.toCharArray(), keyPassword.toCharArray());
+                sslContextBuilder.loadKeyMaterial(loadFile(new File(keyStoreFile)), keyStorePassword.toCharArray(), keyPassword.toCharArray());
             }
         } catch (KeyStoreException | CertificateException | NoSuchAlgorithmException | UnrecoverableKeyException e ) {
             throw new RuntimeException("Invalid key store file " + keyStoreFile, e);

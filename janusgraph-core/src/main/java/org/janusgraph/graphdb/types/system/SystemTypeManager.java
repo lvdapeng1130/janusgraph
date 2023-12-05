@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.types.system;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.graphdb.internal.JanusGraphSchemaCategory;
 import org.janusgraph.graphdb.internal.Token;
 import org.janusgraph.graphdb.types.TypeUtil;

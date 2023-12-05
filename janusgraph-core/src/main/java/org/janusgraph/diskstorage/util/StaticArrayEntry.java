@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.util;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.EntryMetaData;
 import org.janusgraph.diskstorage.MetaAnnotatable;
@@ -28,7 +28,6 @@ import java.util.Map;
  * @author Matthias Broecheler (me@matthiasb.com)
  */
 public class StaticArrayEntry extends BaseStaticArrayEntry implements Entry, MetaAnnotatable {
-
     public StaticArrayEntry(byte[] array, int offset, int limit, int valuePosition) {
         super(array, offset, limit, valuePosition);
     }
@@ -270,7 +269,9 @@ class BaseStaticArrayEntry extends StaticArrayBuffer implements Entry {
 
     @Override
     public StaticBuffer getColumn() {
-        return getColumnAs(StaticBuffer.STATIC_FACTORY);
+        StaticBuffer column = getColumnAs(StaticBuffer.STATIC_FACTORY);
+        column.setHdfsFileName(this.getHdfsFileName());
+        return column;
     }
 
     @Override

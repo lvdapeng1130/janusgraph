@@ -14,7 +14,7 @@
 
 package org.janusgraph.util.datastructures;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 import java.util.AbstractMap;
 import java.util.Collection;

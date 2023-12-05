@@ -20,6 +20,7 @@
 package org.janusgraph.diskstorage.hbase;
 
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.client.Connection;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -54,4 +55,7 @@ public interface ConnectionMask extends Closeable
      * @throws IOException in the case of backend exceptions.
      */
     List<HRegionLocation> getRegionLocations(String tableName) throws IOException;
+
+
+    Connection getConnection();
 }

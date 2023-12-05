@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.util;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.EntryList;
 import org.janusgraph.diskstorage.EntryMetaData;
@@ -204,7 +204,9 @@ public class StaticArrayEntryList extends AbstractList<Entry> implements EntryLi
 
         @Override
         public StaticBuffer getColumn() {
-            return getColumnAs(StaticBuffer.STATIC_FACTORY);
+            StaticBuffer column = getColumnAs(StaticBuffer.STATIC_FACTORY);
+            column.setHdfsFileName(this.getHdfsFileName());
+            return column;
         }
 
         @Override

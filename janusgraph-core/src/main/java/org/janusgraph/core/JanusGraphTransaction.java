@@ -15,6 +15,7 @@
 package org.janusgraph.core;
 
 import org.janusgraph.graphdb.relations.RelationIdentifier;
+import org.janusgraph.kydsj.ContentStatus;
 import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.MediaDataRaw;
 import org.janusgraph.kydsj.serialize.Note;
@@ -86,6 +87,15 @@ public interface JanusGraphTransaction extends Transaction {
     Iterator<Note> getNotes(String vertexId, String ...keys);
 
     Iterator<MediaData> getMediaDatas(String vertexId, String ...keys);
+
+    byte[] getLargeCellContent(String fileName);
+
+    /**
+     * 获取存储在外边系统的大文件信息,暂时只支持hdfs
+     * @param fileName
+     * @return
+     */
+    ContentStatus getContentStatus(String fileName);
 
     /**
      * 查询对象附件对应的标题

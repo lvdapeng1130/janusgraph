@@ -14,7 +14,7 @@
 
 package org.janusgraph.core.util;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.janusgraph.core.JanusGraphVertex;
 import org.janusgraph.graphdb.idmanagement.IDManager;

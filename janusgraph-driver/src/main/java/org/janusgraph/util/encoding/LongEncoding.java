@@ -14,6 +14,7 @@
 
 package org.janusgraph.util.encoding;
 
+
 import com.google.common.base.Preconditions;
 
 /**

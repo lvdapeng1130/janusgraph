@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.database.cache;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.apache.commons.lang.StringUtils;
@@ -199,7 +199,8 @@ public class StandardSchemaCache implements SchemaCache {
             if (entry.getValue().equals(schemaId)) typeNamesBackup.invalidate(entry.getKey());
         }*/
 
-        final String cutTypeId =schemaId.substring(0,schemaId.length()-SCHEMAID_BACK_SHIFT);
+        //final String cutTypeId =schemaId.substring(0,schemaId.length()-SCHEMAID_BACK_SHIFT);
+        String cutTypeId = IDManager.VertexIDType.Schema.removePadding(schemaId);
         ConcurrentMap<String,EntryList> types = schemaRelations;
         if (types!=null) {
             types.keySet().removeIf(key ->{

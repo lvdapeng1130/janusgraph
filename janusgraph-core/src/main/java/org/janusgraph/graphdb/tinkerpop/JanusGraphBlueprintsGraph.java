@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.tinkerpop;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;
 import org.apache.tinkerpop.gremlin.structure.Edge;
@@ -193,6 +193,10 @@ public abstract class JanusGraphBlueprintsGraph implements JanusGraph {
     @Override
     public JanusGraphIndexQuery indexQuery(String indexName, String query) {
         return getAutoStartTx().indexQuery(indexName,query);
+    }
+    @Override
+    public void deleteIndexDocument(String indexName, String ... documentIds){
+         this.getAutoStartTx().deleteIndexDocument(indexName,documentIds);
     }
 
     @Override

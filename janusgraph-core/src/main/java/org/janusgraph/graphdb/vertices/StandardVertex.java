@@ -14,8 +14,10 @@
 
 package org.janusgraph.graphdb.vertices;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.base.Predicate;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.janusgraph.core.VertexLabel;
 import org.janusgraph.diskstorage.EntryList;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.graphdb.internal.ElementLifeCycle;
@@ -24,6 +26,8 @@ import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.graphdb.transaction.addedrelations.AddedRelationsContainer;
 import org.janusgraph.graphdb.transaction.addedrelations.ConcurrentAddedRelations;
 import org.janusgraph.graphdb.transaction.addedrelations.SimpleAddedRelations;
+import org.janusgraph.graphdb.types.VertexLabelVertex;
+import org.janusgraph.graphdb.types.system.BaseVertexLabel;
 import org.janusgraph.util.datastructures.Retriever;
 
 /**
@@ -35,6 +39,7 @@ public class StandardVertex extends AbstractVertex {
     private final Object lifecycleMutex = new Object();
     private volatile byte lifecycle;
     private volatile AddedRelationsContainer addedRelations=AddedRelationsContainer.EMPTY;
+    private volatile VertexLabel vertexLabel;
 
     public StandardVertex(final StandardJanusGraphTx tx, final String id, byte lifecycle) {
         super(tx, id);
@@ -44,6 +49,25 @@ public class StandardVertex extends AbstractVertex {
     public final void updateLifeCycle(ElementLifeCycle.Event event) {
         synchronized(lifecycleMutex) {
             this.lifecycle = ElementLifeCycle.update(lifecycle,event);
+        }
+    }
+
+    public VertexLabel getVertexLabel() {
+        return vertexLabel;
+    }
+
+    public void setVertexLabel(VertexLabel vertexLabel) {
+        this.vertexLabel = vertexLabel;
+    }
+
+    @Override
+    public VertexLabel vertexLabel() {
+        if(this.vertexLabel==null) {
+            Vertex label = getVertexLabelInternal();
+            if (label == null) return BaseVertexLabel.DEFAULT_VERTEXLABEL;
+            else return (VertexLabelVertex) label;
+        }else{
+            return this.vertexLabel;
         }
     }
 

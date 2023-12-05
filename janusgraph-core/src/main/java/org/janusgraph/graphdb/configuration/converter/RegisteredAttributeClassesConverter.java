@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.configuration.converter;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.attribute.AttributeSerializer;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;

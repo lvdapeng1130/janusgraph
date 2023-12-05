@@ -14,15 +14,18 @@
 
 package org.janusgraph.graphdb.relations;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 import org.janusgraph.core.JanusGraphTransaction;
 import org.janusgraph.core.JanusGraphVertex;
 import org.janusgraph.core.JanusGraphVertexProperty;
 import org.janusgraph.core.PropertyKey;
+import org.janusgraph.graphdb.internal.ElementLifeCycle;
 import org.janusgraph.graphdb.internal.InternalVertex;
+import org.janusgraph.graphdb.vertices.CacheVertex;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -76,9 +79,57 @@ public abstract class AbstractVertexProperty<V> extends AbstractTypedRelation im
             PropertyKey key=(PropertyKey)type;
             if (key.cardinality() == org.janusgraph.core.Cardinality.SET) {
                 InternalVertex vertex = this.getVertex(0);
-                Iterable<SimpleJanusGraphProperty> propertyProperties = tx().getPropertyProperties(this, this.value(),propertyKeys);
-                for(SimpleJanusGraphProperty pp:propertyProperties){
+                if(vertex instanceof CacheVertex){
+                    CacheVertex cacheVertex=(CacheVertex) vertex;
+                    Collection<SimpleJanusGraphProperty> propertyProperties = cacheVertex.findPropertyProperties(this,propertyKeys);
+                    if(propertyProperties!=null){
+                        for (SimpleJanusGraphProperty pp : propertyProperties) {
+                            if(pp.getLifeCycle()!=ElementLifeCycle.Removed) {
+                                propertySet.add(pp);
+                            }
+                        }
+                    }
+                }else {
+                    Iterable<SimpleJanusGraphProperty> propertyProperties = tx().getPropertyProperties(this, this.value(), propertyKeys);
+                    for (SimpleJanusGraphProperty pp : propertyProperties) {
+                        if(pp.getLifeCycle()!=ElementLifeCycle.Removed) {
+                            propertySet.add(pp);
+                        }
+                    }
+                }
+            }
+            Iterator<Property<U>> properties = super.properties(propertyKeys);
+            if(properties!=null){
+                while (properties.hasNext()){
+                    Property<U> pp = properties.next();
                     propertySet.add(pp);
+                }
+            }
+            return propertySet.iterator();
+        }else {
+            return super.properties(propertyKeys);
+        }
+    }
+
+    public <U> Iterator<Property<U>> allProperties(final String... propertyKeys) {
+        if(type.isPropertyKey()) {
+            Set<Property<U>> propertySet=new HashSet<>();
+            PropertyKey key=(PropertyKey)type;
+            if (key.cardinality() == org.janusgraph.core.Cardinality.SET) {
+                InternalVertex vertex = this.getVertex(0);
+                if(vertex instanceof CacheVertex){
+                    CacheVertex cacheVertex=(CacheVertex) vertex;
+                    Collection<SimpleJanusGraphProperty> propertyProperties = cacheVertex.findPropertyProperties(this,propertyKeys);
+                    if(propertyProperties!=null){
+                        for (SimpleJanusGraphProperty pp : propertyProperties) {
+                            propertySet.add(pp);
+                        }
+                    }
+                }else {
+                    Iterable<SimpleJanusGraphProperty> propertyProperties = tx().getPropertyProperties(this, this.value(), propertyKeys);
+                    for (SimpleJanusGraphProperty pp : propertyProperties) {
+                        propertySet.add(pp);
+                    }
                 }
             }
             Iterator<Property<U>> properties = super.properties(propertyKeys);

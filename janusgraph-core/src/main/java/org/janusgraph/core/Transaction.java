@@ -84,6 +84,13 @@ public interface Transaction extends Graph, SchemaManager {
     JanusGraphIndexQuery indexQuery(String indexName, String query);
 
     /**
+     * 根据对象id删除外部混合索引记录
+     * @param indexName 所有名称
+     * @param documentIds 对象ID=混合索引ID
+     */
+    void deleteIndexDocument(String indexName, String ... documentIds);
+
+    /**
      * @return
      * @see JanusGraph#multiQuery(org.janusgraph.core.JanusGraphVertex...)
      */

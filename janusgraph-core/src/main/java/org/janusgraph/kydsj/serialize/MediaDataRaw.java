@@ -3,8 +3,6 @@
  */
 package org.janusgraph.kydsj.serialize;
 
-import org.apache.commons.lang.builder.ToStringBuilder;
-import org.apache.commons.lang.builder.ToStringStyle;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.tinkerpop.gremlin.structure.Property;
@@ -16,6 +14,7 @@ import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.Iterator;
 
 /**
@@ -33,8 +32,14 @@ public class MediaDataRaw extends AbstractElement implements JanusGraphElement, 
 	private String mediaTitle;
 	private String key;
 	private String desc;
+	private Date updateDate;
+    private Integer sort;
 
     private transient InternalVertex vertex;
+
+    public MediaDataRaw() {
+        super(null);
+    }
 
     public MediaDataRaw(String id) {
         super(id);
@@ -101,6 +106,22 @@ public class MediaDataRaw extends AbstractElement implements JanusGraphElement, 
         this.key = key;
     }
 
+    public Date getUpdateDate() {
+        return updateDate;
+    }
+
+    public void setUpdateDate(Date updateDate) {
+        this.updateDate = updateDate;
+    }
+
+    public Integer getSort() {
+        return sort;
+    }
+
+    public void setSort(Integer sort) {
+        this.sort = sort;
+    }
+
     public InternalVertex getVertex() {
         return vertex;
     }
@@ -117,7 +138,10 @@ public class MediaDataRaw extends AbstractElement implements JanusGraphElement, 
         mediaData.setLinkType(this.getLinkType());
         mediaData.setMediaTitle(this.getMediaTitle());
         mediaData.setMimeType(this.getMimeType());
+        mediaData.setMediaType(this.getMediaType());
         mediaData.setDesc(this.getDesc());
+        mediaData.setUpdateDate(this.getUpdateDate());
+        mediaData.setSort(this.getSort());
         return mediaData;
     }
 
@@ -162,6 +186,22 @@ public class MediaDataRaw extends AbstractElement implements JanusGraphElement, 
     }
 
     @Override
+    public String toString() {
+        return "MediaDataRaw{" +
+            "mediaType='" + mediaType + '\'' +
+            ", linkType='" + linkType + '\'' +
+            ", mimeType='" + mimeType + '\'' +
+            ", filename='" + filename + '\'' +
+            ", mediaTitle='" + mediaTitle + '\'' +
+            ", key='" + key + '\'' +
+            ", desc='" + desc + '\'' +
+            ", updateDate=" + updateDate +
+            ", sort=" + sort +
+            ", vertex=" + vertex +
+            '}';
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
 
@@ -178,6 +218,9 @@ public class MediaDataRaw extends AbstractElement implements JanusGraphElement, 
             .append(mediaTitle, that.mediaTitle)
             .append(key, that.key)
             .append(desc, that.desc)
+            .append(updateDate, that.updateDate)
+            .append(sort, that.sort)
+            .append(vertex, that.vertex)
             .isEquals();
     }
 
@@ -192,20 +235,9 @@ public class MediaDataRaw extends AbstractElement implements JanusGraphElement, 
             .append(mediaTitle)
             .append(key)
             .append(desc)
+            .append(updateDate)
+            .append(sort)
+            .append(vertex)
             .toHashCode();
     }
-
-    @Override
-    public String toString() {
-        return  new ToStringBuilder( this, ToStringStyle.MULTI_LINE_STYLE)
-            .append( "key", key)
-            .append( "mediaType", mediaType)
-            .append( "linkType", linkType)
-            .append( "mimeType", mimeType)
-            .append( "filename", filename)
-            .append( "mediaTitle", mediaTitle)
-            .append("desc",desc)
-            .toString();
-    }
-
 }

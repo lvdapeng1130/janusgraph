@@ -14,13 +14,13 @@
 
 package org.janusgraph.hadoop.scan;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.configuration.ConfigElement;
 import org.janusgraph.diskstorage.keycolumnvalue.scan.ScanJob;
 import org.janusgraph.diskstorage.keycolumnvalue.scan.ScanMetrics;
 import org.janusgraph.graphdb.olap.VertexScanJob;
 import org.janusgraph.hadoop.config.JanusGraphHadoopConfiguration;
-import org.janusgraph.hadoop.formats.hbase.HBaseBinaryInputFormat;
+import org.janusgraph.hadoop.formats.hbase.KYHBaseBinaryInputFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,9 +59,9 @@ public class HBaseHadoopScanRunner extends AbstractHadoopScanRunner<HBaseHadoopS
         Preconditions.checkNotNull(hadoopConf);
 
         if (null != scanJob) {
-            return HadoopScanRunner.runScanJob(scanJob, scanJobConf, scanJobConfRoot, hadoopConf, HBaseBinaryInputFormat.class);
+            return HadoopScanRunner.runScanJob(scanJob, scanJobConf, scanJobConfRoot, hadoopConf, KYHBaseBinaryInputFormat.class);
         } else {
-            return HadoopScanRunner.runVertexScanJob(vertexScanJob, scanJobConf, scanJobConfRoot, hadoopConf, HBaseBinaryInputFormat.class);
+            return HadoopScanRunner.runVertexScanJob(vertexScanJob, scanJobConf, scanJobConfRoot, hadoopConf, KYHBaseBinaryInputFormat.class);
         }
     }
 }

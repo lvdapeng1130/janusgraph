@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.database.management;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.JanusGraph;
 import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.schema.JanusGraphIndex;

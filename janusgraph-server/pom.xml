@@ -84,4 +84,40 @@
             </exclusions>
         </dependency>
     </dependencies>
+    <profiles>
+        <profile>
+            <id>huawei</id>
+            <properties>
+                <zookeeper.version>3.5.1</zookeeper.version>
+                <hadoop2.version>3.1.1</hadoop2.version>
+                <spark.version>2.3.2</spark.version>
+                <hbase1.version>1.3.1</hbase1.version>
+                <hbase.server.version>1.3.1</hbase.server.version>
+                <elasticsearch.version>6.7.1</elasticsearch.version>
+                <!--<protobuf.version>2.5.0</protobuf.version>-->
+                <protobuf.version>3.12.2</protobuf.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>huawei-cbu-mrs-prd</id>
+            <properties>
+                <zookeeper.version>3.6.3-h0.cbu.mrs.321.r13</zookeeper.version>
+                <hadoop2.version>3.3.1-h0.cbu.mrs.321.r13</hadoop2.version>
+                <spark.version>3.3.1-h0.cbu.mrs.321.r13</spark.version>
+                <hbase2.version>2.4.14-h0.cbu.mrs.321.r13</hbase2.version>
+                <hbase.server.version>2.4.14-h0.cbu.mrs.321.r13</hbase.server.version>
+                <elasticsearch.version>7.10.2-h0.cbu.mrs.321.r13</elasticsearch.version>
+                <!--<protobuf.version>2.5.0</protobuf.version>-->
+                <protobuf.version>3.12.2</protobuf.version>
+            </properties>
+            <repositories>
+                <repository>
+                    <id>huaweicloudsdk</id>
+                    <url>https://repo.huaweicloud.com/repository/maven/huaweicloudsdk/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </repository>
+            </repositories>
+        </profile>
+    </profiles>
 </project>

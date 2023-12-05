@@ -14,13 +14,27 @@
 
 package org.janusgraph.graphdb.vertices;
 
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import org.janusgraph.diskstorage.EntryList;
+import org.janusgraph.diskstorage.PropertyPropertyInfo;
+import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
+import org.janusgraph.graphdb.database.idhandling.IDHandler;
+import org.janusgraph.graphdb.internal.ElementLifeCycle;
+import org.janusgraph.graphdb.internal.RelationCategory;
+import org.janusgraph.graphdb.relations.AbstractVertexProperty;
+import org.janusgraph.graphdb.relations.SimpleJanusGraphProperty;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
+import org.janusgraph.graphdb.util.MD5Util;
 import org.janusgraph.util.datastructures.Retriever;
 
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -32,6 +46,7 @@ public class CacheVertex extends StandardVertex {
     // We use a normal map with synchronization since the likelihood of contention
     // is super low in a single transaction
     protected final Map<SliceQuery, EntryList> queryCache;
+    protected Multimap<String,SimpleJanusGraphProperty> propertiyOfProperties;
 
     public CacheVertex(StandardJanusGraphTx tx, String id, byte lifecycle) {
         super(tx, id, lifecycle);
@@ -71,6 +86,14 @@ public class CacheVertex extends StandardVertex {
             Map.Entry<SliceQuery, EntryList> superset = getSuperResultSet(query);
             if (superset == null || superset.getValue() == null) {
                 result = lookup.get(query);
+                //判断是否是查询所有属性，如果是则加载属性的属性值
+                StaticBuffer[] bound = IDHandler.getBounds(RelationCategory.PROPERTY,false);
+                SliceQuery propertyQuery = new SliceQuery(bound[0], bound[1]);
+                if(propertyQuery.equals(query)){
+                   this.loadPropertyOfProperties();
+                }else if(propertiyOfProperties==null&&propertyQuery.subsumes(query)){
+                    this.loadPropertyOfProperties();
+                }
             } else {
                 result = query.getSubset(superset.getKey(), superset.getValue());
             }
@@ -99,4 +122,40 @@ public class CacheVertex extends StandardVertex {
         return null;
     }
 
+    public Collection<SimpleJanusGraphProperty> findPropertyProperties(AbstractVertexProperty property){
+        return this.findPropertyProperties(property,null);
+    }
+    public Collection<SimpleJanusGraphProperty> findPropertyProperties(AbstractVertexProperty property,final String... propertyKeys){
+        if(propertiyOfProperties!=null&&propertiyOfProperties.size()>0){
+            Object value = property.value();
+            String propertyValueMD5 = MD5Util.getMD8(value);
+            String propertyTypeId = property.propertyKey().longId();
+            Collection<SimpleJanusGraphProperty> simpleJanusGraphProperties = propertiyOfProperties.get(propertyTypeId+propertyValueMD5);
+            if(simpleJanusGraphProperties!=null){
+                simpleJanusGraphProperties.stream().forEach(f -> f.setRelation(property));
+                if(propertyKeys!=null&&propertyKeys.length>0){
+                    Set<String> propertySet= Sets.newHashSet(propertyKeys);
+                    return simpleJanusGraphProperties.stream().filter(f->propertySet.contains(f.propertyKey().name())).collect(Collectors.toList());
+                }else {
+                    return simpleJanusGraphProperties;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public synchronized void remove() {
+        super.remove();
+        this.loadPropertyOfProperties();
+    }
+
+    public void loadPropertyOfProperties(){
+        Multimap<String,SimpleJanusGraphProperty> entries= this.tx().getPropertyProperties(this);
+        this.propertiyOfProperties=entries;
+    }
+
+    public Multimap<String,SimpleJanusGraphProperty> getPropertiyOfProperties() {
+        return propertiyOfProperties;
+    }
 }

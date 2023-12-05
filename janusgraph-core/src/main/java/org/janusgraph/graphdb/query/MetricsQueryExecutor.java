@@ -16,7 +16,7 @@ package org.janusgraph.graphdb.query;
 
 import com.codahale.metrics.Timer;
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.JanusGraphElement;
 import org.janusgraph.graphdb.query.profile.QueryProfiler;
 import org.janusgraph.util.stats.MetricManager;

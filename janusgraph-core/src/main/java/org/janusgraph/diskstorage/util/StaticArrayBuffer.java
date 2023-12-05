@@ -14,9 +14,9 @@
 
 package org.janusgraph.diskstorage.util;
 
-import com.google.common.base.Preconditions;
 import org.janusgraph.diskstorage.ReadBuffer;
 import org.janusgraph.diskstorage.StaticBuffer;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 import java.nio.ByteBuffer;
 
@@ -34,6 +34,8 @@ public class StaticArrayBuffer implements StaticBuffer {
     private final byte[] array;
     private int offset;
     private int limit;
+    private String hdfsFileName;
+    private byte[] hdfsContent;
 
     public StaticArrayBuffer(byte[] array, int offset, int limit) {
         assert array != null;
@@ -150,6 +152,22 @@ public class StaticArrayBuffer implements StaticBuffer {
         if (position<0 || length<0 || (offset + position + length)>limit)
             throw new ArrayIndexOutOfBoundsException("Position ["+position+"] and or length ["+length+"] out of bounds");
         return factory.get(array,offset+position,offset+position+length);
+    }
+
+    public void setHdfsFileName(String fileName){
+        this.hdfsFileName=fileName;
+    }
+
+    public String getHdfsFileName(){
+        return this.hdfsFileName;
+    }
+
+    public void setHdfsContent(byte[] content){
+        this.hdfsContent=content;
+    }
+
+    public byte[] getHdfsContent(){
+        return this.hdfsContent;
     }
 
 

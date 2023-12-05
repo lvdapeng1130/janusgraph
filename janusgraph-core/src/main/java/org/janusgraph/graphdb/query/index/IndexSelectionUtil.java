@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.query.index;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.janusgraph.core.JanusGraphElement;
 import org.janusgraph.core.RelationType;

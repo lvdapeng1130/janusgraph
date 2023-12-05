@@ -14,14 +14,20 @@
 
 package org.janusgraph.hadoop.formats.util.input.current;
 
-import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.tinkerpop.gremlin.structure.Direction;
+import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.core.JanusGraphVertex;
 import org.janusgraph.diskstorage.StaticBuffer;
+import org.janusgraph.diskstorage.configuration.BasicConfiguration;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
+import org.janusgraph.graphdb.database.EdgeSerializer;
 import org.janusgraph.graphdb.database.RelationReader;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
+import org.janusgraph.graphdb.database.serialize.Serializer;
 import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.internal.JanusGraphSchemaCategory;
 import org.janusgraph.graphdb.query.QueryUtil;
@@ -33,8 +39,15 @@ import org.janusgraph.graphdb.types.TypeInspector;
 import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.graphdb.types.system.BaseLabel;
 import org.janusgraph.graphdb.types.vertices.JanusGraphSchemaVertex;
+import org.janusgraph.graphdb.util.Constants;
+import org.janusgraph.hadoop.config.JanusGraphHadoopConfiguration;
+import org.janusgraph.hadoop.config.ModifiableHadoopConfiguration;
 import org.janusgraph.hadoop.formats.util.input.JanusGraphHadoopSetup;
 import org.janusgraph.hadoop.formats.util.input.SystemTypeInspector;
+
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -44,15 +57,40 @@ public class KGJanusGraphHadoopSetupImpl implements JanusGraphHadoopSetup {
     private static final StaticBuffer DEFAULT_COLUMN = StaticArrayBuffer.of(new byte[0]);
     public static final SliceQuery DEFAULT_SLICE_QUERY = new SliceQuery(DEFAULT_COLUMN, DEFAULT_COLUMN);
 
+    private final ModifiableHadoopConfiguration scanConf;
     private final StandardJanusGraph graph;
     private final StandardJanusGraphTx tx;
+    private Set<String> vertexLabelSet;
+    private Set<String> edgeLabelSet;
 
-    public KGJanusGraphHadoopSetupImpl(StandardJanusGraph janusGraph) {
-        graph = janusGraph;
-        tx = (StandardJanusGraphTx)graph.buildTransaction().readOnly()
-        .dirtyVertexSize(0)
-        .checkInternalVertexExistence(false)
-        .vertexCacheSize(0).start();
+    public KGJanusGraphHadoopSetupImpl(final Configuration config) {
+        scanConf = ModifiableHadoopConfiguration.of(JanusGraphHadoopConfiguration.MAPRED_NS, config);
+        BasicConfiguration bc = scanConf.getJanusGraphConf();
+        graph = (StandardJanusGraph) JanusGraphFactory.open(bc);
+        tx = (StandardJanusGraphTx)graph.buildTransaction().readOnly().vertexCacheSize(500).start();
+        String vertexLabels = config.get(Constants.GREMLIN_HADOOP_GRAPH_VERTEXLABELS);
+        if(StringUtils.isNotBlank(vertexLabels)){
+            this.vertexLabelSet= Arrays.stream(vertexLabels.split(",")).collect(Collectors.toSet());
+        }
+        String edgeLabels = config.get(Constants.GREMLIN_HADOOP_GRAPH_EDGELABELS);
+        if(StringUtils.isNotBlank(edgeLabels)){
+            this.edgeLabelSet=Arrays.stream(edgeLabels.split(",")).collect(Collectors.toSet());
+        }
+    }
+
+    @Override
+    public EdgeSerializer getEdgeSerializer(){
+        return graph.getEdgeSerializer();
+    }
+
+    @Override
+    public boolean vertexLabelFilter(String vertexLabel) {
+        return  vertexLabelSet==null||vertexLabelSet.isEmpty()||vertexLabelSet.contains(vertexLabel);
+    }
+
+    @Override
+    public boolean edgeLabelFilter(String edgeLabel) {
+        return  edgeLabelSet==null||edgeLabelSet.isEmpty()||edgeLabelSet.contains(edgeLabel);
     }
 
     public StandardJanusGraphTx startTransaction(StandardJanusGraph graph) {
@@ -132,10 +170,16 @@ public class KGJanusGraphHadoopSetupImpl implements JanusGraphHadoopSetup {
         if (tx.isOpen()) {
             tx.close();
         }
+        graph.close();
     }
 
     @Override
     public boolean getFilterPartitionedVertices() {
-        return true;
+        return scanConf.get(JanusGraphHadoopConfiguration.FILTER_PARTITIONED_VERTICES, true);
+    }
+
+    @Override
+    public Serializer getDataSerializer() {
+        return graph.getDataSerializer();
     }
 }

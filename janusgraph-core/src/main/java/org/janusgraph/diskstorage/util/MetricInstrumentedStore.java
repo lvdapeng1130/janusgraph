@@ -16,7 +16,7 @@ package org.janusgraph.diskstorage.util;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.EntryList;
@@ -29,6 +29,7 @@ import org.janusgraph.diskstorage.keycolumnvalue.KeySlicesIterator;
 import org.janusgraph.diskstorage.keycolumnvalue.MultiSlicesQuery;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
+import org.janusgraph.kydsj.ContentStatus;
 import org.janusgraph.util.stats.MetricManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,6 +127,16 @@ public class MetricInstrumentedStore implements KeyColumnValueStore {
             }
             return results;
         });
+    }
+
+    @Override
+    public byte[] getLargeCellContent(String fileName){
+        return backend.getLargeCellContent(fileName);
+    }
+
+    @Override
+    public ContentStatus getContentStatus(String fileName){
+        return backend.getContentStatus(fileName);
     }
 
     @Override

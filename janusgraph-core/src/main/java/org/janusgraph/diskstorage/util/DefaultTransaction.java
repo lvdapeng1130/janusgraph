@@ -14,10 +14,12 @@
 
 package org.janusgraph.diskstorage.util;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
 import org.janusgraph.diskstorage.BaseTransactionConfigurable;
+
+import java.util.Set;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -44,4 +46,13 @@ public class DefaultTransaction implements BaseTransactionConfigurable {
     public void rollback() throws BackendException {
     }
 
+    @Override
+    public boolean isIndexMode() {
+        return config.isIndexMode();
+    }
+
+    @Override
+    public Set<String> getSkipIndexes(){
+        return config.getSkipIndexes();
+    }
 }

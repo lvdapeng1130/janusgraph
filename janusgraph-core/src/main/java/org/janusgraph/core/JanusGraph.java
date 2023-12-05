@@ -155,6 +155,10 @@ public interface JanusGraph extends Transaction {
 
     String getUniqueInstanceId();
 
+    void setReadOnly(boolean readOnly);
+
+    boolean isReadOnly();
+
     /**
      * The version of this JanusGraph graph database
      *

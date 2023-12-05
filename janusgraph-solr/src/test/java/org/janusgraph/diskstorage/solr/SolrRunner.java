@@ -15,7 +15,7 @@
 package org.janusgraph.diskstorage.solr;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.commons.io.FileUtils;
 import org.apache.solr.client.solrj.embedded.JettyConfig;

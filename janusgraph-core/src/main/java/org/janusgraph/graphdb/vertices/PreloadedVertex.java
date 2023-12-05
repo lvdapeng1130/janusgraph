@@ -14,9 +14,11 @@
 
 package org.janusgraph.graphdb.vertices;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Edge;
@@ -25,14 +27,20 @@ import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.janusgraph.core.JanusGraphEdge;
 import org.janusgraph.core.JanusGraphVertexProperty;
 import org.janusgraph.diskstorage.EntryList;
+import org.janusgraph.diskstorage.PropertyPropertyInfo;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.graphdb.internal.ElementLifeCycle;
 import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.query.vertex.VertexCentricQueryBuilder;
+import org.janusgraph.graphdb.relations.CacheVertexProperty;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.graphdb.util.ElementHelper;
+import org.janusgraph.graphdb.util.MD5Util;
+import org.janusgraph.kydsj.serialize.MediaData;
+import org.janusgraph.kydsj.serialize.Note;
 import org.janusgraph.util.datastructures.Retriever;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 
@@ -45,6 +53,11 @@ public class PreloadedVertex extends CacheVertex {
 
     private PropertyMixing mixin = NO_MIXIN;
     private AccessCheck accessCheck = DEFAULT_CHECK;
+    private Multimap<String, PropertyPropertyInfo> multiPropertyProperties;
+
+    private Iterator<MediaData> mediaIterator;
+
+    private Iterator<Note> noteIterator;
 
     public PreloadedVertex(StandardJanusGraphTx tx, String id, byte lifecycle) {
         super(tx, id, lifecycle);
@@ -55,6 +68,30 @@ public class PreloadedVertex extends CacheVertex {
         Preconditions.checkNotNull(mixin);
         Preconditions.checkArgument(this.mixin == NO_MIXIN, "A property mixing has already been set");
         this.mixin = mixin;
+    }
+
+    public Multimap<String, PropertyPropertyInfo> getMultiPropertyProperties() {
+        return multiPropertyProperties;
+    }
+
+    public void setMultiPropertyProperties(Multimap<String, PropertyPropertyInfo> multiPropertyProperties) {
+        this.multiPropertyProperties = multiPropertyProperties;
+    }
+
+    public Iterator<MediaData> getMediaIterator() {
+        return mediaIterator;
+    }
+
+    public void setMediaIterator(Iterator<MediaData> mediaIterator) {
+        this.mediaIterator = mediaIterator;
+    }
+
+    public Iterator<Note> getNoteIterator() {
+        return noteIterator;
+    }
+
+    public void setNoteIterator(Iterator<Note> noteIterator) {
+        this.noteIterator = noteIterator;
     }
 
     public void setAccessCheck(final AccessCheck accessCheck) {
@@ -116,14 +153,28 @@ public class PreloadedVertex extends CacheVertex {
     @Override
     public <V> Iterator<VertexProperty<V>> properties(String... keys) {
         accessCheck.accessProperties();
-        if (mixin == NO_MIXIN) return super.properties(keys);
+        if (mixin == NO_MIXIN) {
+            Iterator<VertexProperty<Object>> properties = super.properties(keys);
+            PropertyIterator propertyIterator = new PropertyIterator(properties, this.getMultiPropertyProperties());
+            return propertyIterator;
+        }
         if (keys != null && keys.length > 0) {
             int count = 0;
             for (String key : keys) if (mixin.supports(key)) count++;
-            if (count == 0 || !mixin.properties(keys).hasNext()) return super.properties(keys);
-            else if (count == keys.length) return mixin.properties(keys);
+            if (count == 0 || !mixin.properties(keys).hasNext()) {
+                Iterator<VertexProperty<Object>> properties = super.properties(keys);
+                PropertyIterator propertyIterator = new PropertyIterator(properties, this.getMultiPropertyProperties());
+                return propertyIterator;
+            }
+            else if (count == keys.length) {
+                Iterator<VertexProperty<Object>> properties = mixin.properties(keys);
+                PropertyIterator propertyIterator = new PropertyIterator(properties, this.getMultiPropertyProperties());
+                return propertyIterator;
+            }
         }
-        return Iterators.concat(super.properties(keys), mixin.properties(keys));
+        Iterator<VertexProperty<Object>> concat = Iterators.concat(super.properties(keys), mixin.properties(keys));
+        PropertyIterator propertyIterator = new PropertyIterator(concat, this.getMultiPropertyProperties());
+        return propertyIterator;
     }
 
     @Override
@@ -150,6 +201,41 @@ public class PreloadedVertex extends CacheVertex {
     @Override
     public boolean addRelation(InternalRelation e) {
         throw GraphComputer.Exceptions.adjacentVertexPropertiesCanNotBeReadOrUpdated();
+    }
+
+    private static class PropertyIterator<V> implements Iterator<VertexProperty<V>> {
+
+        private final Iterator<VertexProperty<V>> iterator;
+        private final Multimap<String, PropertyPropertyInfo> multiPropertyProperties;
+
+        public PropertyIterator(final Iterator<VertexProperty<V>> iterator,final Multimap<String, PropertyPropertyInfo> multiPropertyProperties) {
+            this.iterator = iterator;
+            this.multiPropertyProperties=multiPropertyProperties;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return iterator.hasNext();
+        }
+
+        @Override
+        public VertexProperty<V> next() {
+            final VertexProperty property = iterator.next();
+            if(multiPropertyProperties!=null&&property instanceof CacheVertexProperty){
+                CacheVertexProperty cacheVertexProperty=(CacheVertexProperty)property;
+                Object value = cacheVertexProperty.value();
+                String propertyValueMD5 = MD5Util.getMD8(value);
+                String propertyTypeId = cacheVertexProperty.propertyKey().longId();
+                Collection<PropertyPropertyInfo> propertyPropertyInfos = multiPropertyProperties.get(propertyTypeId+propertyValueMD5);
+                cacheVertexProperty.setMultiPropertyProperties(Lists.newArrayList(propertyPropertyInfos));
+            }
+            return property;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
     }
 
     public interface AccessCheck {

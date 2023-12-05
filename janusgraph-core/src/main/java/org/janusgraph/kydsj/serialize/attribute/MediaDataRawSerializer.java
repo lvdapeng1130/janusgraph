@@ -1,6 +1,6 @@
 package org.janusgraph.kydsj.serialize.attribute;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.attribute.AttributeSerializer;
 import org.janusgraph.diskstorage.ScanBuffer;
 import org.janusgraph.diskstorage.WriteBuffer;
@@ -8,6 +8,8 @@ import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.database.serialize.Serializer;
 import org.janusgraph.graphdb.database.serialize.SerializerInjected;
 import org.janusgraph.kydsj.serialize.MediaDataRaw;
+
+import java.util.Date;
 
 /**
  * @author: ldp
@@ -26,6 +28,9 @@ public class MediaDataRawSerializer implements AttributeSerializer<MediaDataRaw>
         String mediaType = (String)serializer.readClassAndObject(buffer);
         String mediaTitle = (String)serializer.readClassAndObject(buffer);
         String mimeType = (String)serializer.readClassAndObject(buffer);
+        Date updateDate = (Date)serializer.readClassAndObject(buffer);
+        Integer sort = (Integer) serializer.readClassAndObject(buffer);
+        String desc = (String)serializer.readClassAndObject(buffer);
         MediaDataRaw media=new MediaDataRaw(key);
         media.setKey(key);
         media.setMediaTitle(mediaTitle);
@@ -33,6 +38,9 @@ public class MediaDataRawSerializer implements AttributeSerializer<MediaDataRaw>
         media.setLinkType(linkType);
         media.setMediaType(mediaType);
         media.setMimeType(mimeType);
+        media.setUpdateDate(updateDate);
+        media.setSort(sort);
+        media.setDesc(desc);
         return media;
     }
 
@@ -45,6 +53,9 @@ public class MediaDataRawSerializer implements AttributeSerializer<MediaDataRaw>
         out.writeClassAndObject(attribute.getMediaType());
         out.writeClassAndObject(attribute.getMediaTitle());
         out.writeClassAndObject(attribute.getMimeType());
+        out.writeClassAndObject(attribute.getUpdateDate());
+        out.writeClassAndObject(attribute.getSort());
+        out.writeClassAndObject(attribute.getDesc());
     }
 
     @Override

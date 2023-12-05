@@ -69,6 +69,18 @@ public class TestMockIndexProvider implements IndexProvider {
     }
 
     @Override
+    public void register(String store, String key, KeyInformation information,
+                         BaseTransaction tx,Map<String,Object> settings, Set<String> aliases) throws BackendException {
+        index.register(store,key,information,tx,settings,aliases);
+    }
+
+    @Override
+    public void register(String store, List<String> keys, List<KeyInformation> informations,
+                         BaseTransaction tx,Map<String,Object> settings,Set<String> aliases) throws BackendException {
+        index.register(store,keys,informations,tx,settings,aliases);
+    }
+
+    @Override
     public void register(String store, String key, KeyInformation information, BaseTransaction tx) throws BackendException {
         this.register(store,key,information,tx,null);
     }
@@ -93,6 +105,11 @@ public class TestMockIndexProvider implements IndexProvider {
     @Override
     public Long queryCount(IndexQuery query, KeyInformation.IndexRetriever information, BaseTransaction tx) throws BackendException {
         return index.queryCount(query, information, tx);
+    }
+
+    @Override
+    public void deleteDocument(String index,String ... ids) throws BackendException{
+
     }
 
     @Override

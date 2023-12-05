@@ -14,14 +14,16 @@
 
 package org.janusgraph.diskstorage.util;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.core.TransactionCustom;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.util.time.TimestampProvider;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 import java.time.Instant;
+import java.util.Set;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -33,17 +35,25 @@ public class StandardBaseTransactionConfig implements BaseTransactionConfig {
     private final TimestampProvider times;
     private final String groupName;
     private final Configuration customOptions;
+    private boolean indexMode;
+    private Set<String> skipIndexes;
+
+    private TransactionCustom transactionCustom;
 
     private StandardBaseTransactionConfig(String groupName,
                                           TimestampProvider times,
                                           Instant commitTime,
-                                          Configuration customOptions) {
+                                          Configuration customOptions,boolean indexMode,
+                                          TransactionCustom transactionCustom,Set<String> skipIndexes) {
         Preconditions.checkArgument(customOptions!=null);
         Preconditions.checkArgument(null != times || null != commitTime);
         this.groupName = groupName;
         this.times = times;
         this.commitTime = commitTime;
         this.customOptions = customOptions;
+        this.indexMode=indexMode;
+        this.skipIndexes=skipIndexes;
+        this.transactionCustom=transactionCustom;
     }
 
     @Override
@@ -91,12 +101,31 @@ public class StandardBaseTransactionConfig implements BaseTransactionConfig {
         return customOptions;
     }
 
+    @Override
+    public boolean isIndexMode() {
+        return indexMode;
+    }
+
+    @Override
+    public Set<String> getSkipIndexes(){
+        return this.skipIndexes;
+    }
+
+    @Override
+    public TransactionCustom getTransactionCustom() {
+        return transactionCustom;
+    }
+
     public static class Builder {
 
         private Instant commitTime = null;
         private TimestampProvider times;
         private String groupName = GraphDatabaseConfiguration.METRICS_SYSTEM_PREFIX_DEFAULT;
         private Configuration customOptions = Configuration.EMPTY;
+        private boolean hasIndexAddMode;
+        private Set<String> skipIndexes;
+
+        private TransactionCustom transactionCustom;
 
         public Builder() { }
 
@@ -112,6 +141,24 @@ public class StandardBaseTransactionConfig implements BaseTransactionConfig {
             customOptions(template.getCustomOptions());
             groupName(template.getGroupName());
             timestampProvider(template.getTimestampProvider());
+            indexMode(template.isIndexMode());
+            skipIndexes(template.getSkipIndexes());
+            setTransactionCustom(template.getTransactionCustom());
+        }
+
+        public Builder indexMode(boolean hasIndexMode) {
+            this.hasIndexAddMode = hasIndexMode;
+            return this;
+        }
+
+        public Builder skipIndexes(Set<String> skipIndexes) {
+            this.skipIndexes = skipIndexes;
+            return this;
+        }
+
+        public Builder setTransactionCustom(TransactionCustom transactionCustom) {
+            this.transactionCustom = transactionCustom;
+            return this;
         }
 
         public Builder groupName(String group) {
@@ -136,7 +183,7 @@ public class StandardBaseTransactionConfig implements BaseTransactionConfig {
         }
 
         public StandardBaseTransactionConfig build() {
-            return new StandardBaseTransactionConfig(groupName, times, commitTime, customOptions);
+            return new StandardBaseTransactionConfig(groupName, times, commitTime, customOptions,hasIndexAddMode,transactionCustom,skipIndexes);
         }
     }
 

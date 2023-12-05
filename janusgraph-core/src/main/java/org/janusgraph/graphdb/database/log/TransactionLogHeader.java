@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.database.log;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.janusgraph.core.log.Change;
 import org.janusgraph.diskstorage.ReadBuffer;

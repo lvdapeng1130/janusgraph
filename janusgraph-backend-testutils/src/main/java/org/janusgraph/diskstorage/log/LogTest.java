@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.log;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import io.github.artsok.RepeatedIfExceptionsTest;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.StaticBuffer;

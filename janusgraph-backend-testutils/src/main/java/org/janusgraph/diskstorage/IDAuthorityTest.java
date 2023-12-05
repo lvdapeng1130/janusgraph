@@ -16,7 +16,6 @@ package org.janusgraph.diskstorage;
 
 import com.carrotsearch.hppc.LongHashSet;
 import com.carrotsearch.hppc.LongSet;
-import com.google.common.base.Preconditions;
 import org.janusgraph.StorageSetup;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
@@ -31,6 +30,7 @@ import org.janusgraph.diskstorage.keycolumnvalue.StoreManager;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.database.idassigner.IDBlockSizer;
 import org.janusgraph.graphdb.database.idassigner.IDPoolExhaustedException;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.graphdb.idmanagement.UniqueInstanceIdRetriever;
 import org.janusgraph.testutil.TestGraphConfigs;
 import org.junit.jupiter.api.AfterEach;
@@ -41,12 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.Stream;
-
-import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
-import static org.junit.jupiter.api.Assertions.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;

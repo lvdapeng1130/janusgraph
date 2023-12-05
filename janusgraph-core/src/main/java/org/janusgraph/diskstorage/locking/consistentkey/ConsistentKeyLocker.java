@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.locking.consistentkey;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.Iterables;
 import org.janusgraph.core.JanusGraphConfigurationException;
 import org.janusgraph.diskstorage.BackendException;

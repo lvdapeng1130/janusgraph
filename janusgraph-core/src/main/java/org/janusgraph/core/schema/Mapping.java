@@ -14,7 +14,7 @@
 
 package org.janusgraph.core.schema;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.indexing.KeyInformation;
 import org.janusgraph.graphdb.types.ParameterType;
 

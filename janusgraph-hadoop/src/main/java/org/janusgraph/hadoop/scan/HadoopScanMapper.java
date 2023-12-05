@@ -14,11 +14,11 @@
 
 package org.janusgraph.hadoop.scan;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.EntryList;
+import org.janusgraph.diskstorage.PropertyEntry;
 import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.configuration.ConfigNamespace;
 import org.janusgraph.diskstorage.configuration.Configuration;
@@ -27,6 +27,7 @@ import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.diskstorage.keycolumnvalue.scan.ScanJob;
 import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.EntryArrayList;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.hadoop.config.JanusGraphHadoopConfiguration;
 import org.janusgraph.hadoop.config.ModifiableHadoopConfiguration;
 import org.slf4j.Logger;
@@ -44,7 +45,7 @@ import java.util.function.Predicate;
  * Run a {@link org.janusgraph.diskstorage.keycolumnvalue.scan.ScanJob}
  * via a Hadoop {@link org.apache.hadoop.mapreduce.Mapper} over the edgestore.
  */
-public class HadoopScanMapper extends Mapper<StaticBuffer, Iterable<Entry>, NullWritable, NullWritable> {
+public class HadoopScanMapper extends Mapper<StaticBuffer, PropertyEntry, NullWritable, NullWritable> {
 
     private static final Logger log = LoggerFactory.getLogger(HadoopScanMapper.class);
 
@@ -96,9 +97,8 @@ public class HadoopScanMapper extends Mapper<StaticBuffer, Iterable<Entry>, Null
     }
 
     @Override
-    protected void map(StaticBuffer key, Iterable<Entry> values, Context context) throws IOException, InterruptedException {
-        EntryArrayList al = EntryArrayList.of(values);
-
+    protected void map(StaticBuffer key, PropertyEntry propertyEntry, Context context) throws IOException, InterruptedException {
+        EntryArrayList al = EntryArrayList.of(propertyEntry.getProperties());
         // KeyFilter check
         if (!keyFilter.test(key)) {
             log.debug("Skipping key {} based on KeyFilter", key);
@@ -124,9 +124,8 @@ public class HadoopScanMapper extends Mapper<StaticBuffer, Iterable<Entry>, Null
         }
 
         // Process
-        job.process(key, matches, metrics);
+        job.process(key, matches, metrics,propertyEntry);
     }
-
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException {
         super.cleanup(context);
@@ -239,8 +238,9 @@ public class HadoopScanMapper extends Mapper<StaticBuffer, Iterable<Entry>, Null
             return null;
         }
         ConfigNamespace jobRoot = getJobRoot(scanConf.get(JanusGraphHadoopConfiguration.SCAN_JOB_CONFIG_ROOT));
-        return ModifiableHadoopConfiguration.prefixView(jobRoot, JanusGraphHadoopConfiguration.SCAN_JOB_CONFIG_KEYS,
-                scanConf);
+        ModifiableConfiguration modifiableConfiguration = ModifiableHadoopConfiguration.prefixView(jobRoot, JanusGraphHadoopConfiguration.SCAN_JOB_CONFIG_KEYS,
+            scanConf);
+        return modifiableConfiguration;
     }
 
     static ConfigNamespace getJobRoot(String confRootName) {

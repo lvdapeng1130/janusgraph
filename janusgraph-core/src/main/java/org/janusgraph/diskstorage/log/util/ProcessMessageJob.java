@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.log.util;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.log.Message;
 import org.janusgraph.diskstorage.log.MessageReader;
 import org.slf4j.Logger;

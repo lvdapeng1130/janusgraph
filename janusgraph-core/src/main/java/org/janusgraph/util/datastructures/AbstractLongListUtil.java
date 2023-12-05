@@ -15,7 +15,7 @@
 package org.janusgraph.util.datastructures;
 
 import com.carrotsearch.hppc.ObjectArrayList;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 /**
  * Utility class for merging and sorting lists of longs

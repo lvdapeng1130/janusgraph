@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.olap.job;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.core.BaseVertexQuery;
 import org.janusgraph.core.JanusGraphElement;
@@ -75,6 +75,7 @@ public class IndexRepairJob extends IndexUpdateJob implements VertexScanJob {
     public static final String DOCUMENT_UPDATES_COUNT = "doc-updates";
 
     private Map<String,Map<String,List<IndexEntry>>> documentsPerStore = new HashMap<>();
+    private int currentPointer=0;
 
     public IndexRepairJob() {
         super();
@@ -211,15 +212,43 @@ public class IndexRepairJob extends IndexUpdateJob implements VertexScanJob {
                     for (JanusGraphElement element : elements) {
                         if (indexSerializer.reindexElement(element, (MixedIndexType) indexType, documentsPerStore)) {
                             metrics.incrementCustom(DOCUMENT_UPDATES_COUNT);
+                            currentPointer++;
                         }
                     }
                 }
 
             } else throw new UnsupportedOperationException("Unsupported index found: "+index);
+
+            //批量提交数据向es写索引
+            if(currentPointer>=batchSize){
+                for(Map.Entry<String,Map<String,List<IndexEntry>>> entry:documentsPerStore.entrySet()) {
+                    log.info(String.format("线程%s向es提交数据%s,%s条",Thread.currentThread().getName(),entry.getKey(),entry.getValue().size()));
+                }
+                long begin = System.currentTimeMillis();
+                this.submit();
+                long end=System.currentTimeMillis();
+                log.info(String.format("线程%s,向es写数据用时%s",Thread.currentThread().getName(),(end-begin)));
+            }
         } catch (final Exception e) {
             managementSystem.rollback();
             writeTx.rollback();
             metrics.incrementCustom(FAILED_TX);
+            throw new JanusGraphException(e.getMessage(), e);
+        }
+    }
+
+    private void submit(){
+        try {
+            if (index instanceof JanusGraphIndex) {
+                BackendTransaction mutator = writeTx.getTxHandle();
+                IndexType indexType = managementSystem.getSchemaVertex(index).asIndexType();
+                if (indexType.isMixedIndex() && documentsPerStore.size() > 0) {
+                    mutator.getIndexTransaction(indexType.getBackingIndexName()).restore(documentsPerStore);
+                    documentsPerStore = new HashMap<>();
+                    currentPointer=0;
+                }
+            }
+        } catch (BackendException e) {
             throw new JanusGraphException(e.getMessage(), e);
         }
     }
@@ -231,7 +260,13 @@ public class IndexRepairJob extends IndexUpdateJob implements VertexScanJob {
                 BackendTransaction mutator = writeTx.getTxHandle();
                 IndexType indexType = managementSystem.getSchemaVertex(index).asIndexType();
                 if (indexType.isMixedIndex() && documentsPerStore.size() > 0) {
+                    for(Map.Entry<String,Map<String,List<IndexEntry>>> entry:documentsPerStore.entrySet()) {
+                        log.info(String.format("线程%s向es提交数据%s,%s条",Thread.currentThread().getName(),entry.getKey(),entry.getValue().size()));
+                    }
+                    long begin = System.currentTimeMillis();
                     mutator.getIndexTransaction(indexType.getBackingIndexName()).restore(documentsPerStore);
+                    long end=System.currentTimeMillis();
+                    log.info(String.format("线程%s,向es写数据用时%s",Thread.currentThread().getName(),(end-begin)));
                     documentsPerStore = new HashMap<>();
                 }
             }

@@ -14,7 +14,7 @@
 
 package org.janusgraph.util.system;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.janusgraph.diskstorage.configuration.ConfigElement;

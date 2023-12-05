@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.Maps;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Element;
@@ -111,7 +111,7 @@ public abstract class JanusGraphBaseTest implements JanusGraphBaseStoreFeaturesT
         final ModifiableConfiguration adjustedConfig = new ModifiableConfiguration(GraphDatabaseConfiguration.ROOT_NS,config.copy(), BasicConfiguration.Restriction.NONE);
         adjustedConfig.set(GraphDatabaseConfiguration.LOCK_LOCAL_MEDIATOR_GROUP, "tmp");
         adjustedConfig.set(GraphDatabaseConfiguration.UNIQUE_INSTANCE_ID, "inst");
-        final Backend backend = new Backend(adjustedConfig);
+        final Backend backend = new Backend(adjustedConfig,null);
         if (initialize) {
             backend.initialize(adjustedConfig);
         }
@@ -285,7 +285,7 @@ public abstract class JanusGraphBaseTest implements JanusGraphBaseStoreFeaturesT
                 //Open log manager - only supports KCVSLog
                 final Configuration logConfig = configuration.restrictTo(logManagerName);
                 Preconditions.checkState(logConfig.get(LOG_BACKEND).equals(LOG_BACKEND.getDefaultValue()));
-                logManagers.put(logManagerName,new KCVSLogManager(logStoreManager,logConfig));
+                logManagers.put(logManagerName,new KCVSLogManager(logStoreManager,logConfig,null));
             }
             Preconditions.checkState(logManagers.containsKey(logManagerName));
             return logManagers.get(logManagerName).openLog(logName);

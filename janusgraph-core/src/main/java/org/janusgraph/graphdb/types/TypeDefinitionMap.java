@@ -15,7 +15,7 @@
 
 package org.janusgraph.graphdb.types;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 import java.util.EnumMap;
 import java.util.Set;

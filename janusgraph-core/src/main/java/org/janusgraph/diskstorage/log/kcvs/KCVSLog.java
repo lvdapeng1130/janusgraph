@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.log.kcvs;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
@@ -337,7 +337,9 @@ public class KCVSLog implements Log, BackendOperation.TransactionalProvider {
                 }
             }
         }
-        writeSetting(manager.senderId, MESSAGE_COUNTER_COLUMN, numMsgCounter.get());
+        if(!manager.isReadOnly()) {
+            writeSetting(manager.senderId, MESSAGE_COUNTER_COLUMN, numMsgCounter.get());
+        }
         store.close();
         manager.closedLog(this);
     }
@@ -823,7 +825,9 @@ public class KCVSLog implements Log, BackendOperation.TransactionalProvider {
             if (readMarker.hasIdentifier()) {
                 try {
                     log.debug("Attempting to persist read marker with identifier {}", readMarker.getIdentifier());
-                    writeSetting(readMarker.getIdentifier(), getMarkerColumn(partitionId, bucketId), times.getTime(messageTimeStart));
+                    if(!manager.isReadOnly()) {
+                        writeSetting(readMarker.getIdentifier(), getMarkerColumn(partitionId, bucketId), times.getTime(messageTimeStart));
+                    }
                     log.debug("Persisted read marker: identifier={} partitionId={} buckedId={} nextTimepoint={}",
                             readMarker.getIdentifier(), partitionId, bucketId, messageTimeStart);
                 } catch (Throwable e) {

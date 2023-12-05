@@ -64,13 +64,13 @@ public abstract class AbstractElement implements InternalElement, Comparable<Jan
             return false;
         //Same type => they are the same if they have identical ids.
         if (other instanceof AbstractElement) {
-            return getCompareId()==((AbstractElement)other).getCompareId();
+            return getCompareId().equals(((AbstractElement)other).getCompareId());
         } else if (other instanceof JanusGraphElement) {
-            return ((JanusGraphElement) other).hasId() && getCompareId()==((JanusGraphElement)other).longId();
+            return ((JanusGraphElement) other).hasId() && getCompareId().equals(((JanusGraphElement)other).longId());
         } else {
             Object otherId = ((Element)other).id();
             if (otherId instanceof RelationIdentifier) {
-                return ((RelationIdentifier) otherId).getRelationId() == getCompareId();
+                return ((RelationIdentifier) otherId).getRelationId().equals(getCompareId());
             } else {
                 return otherId.equals(getCompareId());
             }

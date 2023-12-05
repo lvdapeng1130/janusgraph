@@ -14,7 +14,7 @@
 
 package org.janusgraph.util.stats;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)

@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.olap.job;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.janusgraph.core.JanusGraph;
 import org.janusgraph.core.JanusGraphException;
@@ -59,6 +59,9 @@ public abstract class IndexUpdateJob {
                     "relation type configured under index-name. This should remain empty for global graph indexes.",
             ConfigOption.Type.LOCAL, "", Objects::nonNull);
 
+    public static final ConfigOption<Integer> BATCHSIZE = new ConfigOption(INDEX_JOB_NS,"batchSize","批量提交的批次大小"
+        ,ConfigOption.Type.LOCAL, Integer.class,500);
+
 
     protected String indexRelationTypeName = null;
     protected String indexName = null;
@@ -70,6 +73,7 @@ public abstract class IndexUpdateJob {
     protected Index index;
     protected RelationType indexRelationType;
     protected Instant jobStartTime;
+    protected Integer batchSize=500;
 
     public IndexUpdateJob() { }
 
@@ -95,6 +99,7 @@ public abstract class IndexUpdateJob {
         this.graph = (StandardJanusGraph)graph;
         Preconditions.checkArgument(config.has(GraphDatabaseConfiguration.JOB_START_TIME),"Invalid configuration for this job. Start time is required.");
         this.jobStartTime = Instant.ofEpochMilli(config.get(GraphDatabaseConfiguration.JOB_START_TIME));
+        this.batchSize=config.get(BATCHSIZE);
         if (indexName == null) {
             Preconditions.checkArgument(config.has(INDEX_NAME), "Need to configure the name of the index to be repaired");
             indexName = config.get(INDEX_NAME);
@@ -118,6 +123,7 @@ public abstract class IndexUpdateJob {
 
             StandardTransactionBuilder txb = this.graph.buildTransaction();
             txb.commitTime(jobStartTime);
+            txb.setIndexMode(true);
             writeTx = (StandardJanusGraphTx)txb.start();
         } catch (final Exception e) {
             if (null != managementSystem && managementSystem.isOpen())

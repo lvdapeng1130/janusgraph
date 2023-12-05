@@ -26,11 +26,11 @@
     </properties>
 
     <dependencies>
-        <dependency>
+        <!--<dependency>
             <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-grpc</artifactId>
             <version>${project.version}</version>
-        </dependency>
+        </dependency>-->
         <dependency>
             <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-driver</artifactId>
@@ -41,11 +41,11 @@
             <artifactId>janusgraph-core</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
+        <!--<dependency>
             <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-server</artifactId>
             <version>${project.version}</version>
-        </dependency>
+        </dependency>-->
         <dependency>
             <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-inmemory</artifactId>
@@ -200,6 +200,21 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>server</id>
+            <dependencies>
+                <dependency>
+                  <groupId>org.janusgraph</groupId>
+                  <artifactId>janusgraph-grpc</artifactId>
+                  <version>${project.version}</version>
+              </dependency>
+                <dependency>
+                    <groupId>org.janusgraph</groupId>
+                    <artifactId>janusgraph-server</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
         <profile>
             <id>janusgraph-cache</id>
 	        <properties>

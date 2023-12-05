@@ -15,7 +15,6 @@
 package org.janusgraph.graphdb.log;
 
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
-import com.carrotsearch.hppc.cursors.LongObjectCursor;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.core.EdgeLabel;
 import org.janusgraph.core.PropertyKey;
@@ -28,10 +27,12 @@ import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.relations.CacheEdge;
 import org.janusgraph.graphdb.relations.CacheVertexProperty;
+import org.janusgraph.graphdb.relations.ContentCacheVertexProperty;
 import org.janusgraph.graphdb.relations.RelationCache;
 import org.janusgraph.graphdb.relations.StandardEdge;
 import org.janusgraph.graphdb.relations.StandardVertexProperty;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
+import org.janusgraph.util.system.DefaultFields;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -55,7 +56,11 @@ public class ModificationDeserializer {
             if (state==Change.REMOVED) {
                 rel = new StandardVertexProperty(relCache.relationId,(PropertyKey)type,outVertex,relCache.getValue(), ElementLifeCycle.Removed);
             } else {
-                rel = new CacheVertexProperty(relCache.relationId,(PropertyKey)type,outVertex,relCache.getValue(),relEntry);
+                if(type.name().equals(DefaultFields.DOCTEXT.getName())){
+                    rel = new ContentCacheVertexProperty(relCache.relationId, (PropertyKey) type, outVertex, relCache.getValue(), relEntry);
+                }else {
+                    rel = new CacheVertexProperty(relCache.relationId, (PropertyKey) type, outVertex, relCache.getValue(), relEntry);
+                }
             }
         } else {
             assert type.isEdgeLabel();

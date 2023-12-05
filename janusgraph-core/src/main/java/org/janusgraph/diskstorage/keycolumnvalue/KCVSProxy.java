@@ -14,11 +14,12 @@
 
 package org.janusgraph.diskstorage.keycolumnvalue;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.EntryList;
 import org.janusgraph.diskstorage.StaticBuffer;
+import org.janusgraph.kydsj.ContentStatus;
 
 import java.util.List;
 import java.util.Map;
@@ -80,6 +81,16 @@ public class KCVSProxy implements KeyColumnValueStore {
     @Override
     public EntryList getSlice(KeySliceQuery query, StoreTransaction txh) throws BackendException {
         return store.getSlice(query, unwrapTx(txh));
+    }
+
+    @Override
+    public byte[] getLargeCellContent(String fileName){
+        return store.getLargeCellContent(fileName);
+    }
+
+    @Override
+    public ContentStatus getContentStatus(String fileName){
+        return store.getContentStatus(fileName);
     }
 
     @Override

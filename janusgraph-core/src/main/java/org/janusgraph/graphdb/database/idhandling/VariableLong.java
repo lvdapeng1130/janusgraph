@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.database.idhandling;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.ReadBuffer;
 import org.janusgraph.diskstorage.ScanBuffer;
 import org.janusgraph.diskstorage.StaticBuffer;

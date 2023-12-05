@@ -15,7 +15,7 @@
 package org.janusgraph.diskstorage.solr;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
@@ -338,6 +338,17 @@ public class SolrIndex implements IndexProvider {
     public void register(String store, String key, KeyInformation information,
                          BaseTransaction tx,Set<String> aliases) throws BackendException {
         this.register(store,key,information,tx);
+    }
+
+    @Override
+    public void register(String store, String key, KeyInformation information,
+                         BaseTransaction tx,Map<String,Object> settings,Set<String> aliases) throws BackendException {
+        this.register(store,key,information,tx);
+    }
+    @Override
+    public void register(String store, List<String> keys, List<KeyInformation> informations,
+                         BaseTransaction tx,Map<String,Object> settings,Set<String> aliases) throws BackendException {
+        //this.register(store,key,information,tx);
     }
 
     /**
@@ -668,6 +679,11 @@ public class SolrIndex implements IndexProvider {
             }
         }
         return solrQuery;
+    }
+
+    @Override
+    public void deleteDocument(String index,String ... ids) throws BackendException{
+
     }
 
     @Override

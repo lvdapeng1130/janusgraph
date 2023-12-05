@@ -18,6 +18,7 @@ package org.janusgraph.core;
 
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
+import org.janusgraph.kydsj.ContentStatus;
 import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.Note;
 
@@ -66,6 +67,20 @@ public interface JanusGraphVertex extends JanusGraphElement, Vertex {
      * @param mediaData
      */
     void attachment(MediaData mediaData);
+
+    /**
+     * 获取对象存储在外部的大文件内容
+     * @param fileName
+     * @return
+     */
+    byte[] getLargeCellContent(String fileName);
+
+    /**
+     * 获取存储在外边系统的大文件信息,暂时只支持hdfs
+     * @param fileName
+     * @return
+     */
+    ContentStatus getContentStatus(String fileName);
 
     /**
      * Creates a new property for this vertex and given key with the specified value.

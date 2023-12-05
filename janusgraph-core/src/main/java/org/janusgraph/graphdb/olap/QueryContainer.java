@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.olap;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import org.apache.tinkerpop.gremlin.process.traversal.Order;

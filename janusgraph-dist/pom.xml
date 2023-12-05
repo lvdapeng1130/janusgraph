@@ -510,14 +510,14 @@
         <profile>
             <id>janusgraph-release</id>
 
-            <dependencies>
+            <!--<dependencies>
                 <dependency>
                     <groupId>${project.groupId}</groupId>
                     <artifactId>janusgraph-core</artifactId>
                     <version>${project.version}</version>
                     <classifier>javadoc</classifier>
                 </dependency>
-            </dependencies>
+            </dependencies>-->
 
             <build>
                 <plugins>
@@ -767,7 +767,7 @@
                                     </formats>
                                 </configuration>
                             </execution>
-                            <execution>
+                           <!-- <execution>
                                 <id>unpack-janusgraph-core-javadocs</id>
                                 <phase>package</phase>
                                 <goals>
@@ -781,7 +781,7 @@
                                         <descriptor>${assembly.descriptor.dir}/javadocs.xml</descriptor>
                                     </descriptors>
                                 </configuration>
-                            </execution>
+                            </execution>-->
                         </executions>
                     </plugin>
 

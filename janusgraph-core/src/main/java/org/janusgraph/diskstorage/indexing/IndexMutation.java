@@ -14,13 +14,16 @@
 
 package org.janusgraph.diskstorage.indexing;
 
-import com.google.common.base.Preconditions;
+import org.checkerframework.checker.units.qual.K;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.diskstorage.EntryMetaData;
 import org.janusgraph.diskstorage.Mutation;
 
 import java.util.AbstractMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -87,7 +90,7 @@ public class IndexMutation extends Mutation<IndexEntry,IndexEntry> {
 
     @Override
     public void consolidate() {
-        super.consolidate(entryConversionFunction, entryConversionFunction);
+        super.kgConsolidate(entryConversionFunction, entryConversionFunction);
     }
 
     @Override

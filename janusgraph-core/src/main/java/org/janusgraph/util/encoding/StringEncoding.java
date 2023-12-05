@@ -15,7 +15,7 @@
 
 package org.janusgraph.util.encoding;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;

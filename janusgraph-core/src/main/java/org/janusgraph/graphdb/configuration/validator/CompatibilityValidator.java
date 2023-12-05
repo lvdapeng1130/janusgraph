@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.configuration.validator;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.graphdb.configuration.JanusGraphConstants;
 

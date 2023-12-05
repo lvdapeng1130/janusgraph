@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.idmanagement;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.IDAuthority;
 import org.janusgraph.diskstorage.IDBlock;

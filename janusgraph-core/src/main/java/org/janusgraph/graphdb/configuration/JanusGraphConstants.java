@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.configuration;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.JanusGraphFactory;
 
 import java.io.IOException;

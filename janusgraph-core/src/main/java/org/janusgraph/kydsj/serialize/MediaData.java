@@ -4,8 +4,6 @@
 package org.janusgraph.kydsj.serialize;
 
 import com.google.common.collect.Sets;
-import org.apache.commons.lang.builder.ToStringBuilder;
-import org.apache.commons.lang.builder.ToStringStyle;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.tinkerpop.gremlin.structure.Property;
@@ -15,10 +13,17 @@ import org.janusgraph.graphdb.internal.AbstractElement;
 import org.janusgraph.graphdb.internal.InternalElement;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
+import org.janusgraph.kydsj.ContentStatus;
 
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
+
+import static org.janusgraph.graphdb.util.Constants.HDFS_MEDIA_MEDIATYPE;
+import static org.janusgraph.graphdb.util.Constants.HDFS_MEDIA_SUFFIX;
 
 /**
  * 顶点的多媒体类型
@@ -45,7 +50,18 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
 
 	private String desc;
 
+    private Date updateDate;
+
+    private Integer sort;
+
+    private String text;
+
+    private ContentStatus status;
+
     private transient InternalVertex vertex;
+    public MediaData() {
+        super(null);
+    }
 
     public MediaData(String id) {
         super(id);
@@ -132,6 +148,52 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
         this.vertex = vertex;
     }
 
+    public Date getUpdateDate() {
+        return updateDate;
+    }
+
+    public void setUpdateDate(Date updateDate) {
+        this.updateDate = updateDate;
+    }
+
+    public Integer getSort() {
+        return sort;
+    }
+
+    public void setSort(Integer sort) {
+        this.sort = sort;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public void setText(String text) {
+        this.text = text;
+    }
+
+    public String getLargeFileName(String vertexId){
+        String largeFileName=vertexId+"."+this.getKey()+HDFS_MEDIA_SUFFIX;
+        return largeFileName;
+    }
+
+    public ContentStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ContentStatus status) {
+        this.status = status;
+    }
+
+    public MediaData loadHdfsContent(){
+        if(status!=null){
+            String largeFileName = this.getLargeFileName(vertex.id().toString());
+            MediaData media = tx().loadHdfsMediaData(largeFileName);
+            return media;
+        }
+        return null;
+    }
+
     @Override
     public InternalElement it() {
         return vertex;
@@ -172,6 +234,22 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
         return null;
     }
 
+    public MediaData smallMediaData(String hdfsFileName){
+        MediaData mediaData=new MediaData();
+        mediaData.setKey(this.getKey());
+        mediaData.setVertex(this.getVertex());
+        mediaData.setDesc(this.desc);
+        mediaData.setMimeType(this.mimeType);
+        mediaData.setMediaType(HDFS_MEDIA_MEDIATYPE);
+        mediaData.setMediaTitle(this.getMediaTitle());
+        mediaData.setFilename(this.getFilename());
+        mediaData.setMediaData(hdfsFileName.getBytes(StandardCharsets.UTF_8));
+        mediaData.setDsr(this.getDsr());
+        mediaData.setLinkType(this.getLinkType());
+        mediaData.setSort(this.getSort());
+        mediaData.setUpdateDate(this.getUpdateDate());
+        return mediaData;
+    }
     public MediaDataRaw mediaDataRaw(){
         MediaDataRaw mediaDataRaw=new MediaDataRaw(this.key);
         mediaDataRaw.setVertex(this.vertex);
@@ -179,9 +257,30 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
         mediaDataRaw.setKey(this.getKey());
         mediaDataRaw.setLinkType(this.getLinkType());
         mediaDataRaw.setMediaTitle(this.getMediaTitle());
+        mediaDataRaw.setMediaType(this.getMediaType());
         mediaDataRaw.setMimeType(this.getMimeType());
         mediaDataRaw.setDesc(this.getDesc());
+        mediaDataRaw.setUpdateDate(this.getUpdateDate());
+        mediaDataRaw.setSort(this.getSort());
         return mediaDataRaw;
+    }
+
+    @Override
+    public String toString() {
+        return "MediaData{" +
+            "dsr=" + dsr +
+            ", mediaType='" + mediaType + '\'' +
+            ", linkType='" + linkType + '\'' +
+            ", mimeType='" + mimeType + '\'' +
+            ", filename='" + filename + '\'' +
+            ", mediaTitle='" + mediaTitle + '\'' +
+            ", mediaData=" + Arrays.toString(mediaData) +
+            ", key='" + key + '\'' +
+            ", desc='" + desc + '\'' +
+            ", updateDate=" + updateDate +
+            ", sort=" + sort +
+            ", vertex=" + vertex +
+            '}';
     }
 
     @Override
@@ -203,6 +302,9 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
             .append(mediaData, mediaData1.mediaData)
             .append(key, mediaData1.key)
             .append(desc, mediaData1.desc)
+            .append(updateDate, mediaData1.updateDate)
+            .append(sort, mediaData1.sort)
+            .append(vertex, mediaData1.vertex)
             .isEquals();
     }
 
@@ -219,21 +321,9 @@ public class MediaData extends AbstractElement implements JanusGraphElement, Ser
             .append(mediaData)
             .append(key)
             .append(desc)
+            .append(updateDate)
+            .append(sort)
+            .append(vertex)
             .toHashCode();
     }
-
-    @Override
-    public String toString() {
-        return  new ToStringBuilder( this, ToStringStyle.MULTI_LINE_STYLE)
-            .append( "key", key)
-            .append( "dsr", dsr)
-            .append( "mediaType", mediaType)
-            .append( "linkType", linkType)
-            .append( "mimeType", mimeType)
-            .append( "filename", filename)
-            .append( "mediaTitle", mediaTitle)
-            .append( "mediaData", mediaData)
-            .toString();
-    }
-
 }

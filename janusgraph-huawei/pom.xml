@@ -33,7 +33,7 @@
             <artifactId>janusgraph-core</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
+       <!-- <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>janusgraph-hbase-core</artifactId>
             <version>${project.version}</version>
@@ -44,7 +44,7 @@
             <artifactId>janusgraph-hbase-10</artifactId>
             <version>${project.version}</version>
             <optional>true</optional>
-        </dependency>
+        </dependency>-->
         <!-- <dependency>
                <groupId>org.apache.hbase</groupId>
                <artifactId>hbase-shaded-client</artifactId>
@@ -132,7 +132,7 @@
             <groupId>org.janusgraph</groupId>
             <artifactId>janusgraph-hbase</artifactId>
             <version>${project.version}</version>
-            <scope>runtime</scope>
+            <optional>true</optional>
         </dependency>
         <!--<dependency>
             <groupId>org.janusgraph</groupId>

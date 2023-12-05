@@ -14,7 +14,8 @@
 
 package org.janusgraph.graphdb.olap.job;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.diskstorage.PropertyEntry;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.JanusGraph;
 import org.janusgraph.core.JanusGraphRelation;
 import org.janusgraph.core.JanusGraphVertex;
@@ -84,11 +85,12 @@ public class GhostVertexRemover extends AbstractScanJob {
         txb.commitTime(jobStartTime);
         txb.checkExternalVertexExistence(false);
         txb.checkInternalVertexExistence(false);
+        txb.setIndexMode(true);
         return (StandardJanusGraphTx) txb.start();
     }
 
     @Override
-    public void process(StaticBuffer key, Map<SliceQuery, EntryList> entries, ScanMetrics metrics) {
+    public void process(StaticBuffer key, Map<SliceQuery, EntryList> entries, ScanMetrics metrics, PropertyEntry propertyEntry) {
         String vertexId = getVertexId(key);
         assert entries.size() == 1;
         assert entries.get(everythingQueryLimit) != null;

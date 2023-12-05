@@ -15,7 +15,7 @@
 package org.janusgraph.diskstorage.es;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.es.rest.RestClientSetup;
 import org.slf4j.Logger;

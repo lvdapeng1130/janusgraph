@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.indexing;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransaction;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
@@ -84,6 +84,16 @@ public class IndexTransaction implements BaseTransaction, LoggableTransaction {
         getIndexMutation(store,documentId,false,deleteAll).deletion(new IndexEntry(key,value));
     }
 
+    public void delete(String store, String documentId, IndexEntry entry, boolean deleteAll) {
+        IndexEntry indexEntry = new IndexEntry(entry.field, entry.value, entry.getMetaData());
+        indexEntry.setRole(entry.getRole());
+        indexEntry.setEndDate(entry.getEndDate());
+        indexEntry.setStartDate(entry.getStartDate());
+        indexEntry.setGeo(entry.getGeo());
+        indexEntry.setDsr(entry.getDsr());
+        getIndexMutation(store,documentId,false,deleteAll).deletion(indexEntry);
+    }
+
     private IndexMutation getIndexMutation(String store, String documentId, boolean isNew, boolean isDeleted) {
         final Map<String, IndexMutation> storeMutations = mutations.computeIfAbsent(store, k -> new HashMap<>(DEFAULT_INNER_MAP_SIZE));
         IndexMutation m = storeMutations.get(documentId);
@@ -100,9 +110,20 @@ public class IndexTransaction implements BaseTransaction, LoggableTransaction {
         return m;
     }
 
+    public void deleteDocument(String indexName,String ... ids) throws BackendException {
+        index.deleteDocument(indexName,ids);
+    }
 
     public void register(String store, String key, KeyInformation information, Set<String> aliases) throws BackendException {
         index.register(store,key,information,indexTx,aliases);
+    }
+
+    public void register(String store, String key, KeyInformation information,Map<String,Object> settings, Set<String> aliases) throws BackendException {
+        index.register(store,key,information,indexTx,settings,aliases);
+    }
+
+    public void register(String store, List<String> keys, List<KeyInformation> informations,Map<String,Object> settings, Set<String> aliases) throws BackendException {
+        index.register(store,keys,informations,indexTx,settings,aliases);
     }
 
     /**
@@ -153,6 +174,10 @@ public class IndexTransaction implements BaseTransaction, LoggableTransaction {
         indexTx.rollback();
     }
 
+    @Override
+    public Set<String> getSkipIndexes() {
+        return indexTx.getSkipIndexes();
+    }
 
 
     private void flushInternal() throws BackendException {

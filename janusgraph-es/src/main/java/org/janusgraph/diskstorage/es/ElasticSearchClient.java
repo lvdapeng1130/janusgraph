@@ -39,7 +39,7 @@ public interface ElasticSearchClient extends Closeable {
 
     ESScriptResponse getStoredScript(String scriptName) throws IOException;
 
-    void createIndex(String indexName, Map<String,Object> settings) throws IOException;
+    void createIndex(String indexName, Map<String,Object> settings,Set<String> aliases) throws IOException;
 
     void updateIndexSettings(String indexName, Map<String,Object> settings) throws IOException;
 
@@ -54,6 +54,8 @@ public interface ElasticSearchClient extends Closeable {
     void deleteIndex(String indexName) throws IOException;
 
     void bulkRequest(List<ElasticSearchMutation> requests, String ingestPipeline) throws IOException;
+
+    void bulkRequestAsync(List<ElasticSearchMutation> requests, String ingestPipeline) throws IOException;
 
     long countTotal(String indexName, Map<String,Object> requestData) throws IOException;
 

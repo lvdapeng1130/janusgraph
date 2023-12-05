@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.indexing;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.janusgraph.diskstorage.EntryMetaData;
 import org.janusgraph.diskstorage.MetaAnnotatable;
@@ -41,6 +41,7 @@ public class IndexEntry implements MetaAnnotated, MetaAnnotatable {
     private double[] geo;
 
 
+    private boolean overlaid;
     public IndexEntry(final String field, final Object value) {
         this(field, value, null);
     }
@@ -121,5 +122,13 @@ public class IndexEntry implements MetaAnnotated, MetaAnnotatable {
 
     public void setGeo(double[] geo) {
         this.geo = geo;
+    }
+
+    public boolean isOverlaid() {
+        return overlaid;
+    }
+
+    public void setOverlaid(boolean overlaid) {
+        this.overlaid = overlaid;
     }
 }

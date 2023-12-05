@@ -37,13 +37,107 @@ public class SelectedQQKGgraph extends AbstractKGgraphTest {
     @Before
     public void startHBase() throws IOException, ConfigurationException {
         LOGGER.info("opening graph");
-        conf = ConfigurationUtil.loadPropertiesConfig("D:\\github\\janusgraph\\janusgraph-kydsj\\src\\test\\resources\\trsgraph-hbase-es-test-qq.properties");
+        String dataPath=this.getClass().getResource("/trsgraph-hbase-es-244_es7new1.properties").getFile();
+        conf=ConfigurationUtil.loadPropertiesConfig(dataPath);
         graph = JanusGraphFactory.open(conf);
         g = graph.traversal();
     }
     protected JanusGraph getJanusGraph() {
         return (JanusGraph) graph;
     }
+    /**
+     * 根据tid查询顶点对象
+     */
+    @Test
+    public void selectByVertex(){
+        List<Vertex> vertices = g.V().hasLabel("eidentity_qqqun").limit(1).both("link_member").toList();
+        for(Vertex next:vertices) {
+            System.out.println("------------------------------------------------------------");
+            System.out.println(next.label() + "-->" + next.id());
+            Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
+            while (qq_num_properties.hasNext()) {
+                VertexProperty<Object> vertexProperty = qq_num_properties.next();
+                if (vertexProperty.isPresent()) {
+                    Object value = vertexProperty.value();
+                    System.out.println(vertexProperty.key() + "->" + value);
+                    Iterator<Property<Object>> properties = vertexProperty.properties();
+                    while (properties.hasNext()) {
+                        Property<Object> property = properties.next();
+                        if (property.isPresent()) {
+                            Object value1 = property.value();
+                            System.out.println(property.key() + "<->" + value1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void selectByLink(){
+        List<Edge> edges = g.V().hasLabel("eidentity_qqqun").limit(1).bothE("link_member").toList();
+        for(Edge next:edges) {
+            System.out.println("------------------------------------------------------------");
+            System.out.println(next.label() + "-->" + next.id());
+            Iterator<Property<Object>> properties1 = next.properties();
+            while (properties1.hasNext()) {
+                Property<Object> property1 = properties1.next();
+                if (property1.isPresent()) {
+                    Object value = property1.value();
+                    System.out.println(property1.key() + "->" + value);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void selectByTid1(){
+        Vertex next = g.V("e0a1bc84d8226ff5_21_000").next();
+        System.out.println(next.label());
+        Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
+        while (qq_num_properties.hasNext()){
+            VertexProperty<Object> vertexProperty = qq_num_properties.next();
+            if(vertexProperty.isPresent()){
+                Object value = vertexProperty.value();
+                System.out.println(vertexProperty.key()+"->"+value);
+                Iterator<Property<Object>> properties = vertexProperty.properties();
+                while (properties.hasNext()){
+                    Property<Object> property = properties.next();
+                    if(property.isPresent()){
+                        Object value1 = property.value();
+                        System.out.println(property.key()+"<->"+value1);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void selectLink(){
+        List<Vertex> vertices = g.V("6de0d81a7c48c621_31_000").both().toList();
+        for(Vertex next:vertices){
+            System.out.println("--------------------------------------------------------------------");
+            System.out.println(next.label()+"-->"+next.id());
+            Iterator<VertexProperty<Object>> qq_num_properties = next.properties();
+            while (qq_num_properties.hasNext()){
+                VertexProperty<Object> vertexProperty = qq_num_properties.next();
+                if(vertexProperty.isPresent()){
+                    Object value = vertexProperty.value();
+                    System.out.println(vertexProperty.key()+"->"+value);
+                    Iterator<Property<Object>> properties = vertexProperty.properties();
+                    while (properties.hasNext()){
+                        Property<Object> property = properties.next();
+                        if(property.isPresent()){
+                            Object value1 = property.value();
+                            System.out.println(property.key()+"<->"+value1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
     @Test
     public void readElements() {
         try {

@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.apache.tinkerpop.gremlin.process.traversal.util.TraversalInterruptedException;
 import org.janusgraph.core.JanusGraphException;
@@ -33,6 +33,8 @@ import org.janusgraph.diskstorage.log.kcvs.ExternalCachePersistor;
 import org.janusgraph.diskstorage.util.BackendOperation;
 import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.graphdb.database.serialize.DataOutput;
+import org.janusgraph.graphdb.types.IndexType;
+import org.janusgraph.kydsj.ContentStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +42,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -181,6 +184,11 @@ public class BackendTransaction implements LoggableTransaction {
             if (exception instanceof BackendException) throw (BackendException)exception;
             else throw new PermanentBackendException("Unexpected exception",exception);
         }
+    }
+
+    @Override
+    public Set<String> getSkipIndexes() {
+        return storeTx.getSkipIndexes();
     }
 
 
@@ -500,6 +508,32 @@ public class BackendTransaction implements LoggableTransaction {
         });
     }
 
+    public byte[] getLargeCellContent(String fileName) {
+        return executeRead(new Callable<byte[]>() {
+            @Override
+            public byte[] call() throws Exception {
+                return attachmentStore.getLargeCellContent(fileName);
+            }
+            @Override
+            public String toString() {
+                return "Large Cell Content";
+            }
+        });
+    }
+
+    public ContentStatus getContentStatus(String fileName) {
+        return executeRead(new Callable<ContentStatus>() {
+            @Override
+            public ContentStatus call() throws Exception {
+                return attachmentStore.getContentStatus(fileName);
+            }
+            @Override
+            public String toString() {
+                return "Large Cell Content Status";
+            }
+        });
+    }
+
     public EntryList noteQuery(final KeySliceQuery query) {
         return executeRead(new Callable<EntryList>() {
             @Override
@@ -540,6 +574,23 @@ public class BackendTransaction implements LoggableTransaction {
                 return "indexQueryCount";
             }
         });
+    }
+    public void deleteIndexDocument(IndexType indexType,String indexName, String ... documentIds) {
+        if(indexType.isMixedIndex()) {
+            final IndexTransaction indexTx = getIndexTransaction(indexType.getBackingIndexName());
+            executeRead(new Callable<Integer>() {
+                @Override
+                public Integer call() throws Exception {
+                    indexTx.deleteDocument(indexName, documentIds);
+                    return documentIds.length;
+                }
+
+                @Override
+                public String toString() {
+                    return "deleteIndexDocument";
+                }
+            });
+        }
     }
 
     public Stream<RawQuery.Result<String>> rawQuery(final String index, final RawQuery query) {

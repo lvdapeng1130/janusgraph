@@ -14,8 +14,8 @@
 
 package org.janusgraph.graphdb.vertices;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Property;
@@ -29,6 +29,7 @@ import org.janusgraph.core.JanusGraphVertex;
 import org.janusgraph.core.JanusGraphVertexProperty;
 import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.VertexLabel;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.graphdb.internal.AbstractElement;
 import org.janusgraph.graphdb.internal.ElementLifeCycle;
 import org.janusgraph.graphdb.internal.InternalVertex;
@@ -39,6 +40,7 @@ import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.graphdb.types.system.BaseLabel;
 import org.janusgraph.graphdb.types.system.BaseVertexLabel;
 import org.janusgraph.graphdb.util.ElementHelper;
+import org.janusgraph.kydsj.ContentStatus;
 import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.MediaDataRaw;
 import org.janusgraph.kydsj.serialize.Note;
@@ -50,6 +52,7 @@ import javax.annotation.Nullable;
 public abstract class AbstractVertex extends AbstractElement implements InternalVertex, Vertex {
 
     private final StandardJanusGraphTx tx;
+    private boolean partition;
 
 
     protected AbstractVertex(StandardJanusGraphTx tx, String id) {
@@ -79,8 +82,12 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
 
     @Override
     public String getCompareId() {
-        if (tx.isPartitionedVertex(this)) return tx.getIdInspector().getCanonicalVertexId(longId());
-        else return longId();
+        if(this.isPartition()) {
+            if (tx.isPartitionedVertex(this)) return tx.getIdInspector().getCanonicalVertexId(longId());
+            else return longId();
+        }else{
+            return longId();
+        }
     }
 
     @Override
@@ -182,6 +189,16 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
     }
 
     @Override
+    public byte[] getLargeCellContent(String fileName){
+        return tx().getLargeCellContent(fileName);
+    }
+
+    @Override
+    public ContentStatus getContentStatus(String fileName){
+        return tx().getContentStatus(fileName);
+    }
+
+    @Override
     public <O> O valueOrNull(PropertyKey key) {
         return (O)property(key.name()).orElse(null);
     }
@@ -225,11 +242,45 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
         }
     }
 
+    public <V> JanusGraphVertexProperty<V> trsProperty(final String key, final V value, final Object... keyValues) {
+        if(key.equals(BaseKey.VertexAttachment.name())) {
+            JanusGraphVertexProperty p = tx().addAttachment(it(), BaseKey.VertexAttachment, value);
+            return p;
+        }else if(key.equals(BaseKey.VertexNote.name())) {
+            JanusGraphVertexProperty p = tx().addNote(it(), BaseKey.VertexNote, value);
+            return p;
+        }else{
+            PropertyKey propertyKey = tx().getPropertyKey(key);
+            if (propertyKey == null) {
+                return JanusGraphVertexProperty.empty();
+            }
+            VertexProperty.Cardinality vCardinality = propertyKey.cardinality().convert();
+            if (value == null) {
+                if (vCardinality.equals(VertexProperty.Cardinality.single)) {
+                    // putting null value with SINGLE cardinality is equivalent to removing existing value
+                    properties(key).forEachRemaining(Property::remove);
+                } else {
+                    // simply ignore this mutation
+                    assert vCardinality.equals(VertexProperty.Cardinality.list) || vCardinality.equals(VertexProperty.Cardinality.set);
+                }
+                return JanusGraphVertexProperty.empty();
+            }else {
+                JanusGraphVertexProperty<V> p = tx().addTrsProperty(vCardinality, it(), propertyKey, value, null);
+                ElementHelper.attachProperties(p, keyValues);
+                return p;
+            }
+        }
+    }
+
     @Override
     public JanusGraphEdge addEdge(String label, Vertex vertex, Object... keyValues) {
         Preconditions.checkArgument(vertex instanceof JanusGraphVertex,"Invalid vertex provided: %s",vertex);
         final Optional<Object> idValue = org.apache.tinkerpop.gremlin.structure.util.ElementHelper.getIdValue(keyValues);
-        final String id = idValue.map(String.class::cast).orElse(null);
+        String id = idValue.map(String.class::cast).orElse(null);
+        if(StringUtils.isNotBlank(id)){
+            long partition= tx().getPartitionID((InternalVertex)vertex);
+            id = tx().getIdInspector().getRelationID(id, partition);
+        }
         JanusGraphEdge edge = tx().addEdge(id,it(), (JanusGraphVertex) vertex, tx().getOrCreateEdgeLabel(label));
         ElementHelper.attachProperties(edge,keyValues);
         return edge;
@@ -298,7 +349,11 @@ public abstract class AbstractVertex extends AbstractElement implements Internal
 
     }
 
+    public boolean isPartition() {
+        return partition;
+    }
 
-
-
+    public void setPartition(boolean partition) {
+        this.partition = partition;
+    }
 }

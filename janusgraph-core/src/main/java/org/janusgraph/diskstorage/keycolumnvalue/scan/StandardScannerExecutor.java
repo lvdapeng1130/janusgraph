@@ -14,7 +14,6 @@
 
 package org.janusgraph.diskstorage.keycolumnvalue.scan;
 
-import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AbstractFuture;
 import org.janusgraph.core.schema.JanusGraphManagement;
 import org.janusgraph.diskstorage.BackendException;
@@ -27,6 +26,7 @@ import org.janusgraph.diskstorage.keycolumnvalue.StoreFeatures;
 import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
 import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.util.system.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -246,7 +246,7 @@ class StandardScannerExecutor extends AbstractFuture<ScanMetrics> implements Jan
                             numProcessed=0;
                         }
                         try {
-                            job.process(row.key,row.entries,metrics);
+                            job.process(row.key,row.entries,metrics, null);
                             metrics.increment(ScanMetrics.Metric.SUCCESS);
                         } catch (Throwable ex) {
                             log.error("Exception processing row ["+row.key+"]: ",ex);

@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.management;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.ConfigurationConverter;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;

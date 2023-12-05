@@ -16,6 +16,7 @@ package org.janusgraph.graphdb.types;
 
 import org.janusgraph.core.PropertyKey;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -40,5 +41,16 @@ public interface MixedIndexType extends IndexType {
      * @return
      */
     Set<String> getAliases();
+
+    /**
+     * 设置创建elasticsearch索引时指定setting参数
+     * @param settings
+     */
+    void setSettings(Map<String,Object> settings);
+
+    /**
+     * 获取创建elasticsearch索引时指定setting参数
+     */
+    Map<String,Object> getSettings();
 
 }

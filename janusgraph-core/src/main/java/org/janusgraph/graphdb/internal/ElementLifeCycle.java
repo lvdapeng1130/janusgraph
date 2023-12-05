@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.internal;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 /**
  * ElementLifeCycle enumerates all possible states of the lifecycle of a entity.

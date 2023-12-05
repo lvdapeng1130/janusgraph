@@ -67,4 +67,6 @@ public interface InternalRelation extends JanusGraphRelation, InternalElement {
 
     <O> O removePropertyDirect(PropertyKey key);
 
+    <O> O removePropertyDsr(PropertyKey key, Object value);
+
 }

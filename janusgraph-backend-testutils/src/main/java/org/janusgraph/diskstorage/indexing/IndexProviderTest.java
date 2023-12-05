@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.indexing;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
@@ -36,6 +36,7 @@ import org.janusgraph.diskstorage.BaseTransactionConfig;
 import org.janusgraph.diskstorage.EntryMetaData;
 import org.janusgraph.diskstorage.util.StandardBaseTransactionConfig;
 import org.janusgraph.diskstorage.util.time.TimestampProviders;
+import org.janusgraph.graphdb.internal.ElementCategory;
 import org.janusgraph.graphdb.internal.Order;
 import org.janusgraph.graphdb.query.JanusGraphPredicate;
 import org.janusgraph.graphdb.query.condition.And;
@@ -107,7 +108,17 @@ public abstract class IndexProviderTest {
 
             @Override
             public KeyInformation.StoreRetriever get(String store) {
-                return mappings::get;
+                return new KeyInformation.StoreRetriever() {
+                    @Override
+                    public ElementCategory getCategory() {
+                        return null;
+                    }
+
+                    @Override
+                    public KeyInformation get(String key) {
+                        return mappings.get(key);
+                    }
+                };
             }
 
             @Override

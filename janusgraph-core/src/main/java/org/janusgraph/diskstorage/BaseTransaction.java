@@ -14,6 +14,8 @@
 
 package org.janusgraph.diskstorage;
 
+import java.util.Set;
+
 /**
  * Represents a transaction for a particular storage backend.
  *
@@ -39,5 +41,15 @@ public interface BaseTransaction {
      * @throws BackendException
      */
     void rollback() throws BackendException;
+
+    default boolean isIndexMode(){
+        return false;
+    }
+
+    /**
+     * skip index type
+     * @return
+     */
+    Set<String> getSkipIndexes();
 
 }

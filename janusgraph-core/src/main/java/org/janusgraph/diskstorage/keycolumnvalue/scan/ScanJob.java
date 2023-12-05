@@ -16,6 +16,7 @@ package org.janusgraph.diskstorage.keycolumnvalue.scan;
 
 import org.apache.tinkerpop.gremlin.process.computer.Memory;
 import org.janusgraph.diskstorage.EntryList;
+import org.janusgraph.diskstorage.PropertyEntry;
 import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
@@ -93,14 +94,15 @@ public interface ScanJob extends Cloneable {
      * @param key
      * @param entries
      * @param metrics
+     * @param propertyEntry
      */
-    void process(StaticBuffer key, Map<SliceQuery, EntryList> entries, ScanMetrics metrics);
+    void process(StaticBuffer key, Map<SliceQuery, EntryList> entries, ScanMetrics metrics, PropertyEntry propertyEntry);
 
     /**
      * Returns one or more {@code SliceQuery} instances belonging to this {@code ScanJob}.
      * <p>
      * Before calling
-     * {@link #process(org.janusgraph.diskstorage.StaticBuffer, java.util.Map, ScanMetrics)},
+     * {@link #process(org.janusgraph.diskstorage.StaticBuffer, java.util.Map, ScanMetrics,EntryList)},
      * users of this interface must check that the key in question contains at least one
      * entry matching the initial {@code SliceQuery} returned by this method.  See the javadoc
      * for the {@code process} method for more information.
@@ -115,7 +117,7 @@ public interface ScanJob extends Cloneable {
 
     /**
      * A predicate that determines whether
-     * {@link #process(org.janusgraph.diskstorage.StaticBuffer, java.util.Map, ScanMetrics)}
+     * {@link #process(org.janusgraph.diskstorage.StaticBuffer, java.util.Map, ScanMetrics,EntryList)}
      * should be invoked for the given key.  If the predicate returns true,
      * then users of this interface should invoke {@code process} for the key and
      * its associated entries.  If the predicate returns false, then users of this

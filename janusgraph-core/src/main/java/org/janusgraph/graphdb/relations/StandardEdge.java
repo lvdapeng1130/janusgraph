@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.relations;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.janusgraph.core.EdgeLabel;
 import org.janusgraph.core.PropertyKey;
@@ -88,6 +88,11 @@ public class StandardEdge extends AbstractEdge implements StandardRelation, Reas
         if (!properties.isEmpty())
             return (O) properties.remove(key);
         else return null;
+    }
+
+    @Override
+    public <O> O removePropertyDsr(PropertyKey key, Object value) {
+       return null;
     }
 
     @Override

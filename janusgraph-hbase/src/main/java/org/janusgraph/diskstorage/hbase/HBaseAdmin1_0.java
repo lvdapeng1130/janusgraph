@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,6 +120,42 @@ public class HBaseAdmin1_0 implements AdminMask
     public void createTable(HTableDescriptor desc, byte[] startKey, byte[] endKey, int numRegions) throws IOException
     {
         adm.createTable(desc, startKey, endKey, numRegions);
+    }
+
+    @Override
+    public void createTable(HTableDescriptor desc, int numRegions) throws IOException
+    {
+        byte[][] bytes = this.calcSplitKeys(numRegions);
+        adm.createTable(desc,bytes);
+    }
+
+    private byte[][] calcSplitKeys(int numRegions) {
+        String minRowKeyPrefix="00000000";
+        String maxRowKeyPrefix="ffffffff";
+        long minInt=Long.parseLong(minRowKeyPrefix,16);
+        long maxInt=Long.parseLong(maxRowKeyPrefix,16);
+        long range=maxInt-minInt;
+        int prepareRegions=numRegions;
+        int splitKeysNumber = prepareRegions - 1;
+        long splitKeysBase = range / prepareRegions;
+        byte[][] splitKeys = new byte[(int)splitKeysNumber][];
+        for(int i = 1; i < prepareRegions ; i ++) {
+            Long endNumber=(i*splitKeysBase);
+            String endRow=endNumber.toHexString(endNumber);
+            /*if(i==prepareRegions-1)
+            {
+                endRow=maxRowKeyPrefix;
+            }*/
+            int w=maxRowKeyPrefix.length()-endRow.length();
+            StringBuffer endRowKey=new StringBuffer();
+            for(int j=0;j<w;j++)
+            {
+                endRowKey.append("0");
+            }
+            endRowKey.append(endRow);
+            splitKeys[i-1] = Bytes.toBytes(endRowKey.toString());
+        }
+        return splitKeys;
     }
 
     @Override

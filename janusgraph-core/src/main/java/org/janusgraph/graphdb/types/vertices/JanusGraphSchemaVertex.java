@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.types.vertices;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Iterables;

@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.keycolumnvalue.keyvalue;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import org.janusgraph.diskstorage.StaticBuffer;

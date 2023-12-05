@@ -15,7 +15,7 @@
 package org.janusgraph.graphdb.query.condition;
 
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.JanusGraphElement;
 
 import java.util.function.Predicate;

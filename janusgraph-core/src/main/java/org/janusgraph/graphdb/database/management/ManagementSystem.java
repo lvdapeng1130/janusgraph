@@ -14,7 +14,6 @@
 
 package org.janusgraph.graphdb.database.management;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.StringUtils;
@@ -53,7 +52,9 @@ import org.janusgraph.core.schema.SchemaStatus;
 import org.janusgraph.core.schema.VertexLabelMaker;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.configuration.BasicConfiguration;
+import org.janusgraph.diskstorage.configuration.ConfigElement;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
+import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration;
 import org.janusgraph.diskstorage.configuration.TransactionalConfiguration;
 import org.janusgraph.diskstorage.configuration.UserModifiableConfiguration;
@@ -64,6 +65,7 @@ import org.janusgraph.diskstorage.log.Log;
 import org.janusgraph.graphdb.database.IndexSerializer;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.database.cache.SchemaCache;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.internal.ElementCategory;
 import org.janusgraph.graphdb.internal.InternalRelationType;
@@ -74,6 +76,7 @@ import org.janusgraph.graphdb.olap.VertexJobConverter;
 import org.janusgraph.graphdb.olap.job.IndexRemoveJob;
 import org.janusgraph.graphdb.olap.job.IndexRepairJob;
 import org.janusgraph.graphdb.query.QueryUtil;
+import org.janusgraph.graphdb.transaction.RelationConstructor;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.graphdb.types.CompositeIndexType;
 import org.janusgraph.graphdb.types.IndexField;
@@ -91,6 +94,7 @@ import org.janusgraph.graphdb.types.TypeDefinitionMap;
 import org.janusgraph.graphdb.types.VertexLabelVertex;
 import org.janusgraph.graphdb.types.indextype.IndexTypeWrapper;
 import org.janusgraph.graphdb.types.system.BaseKey;
+import org.janusgraph.graphdb.types.system.BaseLabel;
 import org.janusgraph.graphdb.types.system.SystemTypeManager;
 import org.janusgraph.graphdb.types.vertices.EdgeLabelVertex;
 import org.janusgraph.graphdb.types.vertices.JanusGraphSchemaVertex;
@@ -99,6 +103,7 @@ import org.janusgraph.graphdb.types.vertices.RelationTypeVertex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Array;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -242,7 +247,9 @@ public class ManagementSystem implements JanusGraphManagement {
         transactionalConfig.commit();
 
         //Commit underlying transaction
-        transaction.commit();
+        if(transaction.isOpen()) {
+            transaction.commit();
+        }
 
         //Communicate schema changes
         if (!updatedTypes.isEmpty() || evictGraphFromCache) {
@@ -430,6 +437,54 @@ public class ManagementSystem implements JanusGraphManagement {
     public JanusGraphIndex getGraphIndex(String name) {
         IndexType index = getGraphIndexDirect(name, transaction);
         return index == null ? null : new JanusGraphIndexWrapper(index);
+    }
+
+    @Override
+    public void removeIndexDuplicateFields(String index){
+        JanusGraphSchemaVertex schemaVertex = transaction.getSchemaVertex(JanusGraphSchemaCategory.GRAPHINDEX.getSchemaName(index));
+        if(schemaVertex!=null&& schemaVertex.asIndexType().isMixedIndex()){
+            Direction dir=Direction.OUT;
+            Iterable<JanusGraphEdge> edges;
+            if (schemaVertex.isLoaded()) {
+                edges = (Iterable) RelationConstructor.readRelation(schemaVertex,
+                    transaction.getGraph().getSchemaCache().getSchemaRelations(schemaVertex.longId(), BaseLabel.SchemaDefinitionEdge,dir),
+                    transaction);
+            } else {
+                edges = schemaVertex.query().type(BaseLabel.SchemaDefinitionEdge).direction(dir).edges();
+            }
+            Set<String> propertyTypes=new HashSet<>();
+            List<JanusGraphEdge> deleteEdges=new ArrayList<>();
+            for (JanusGraphEdge edge: edges) {
+                JanusGraphVertex oth = edge.vertex(dir.opposite());
+                if(oth instanceof PropertyKeyVertex){
+                    String name = ((PropertyKeyVertex) oth).name();
+                    if(!propertyTypes.contains(name)){
+                        propertyTypes.add(name);
+                    }else{
+                        deleteEdges.add(edge);
+                    }
+                }
+            }
+            if(deleteEdges.size()>0) {
+                for (JanusGraphEdge edge : deleteEdges) {
+                    JanusGraphVertex oth = edge.vertex(dir.opposite());
+                    updatedTypes.add((PropertyKeyVertex)oth);
+                    edge.remove();
+                }
+                updatedTypes.add(schemaVertex);
+                transaction.getGraph().getSchemaCache().expireSchemaElement(schemaVertex.longId());
+                transaction.expireSchemaElement(schemaVertex.longId());
+                this.evictGraphFromCache();
+            }
+        }
+    }
+
+    @Override
+    public void deleteMixedIndex(String name){
+        JanusGraphSchemaVertex v = transaction.getSchemaVertex(JanusGraphSchemaCategory.GRAPHINDEX.getSchemaName(name));
+        if(v!=null&& v.asIndexType().isMixedIndex()){
+            v.remove();
+        }
     }
 
     @Override
@@ -725,6 +780,18 @@ public class ManagementSystem implements JanusGraphManagement {
     }
 
     @Override
+    public void registerMixedIndexField(final JanusGraphIndex index,final Set<PropertyKey> keys){
+        try {
+            IndexType indexType = ((JanusGraphIndexWrapper) index).getBaseIndex();
+            if(indexType.isMixedIndex()) {
+                IndexSerializer.register((MixedIndexType) indexType, keys, transaction.getTxHandle());
+            }
+        } catch (BackendException e) {
+            throw new JanusGraphException("Could not register new index field with index backend", e);
+        }
+    }
+
+    @Override
     public void addKGIndexKey(final JanusGraphIndex index, final PropertyKey key, Parameter... parameters) {
         Preconditions.checkArgument(index != null && key != null && index instanceof JanusGraphIndexWrapper
                 && !(key instanceof BaseKey), "Need to provide valid index and key");
@@ -759,11 +826,11 @@ public class ManagementSystem implements JanusGraphManagement {
             throw new JanusGraphException("Could not register new index field '" + key.name() + "' with index backend as the data type, cardinality or parameter combination is not supported.");
         }
 
-        try {
+        /*try {
             IndexSerializer.register((MixedIndexType) indexType, key, transaction.getTxHandle());
         } catch (BackendException e) {
             throw new JanusGraphException("Could not register new index field with index backend", e);
-        }
+        }*/
 
         if (!indexVertex.isNew()) {
             updatedTypes.add(indexVertex);
@@ -889,17 +956,32 @@ public class ManagementSystem implements JanusGraphManagement {
 
         @Override
         public JanusGraphIndex buildKGMixedIndex(String backingIndex,String ... aliases) {
+            return this.buildKGMixedIndex(backingIndex,null,aliases);
+        }
+
+        @Override
+        public JanusGraphIndex buildKGMixedIndex(String backingIndex,Map<String,Object> settings,String ... aliases) {
             Preconditions.checkArgument(StringUtils.isNotBlank(backingIndex), "Need to specify backing index name");
             Preconditions.checkArgument(!unique, "An external index cannot be unique");
 
             JanusGraphIndex index = createMixedIndex(indexName, elementCategory, constraint, backingIndex);
             IndexType indexType = ((JanusGraphIndexWrapper) index).getBaseIndex();
             MixedIndexType mixedIndexType=(MixedIndexType) indexType;
-            if(mixedIndexType!=null&&aliases!=null){
-                mixedIndexType.setAliases(Sets.newHashSet(aliases));
+            if(mixedIndexType!=null){
+                if(aliases!=null) {
+                    mixedIndexType.setAliases(Sets.newHashSet(aliases));
+                }
+                if(settings!=null){
+                    mixedIndexType.setSettings(settings);
+                }
             }
+            Set<PropertyKey> propertyKeys=new HashSet<>();
             for (Map.Entry<PropertyKey, Parameter[]> entry : keys.entrySet()) {
                 addKGIndexKey(index, entry.getKey(), entry.getValue());
+                propertyKeys.add(entry.getKey());
+            }
+            if(propertyKeys.size()>0) {
+                registerMixedIndexField(index, propertyKeys);
             }
             //集群节点中同步schema消息
             if(updatedTypes!=null&&updatedTypes.size()>0) {
@@ -908,6 +990,8 @@ public class ManagementSystem implements JanusGraphManagement {
             return index;
         }
     }
+
+
 
     /* --------------
     Schema Update
@@ -1343,6 +1427,7 @@ public class ManagementSystem implements JanusGraphManagement {
             });
     }
 
+    @Override
     public JanusGraphSchemaVertex getSchemaVertex(JanusGraphSchemaElement element) {
         if (element instanceof RelationType) {
             Preconditions.checkArgument(element instanceof RelationTypeVertex, "Invalid schema element provided: %s", element);
@@ -1617,6 +1702,34 @@ public class ManagementSystem implements JanusGraphManagement {
     @Override
     public synchronized String get(String path) {
         ensureOpen();
+        try {
+            ConfigElement.PathIdentifier pp = ConfigElement.parse(modifyConfig.getRootNamespace(),path);
+            ConfigOption configOption= (ConfigOption)pp.element;
+            if (!pp.element.isNamespace() && (configOption.getType()== ConfigOption.Type.MASKABLE
+                ||configOption.getType()== ConfigOption.Type.LOCAL)) {
+                String[] umbrellaElements= pp.umbrellaElements;
+                Object value;
+                Configuration configuration = graph.getConfiguration().getConfiguration();
+                if (configuration.has(configOption,umbrellaElements) || configOption.getDefaultValue()!=null) {
+                    value = graph.getConfiguration().getConfiguration().get(configOption,umbrellaElements);
+                } else {
+                    return null;
+                }
+                Preconditions.checkNotNull(value);
+                if (value.getClass().isArray()) {
+                    StringBuilder s = new StringBuilder();
+                    s.append("[");
+                    for (int i = 0; i< Array.getLength(value); i++) {
+                        if (i>0) s.append(",");
+                        s.append(Array.get(value,i));
+                    }
+                    s.append("]");
+                    return s.toString();
+                } else return String.valueOf(value);
+            }
+        }catch (Exception e) {
+            LOGGER.error("读取配置信息失败"+path,e);
+        }
         return userConfig.get(path);
     }
 

@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.inmemory;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
 import org.janusgraph.diskstorage.StaticBuffer;
@@ -37,6 +37,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
@@ -189,6 +190,11 @@ public class InMemoryStoreManager implements KeyColumnValueStoreManager {
 
         public InMemoryTransaction(final BaseTransactionConfig config) {
             super(config);
+        }
+
+        @Override
+        public Set<String> getSkipIndexes() {
+            return getConfiguration().getSkipIndexes();
         }
     }
 }

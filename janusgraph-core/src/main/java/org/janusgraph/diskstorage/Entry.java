@@ -55,4 +55,12 @@ public interface Entry extends StaticBuffer, MetaAnnotated {
      * @param cache
      */
     void setCache(RelationCache cache);
+
+    void setHdfsFileName(String fileName);
+
+    String getHdfsFileName();
+
+    void setHdfsContent(byte[] content);
+
+    byte[] getHdfsContent();
 }

@@ -14,7 +14,7 @@
 
 package org.janusgraph.util.datastructures;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 

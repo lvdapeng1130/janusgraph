@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.configuration;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.base.Predicate;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.tinkerpop.gremlin.structure.Graph;
@@ -171,16 +171,19 @@ public class GraphDatabaseConfiguration {
             "will throw an exception, refusing to start.",
             ConfigOption.Type.MASKABLE, Boolean.class, true);
 
-    public static final ConfigOption<String> JANUSGRAPH_ZOOKEEPER_URI = new ConfigOption<>(GRAPH_NS,"zookeeper-uri",
+    public static final ConfigOption<String[]> JANUSGRAPH_ZOOKEEPER_URI = new ConfigOption<>(GRAPH_NS,"zookeeper-uri",
         "zookeeper的地址",
-        ConfigOption.Type.GLOBAL_OFFLINE, String.class);
+        ConfigOption.Type.MASKABLE, String[].class);
     public static final ConfigOption<String> JANUSGRAPH_ZOOKEEPER_NAMESPACE = new ConfigOption<>(GRAPH_NS,"zookeeper-namespace",
-        "实现不同的Zookeeper业务之间的隔离，需要为每个业务分配一个独立的命名空间",
-        ConfigOption.Type.GLOBAL_OFFLINE, String.class,"trs-graph");
+        "MASKABLE，需要为每个业务分配一个独立的命名空间",
+        ConfigOption.Type.MASKABLE, String.class,"trs-graph");
 
     public static final ConfigOption<String> GRAPH_NODE = new ConfigOption<>(GRAPH_NS,"zookeeper-graph-node",
         "每一个graph在zookeeper中的目录名称",
-        ConfigOption.Type.GLOBAL_OFFLINE, String.class);
+        ConfigOption.Type.MASKABLE, String.class);
+    public static final ConfigOption<Boolean> REGISTRY_ZOOKEEPER_ENABLE = new ConfigOption<>(GRAPH_NS,"registry-zookeeper-enable",
+        "是否把图库示例注册zookeeper",
+        ConfigOption.Type.MASKABLE, true);
     public static final ConfigOption<Integer> ZOOKEEPER_SESSIONTIMEOUTMS = new ConfigOption<>(GRAPH_NS,"zookeeper-sessionTimeoutMs",
         "zookeeper的sessionTimeoutMs时间",
         ConfigOption.Type.MASKABLE, Integer.class,5000);
@@ -496,6 +499,13 @@ public class GraphDatabaseConfiguration {
     public static final ConfigOption<Boolean> STORAGE_READONLY = new ConfigOption<>(STORAGE_NS,"read-only",
             "Read-only database",
             ConfigOption.Type.LOCAL, false);
+
+    public static final ConfigOption<Boolean> LARGE_CONTENT_UPLOAD_HDFS_ENABLED = new ConfigOption<>(STORAGE_NS,"large-content-upload-hdfs-enabled",
+        "是否启用把正文或附件大于'large-content-upload-hdfs-size'参数配置的阀值时把内容上传到hdfs上",
+        ConfigOption.Type.LOCAL, false);
+    public static final ConfigOption<Integer> LARGE_CONTENT_UPLOAD_HDFS_SIZE = new ConfigOption<>(STORAGE_NS,"large-content-upload-hdfs-size",
+        "限制多大的正文、附件内容需要上传到hdfs上(默认5M)",
+        ConfigOption.Type.LOCAL, 5242880, ConfigOption.positiveInt());
 
     /**
      * Enables batch loading which improves write performance but assumes that only one thread is interacting with
@@ -818,7 +828,7 @@ public class GraphDatabaseConfiguration {
      */
     public static final ConfigOption<Duration> IDAUTHORITY_WAIT = new ConfigOption<>(IDAUTHORITY_NS,"wait-time",
             "The number of milliseconds the system waits for an ID block reservation to be acknowledged by the storage backend",
-            ConfigOption.Type.GLOBAL_OFFLINE, Duration.ofMillis(300L));
+            ConfigOption.Type.MASKABLE, Duration.ofMillis(300L));
 
     /**
      * Sets the strategy used by {@link ConsistentKeyIDAuthority} to avoid
@@ -1242,6 +1252,10 @@ public class GraphDatabaseConfiguration {
         return readOnly;
     }
 
+    public void setReadOnly(boolean readOnly){
+        this.readOnly=readOnly;
+    }
+
     public boolean hasFlushIDs() {
         return flushIDs;
     }
@@ -1360,7 +1374,7 @@ public class GraphDatabaseConfiguration {
     }
 
     public Backend getBackend() {
-        Backend backend = new Backend(configuration);
+        Backend backend = new Backend(configuration,this);
         backend.initialize(configuration);
         storeFeatures = backend.getStoreFeatures();
         return backend;

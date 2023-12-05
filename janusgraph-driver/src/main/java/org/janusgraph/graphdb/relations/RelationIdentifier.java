@@ -104,7 +104,7 @@ public final class RelationIdentifier implements Serializable {
         if (this == other) return true;
         else if (!getClass().isInstance(other)) return false;
         RelationIdentifier oth = (RelationIdentifier) other;
-        return relationId == oth.relationId && typeId == oth.typeId;
+        return relationId.equals(oth.relationId) && typeId.equals(oth.typeId);
     }
 
     @Override

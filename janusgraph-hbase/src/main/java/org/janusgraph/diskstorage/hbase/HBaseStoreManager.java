@@ -16,11 +16,12 @@ package org.janusgraph.diskstorage.hbase;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -66,8 +67,10 @@ import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.janusgraph.diskstorage.util.time.TimestampProviders;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.hadoop.HBaseHadoopStoreManager;
 import org.janusgraph.hadoop.kerberos.SecurityUtil;
+import org.janusgraph.kydsj.ContentStatus;
 import org.janusgraph.util.system.IOUtils;
 import org.janusgraph.util.system.NetworkUtil;
 import org.slf4j.Logger;
@@ -75,6 +78,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -142,6 +146,21 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
             " to that value.",
             ConfigOption.Type.LOCAL, "janusgraph");
 
+    public static final ConfigOption<Boolean> READ_NOTES =
+        new ConfigOption<>(HBASE_NS, "read-notes",
+            "mapreduce read notes",
+            ConfigOption.Type.LOCAL, true);
+
+    public static final ConfigOption<Boolean> READ_MEDIAS =
+        new ConfigOption<>(HBASE_NS, "read-medias",
+            "mapreduce read medias",
+            ConfigOption.Type.LOCAL, true);
+
+    public static final ConfigOption<Boolean> READ_PROPERTY_PROPERTIES =
+        new ConfigOption<>(HBASE_NS, "read-propertyOfProperties",
+            "mapreduce read property Of Properties",
+            ConfigOption.Type.LOCAL, true);
+
     public static final ConfigOption<String> HBASE_SNAPSHOT =
             new ConfigOption<>(HBASE_NS, "snapshot-name",
             "The name of an existing HBase snapshot to be used by HBaseSnapshotInputFormat",
@@ -152,6 +171,11 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
             "The temporary directory to be used by HBaseSnapshotInputFormat to restore a snapshot." +
             " This directory should be on the same File System as the HBase root dir.",
             ConfigOption.Type.LOCAL, System.getProperty("java.io.tmpdir"));
+
+    public static final ConfigOption<Boolean> BULK_WRITE_COSTS =
+        new ConfigOption<>(HBASE_NS, "show-bulk-write-costs",
+            "显示bulk批量向hbase提交数据耗时大于等于400毫秒请求具体所用时间",
+            ConfigOption.Type.LOCAL, false);
 
     /**
      * Related bug fixed in 0.98.0, 0.94.7, 0.95.0:
@@ -276,6 +300,7 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
     private final int regionsPerServer;
     private final ConnectionMask cnx;
     private final boolean shortCfNames;
+    private final boolean showBulkWriteCosts;
     private final boolean skipSchemaCheck;
     private final boolean isCreateAttachmentTable;
     private final String attachmentSuffix;
@@ -291,6 +316,8 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
 
     // Mutable instance state
     private final ConcurrentMap<String, HBaseKeyColumnValueStore> openStores;
+    private FileSystem hdfsFileSystem;
+    private Path hdfsDirectory;
 
     public HBaseStoreManager(org.janusgraph.diskstorage.configuration.Configuration config) throws BackendException {
         super(config, PORT_DEFAULT);
@@ -357,13 +384,16 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         }
 
         this.shortCfNames = config.get(SHORT_CF_NAMES);
+        this.showBulkWriteCosts = config.get(BULK_WRITE_COSTS);
         this.isCreateAttachmentTable = config.get(IS_CRATE_ATTACHMENT_TABLE);
         this.attachmentSuffix = config.get(ATTACHMENT_TABLE_NAME);
 
         try {
             //this.cnx = HConnectionManager.createConnection(hconf);
             if (SecurityUtil.isSecurityEnabled(hconf)) {
-                this.cnx = compat.createConnection(hconf,kerberosPrincipal,kerberosKeytab);
+                String keytabPath = this.getKerberosKeytab();
+                logger.info(String.format("认证信息Principal:%s ,keytab:%s",kerberosPrincipal,keytabPath));
+                this.cnx = compat.createConnection(hconf,kerberosPrincipal,keytabPath);
             }else {
                 this.cnx = compat.createConnection(hconf);
             }
@@ -383,6 +413,68 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         logger.debug("End of HBase config key=value pairs");
 
         openStores = new ConcurrentHashMap<>();
+        if (config.has(GraphDatabaseConfiguration.LARGE_CONTENT_UPLOAD_HDFS_ENABLED)
+            &&config.get(GraphDatabaseConfiguration.LARGE_CONTENT_UPLOAD_HDFS_ENABLED)) {
+            try {
+                FileSystem fs = FileSystem.get(hconf);
+                if (fs.getScheme().equals("hdfs")) {
+                    this.hdfsFileSystem = fs;
+                    hdfsDirectory = HDFSManager.openGraphHDFS(this.hdfsFileSystem, tableName);
+                }
+
+            } catch (IOException e) {
+                logger.error("打开hdfs文件系统失败！", e);
+            }
+        }
+    }
+
+    private String getKerberosKeytab(){
+        if(StringUtils.isNotBlank(this.kerberosKeytab)){
+            File keytab=new File(this.kerberosKeytab);
+            if(keytab.isFile()&&keytab.exists()){
+                return this.kerberosKeytab;
+            }else{
+                return getKeyTab(keytab.getName());
+            }
+        }else{
+            return getKeyTab("user.keytab");
+        }
+    }
+
+    private String getKeyTab(String keytabName) {
+        String userdir = System.getProperty("user.dir") + File.separator + "conf" + File.separator;
+        String filePath=userdir + keytabName;
+        File file=new File(filePath);
+        if(file.exists()){
+            return filePath;
+        }else{
+            logger.info(String.format("未找到%s keytab秘钥文件",filePath));
+            userdir = System.getProperty("user.dir") + File.separator + "config" + File.separator;
+            filePath=userdir + keytabName;
+            file=new File(filePath);
+            if(file.exists()){
+                return filePath;
+            }else{
+                //加载classpath目录
+                URL resource = this.getClass().getClassLoader().getResource(keytabName);
+                if(resource!=null) {
+                    filePath = resource.getPath();
+                    if (StringUtils.isNotBlank(filePath)) {
+                        file = new File(filePath);
+                        if (file.exists()) {
+                            return filePath;
+                        } else {
+                            logger.info(String.format("未找到%s keytab秘钥文件", filePath));
+                        }
+                    } else {
+                        logger.info(String.format("未找到%s keytab秘钥文件", keytabName));
+                    }
+                }else{
+                    logger.info(String.format("未找到%s keytab秘钥文件", keytabName));
+                }
+            }
+        }
+        return null;
     }
 
     private void loadHbaseConfig(){
@@ -392,13 +484,45 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         this.loadConfig("hbase-site.xml");
     }
 
-    private void loadConfig(String fileName) {
+    private String getFilePath(String fileName){
+        //加载conf目录
         String userdir = System.getProperty("user.dir") + File.separator + "conf" + File.separator;
         String filePath=userdir + fileName;
         File file=new File(filePath);
         if(file.exists()){
-            logger.info("加载配置文件->"+filePath);
+            return filePath;
+        }else{
+            //加载config目录
+            userdir = System.getProperty("user.dir") + File.separator + "config" + File.separator;
+            filePath=userdir + fileName;
+            file=new File(filePath);
+            if(file.exists()){
+                return filePath;
+            }else{
+                //加载classpath目录
+                URL resource = this.getClass().getClassLoader().getResource(fileName);
+                if(resource!=null) {
+                    filePath = resource.getPath();
+                    if (StringUtils.isNotBlank(filePath)) {
+                        file = new File(filePath);
+                        if (file.exists()) {
+                            return filePath;
+                        }
+                    }
+                }
+            }
+        }
+        return fileName;
+    }
+
+    private void loadConfig(String fileName) {
+        String filePath = this.getFilePath(fileName);
+        File file=new File(filePath);
+        if(file.exists()){
+            logger.info(String.format("加载配置文件->%s",filePath));
             hconf.addResource(new Path(filePath), false);
+        }else{
+            logger.info(String.format("路径下未找到%s文件",filePath));
         }
     }
 
@@ -458,6 +582,12 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         if (logger.isTraceEnabled())
             openManagers.remove(this);
         IOUtils.closeQuietly(cnx);
+        if(hdfsFileSystem!=null){
+            try {
+                hdfsFileSystem.close();
+            } catch (IOException e) {
+            }
+        }
     }
 
     @Override
@@ -494,6 +624,30 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         return mapMap;
     }
 
+    public byte[] getLargeCellContent(String fileName){
+        if(this.hdfsFileSystem!=null){
+            try {
+                byte[] bytes = HDFSManager.downloadHdfs(this.hdfsFileSystem, hdfsDirectory, fileName);
+                return bytes;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return null;
+    }
+
+    public ContentStatus getContentStatus(String fileName){
+        if(this.hdfsFileSystem!=null){
+            try {
+                ContentStatus status = HDFSManager.getContentStatus(this.hdfsFileSystem, hdfsDirectory, fileName);
+                return status;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return null;
+    }
+
     @Override
     public void mutateMany(Map<String, Map<StaticBuffer, KCVMutation>> mutations, StoreTransaction txh) throws BackendException {
         Long putTimestamp = null;
@@ -526,7 +680,13 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
 
             try {
                 table = cnx.getTable(tableName);
+                long start = System.currentTimeMillis();
                 table.batch(batch, new Object[batch.size()]);
+                long end=System.currentTimeMillis();
+                long time=end-start;
+                if(showBulkWriteCosts&&time>=400){
+                    logger.info(String.format("线程%s向hbase表%s写入%s条用时：%s毫秒",Thread.currentThread().getName(),tableName,batch.size(),time));
+                }
             } finally {
                 IOUtils.closeQuietly(table);
             }
@@ -586,6 +746,9 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
                 adm.dropTable(tableName);
             } else {
                 adm.clearTable(tableName, times.getTime(times.getTime()));
+            }
+            if(this.hdfsFileSystem!=null){
+                HDFSManager.deleteDirectory(this.hdfsFileSystem,hdfsDirectory);
             }
         } catch (IOException e)
         {
@@ -842,6 +1005,9 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
             if(!cfName.equalsIgnoreCase(familyName)) {
                 HColumnDescriptor family = new HColumnDescriptor(familyName);
                 setCFOptions(family, ttlInSeconds);
+                family.setPrefetchBlocksOnOpen(true);
+                //family.setCompressionType(Compression.Algorithm.SNAPPY);
+                //family.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
                 compat.addColumnFamilyToTableDescriptor(desc, family);
             }
         }
@@ -860,7 +1026,8 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
         }
 
         if (MIN_REGION_COUNT < count) {
-            adm.createTable(desc, getStartKey(count), getEndKey(count), count);
+           //adm.createTable(desc, getStartKey(count), getEndKey(count), count);
+            adm.createTable(desc, count);
             logger.debug("Created table {} with region count {} from {}", tableName, count, src);
         } else {
             adm.createTable(desc);
@@ -1006,6 +1173,13 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
 
                     for (StaticBuffer b : mutation.getDeletions()) {
                         // commands.getSecond() is a Delete for this rowkey.
+                        if(this.hdfsFileSystem!=null&&StringUtils.isNotBlank(b.getHdfsFileName())){
+                            try {
+                                HDFSManager.deleteHdfs(this.hdfsFileSystem,this.hdfsDirectory,b.getHdfsFileName());
+                            } catch (IOException e) {
+                                logger.warn(String.format("在hdfs删除%s/%s失败",this.hdfsDirectory,b.getHdfsFileName()));
+                            }
+                        }
                         addColumnToDelete(commands.getSecond(), cfName, b.as(StaticBuffer.ARRAY_FACTORY), delTimestamp);
                     }
                 }
@@ -1067,6 +1241,14 @@ public class HBaseStoreManager extends DistributedStoreManager implements KeyCol
              p.addColumn(cfName, qualifier, putTimestamp, value);
          } else {
              p.addColumn(cfName, qualifier, value);
+         }
+         //超过一定大小的数据需要写入hdfs
+         if(this.hdfsFileSystem!=null&&e.getHdfsFileName()!=null&&e.getHdfsContent()!=null){
+             try {
+                 HDFSManager.uploadHdfs(this.hdfsFileSystem,hdfsDirectory,e.getHdfsFileName(),e.getHdfsContent());
+             } catch (IOException ex) {
+                 throw new RuntimeException(ex);
+             }
          }
     }
 

@@ -18,7 +18,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.spark.serializer.KryoRegistrator;
 import org.janusgraph.core.attribute.Geoshape;

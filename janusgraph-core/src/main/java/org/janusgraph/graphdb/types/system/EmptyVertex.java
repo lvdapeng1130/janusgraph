@@ -31,6 +31,7 @@ import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.query.vertex.VertexCentricQueryBuilder;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
+import org.janusgraph.kydsj.ContentStatus;
 import org.janusgraph.kydsj.serialize.MediaData;
 import org.janusgraph.kydsj.serialize.Note;
 import org.janusgraph.util.datastructures.Retriever;
@@ -151,6 +152,16 @@ public class EmptyVertex implements InternalVertex {
     @Override
     public void attachment(MediaData mediaData) {
         throw new UnsupportedOperationException(errorName + " do not support incident attachment");
+    }
+
+    @Override
+    public byte[] getLargeCellContent(String fileName){
+        throw new UnsupportedOperationException(errorName + " do not support incident getLargeCellContent");
+    }
+
+    @Override
+    public ContentStatus getContentStatus(String fileName){
+        throw new UnsupportedOperationException(errorName + " do not support incident getContentStatus");
     }
 
     /* ---------------------------------------------------------------

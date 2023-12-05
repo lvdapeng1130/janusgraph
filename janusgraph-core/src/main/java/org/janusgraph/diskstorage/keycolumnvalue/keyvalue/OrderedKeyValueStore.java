@@ -18,6 +18,7 @@ import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
 import org.janusgraph.diskstorage.util.RecordIterator;
+import org.janusgraph.kydsj.ContentStatus;
 
 import java.util.List;
 import java.util.Map;
@@ -69,5 +70,19 @@ public interface OrderedKeyValueStore extends KeyValueStore {
      * @throws BackendException
      */
     Map<KVQuery,RecordIterator<KeyValueEntry>> getSlices(List<KVQuery> queries, StoreTransaction txh) throws BackendException;
+
+    /**
+     * 获取存储在外边系统的大文件内容,暂时只支持hdfs
+     * @param fileName
+     * @return
+     */
+    byte[] getLargeCellContent(String fileName);
+
+    /**
+     * 获取存储在外边系统的大文件信息,暂时只支持hdfs
+     * @param fileName
+     * @return
+     */
+    ContentStatus getContentStatus(String fileName);
 
 }

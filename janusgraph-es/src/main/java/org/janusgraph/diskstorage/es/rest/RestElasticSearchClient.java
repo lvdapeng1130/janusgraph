@@ -19,16 +19,23 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.tinkerpop.shaded.jackson.annotation.JsonIgnoreProperties;
 import org.apache.tinkerpop.shaded.jackson.core.JsonParseException;
 import org.apache.tinkerpop.shaded.jackson.core.type.TypeReference;
-import org.apache.tinkerpop.shaded.jackson.databind.*;
+import org.apache.tinkerpop.shaded.jackson.databind.JsonMappingException;
+import org.apache.tinkerpop.shaded.jackson.databind.ObjectMapper;
+import org.apache.tinkerpop.shaded.jackson.databind.ObjectReader;
+import org.apache.tinkerpop.shaded.jackson.databind.ObjectWriter;
+import org.apache.tinkerpop.shaded.jackson.databind.SerializationFeature;
 import org.apache.tinkerpop.shaded.jackson.databind.module.SimpleModule;
 import org.elasticsearch.client.Request;
+import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.ResponseException;
+import org.elasticsearch.client.ResponseListener;
 import org.elasticsearch.client.RestClient;
 import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.diskstorage.es.ElasticMajorVersion;
@@ -45,9 +52,14 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPOutputStream;
 
 import static org.janusgraph.util.encoding.StringEncoding.UTF8_CHARSET;
 
@@ -231,7 +243,7 @@ public class RestElasticSearchClient implements ElasticSearchClient {
     }
 
     @Override
-    public void createIndex(String indexName, Map<String,Object> settings) throws IOException {
+    public void createIndex(String indexName, Map<String,Object> settings,Set<String> aliases) throws IOException {
 
         Request request = new Request(REQUEST_TYPE_PUT, REQUEST_SEPARATOR + indexName);
 
@@ -245,6 +257,17 @@ public class RestElasticSearchClient implements ElasticSearchClient {
                 Map<String,Object> updatedSettings = new HashMap<>();
                 updatedSettings.put("settings", settings);
                 settings = updatedSettings;
+            }
+            if(aliases !=null&&aliases.size()>0){
+                Map<String,Object> aliaseMap=new HashMap<>();
+                for (String alias : aliases) {
+                    if (StringUtils.isNotBlank(alias)) {
+                        aliaseMap.put(alias,ImmutableMap.of());
+                    }
+                }
+                if(aliaseMap.size()>0) {
+                    settings.put("aliases", aliaseMap);
+                }
             }
         }
 
@@ -368,8 +391,7 @@ public class RestElasticSearchClient implements ElasticSearchClient {
         }
     }
 
-    @Override
-    public void bulkRequest(List<ElasticSearchMutation> requests, String ingestPipeline) throws IOException {
+    public void bulkRequestOld(List<ElasticSearchMutation> requests, String ingestPipeline) throws IOException {
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         for (final ElasticSearchMutation request : requests) {
             Map<String, Object> requestData = new HashMap<>();
@@ -417,6 +439,97 @@ public class RestElasticSearchClient implements ElasticSearchClient {
                 throw new IOException("Failure(s) in Elasticsearch bulk request: " + errors);
             }
         }
+    }
+
+    public void bulkRequest(List<ElasticSearchMutation> requests, String ingestPipeline) throws IOException {
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzipStream = new GZIPOutputStream(outputStream)) {
+            for (final ElasticSearchMutation request : requests) {
+                Map<String, Object> requestData = new HashMap<>();
+                if (useMappingTypes) {
+                    requestData.put("_index", request.getIndex());
+                    requestData.put("_type", request.getType());
+                    requestData.put("_id", request.getId());
+                } else {
+                    requestData.put("_index", request.getIndex());
+                    requestData.put("_id", request.getId());
+                }
+
+                if (retryOnConflict != null && request.getRequestType() == ElasticSearchMutation.RequestType.UPDATE) {
+                    requestData.put(retryOnConflictKey, retryOnConflict);
+                }
+
+                gzipStream.write(mapWriter.writeValueAsBytes(
+                    ImmutableMap.of(request.getRequestType().name().toLowerCase(), requestData))
+                );
+                gzipStream.write(NEW_LINE_BYTES);
+                if (request.getSource() != null) {
+                    gzipStream.write(mapWriter.writeValueAsBytes(request.getSource()));
+                    gzipStream.write(NEW_LINE_BYTES);
+                }
+            }
+        }
+
+        final StringBuilder builder = new StringBuilder();
+        if (ingestPipeline != null) {
+            APPEND_OP.apply(builder).append("pipeline=").append(ingestPipeline);
+        }
+        if (bulkRefreshEnabled) {
+            APPEND_OP.apply(builder).append("refresh=").append(bulkRefresh);
+        }
+        builder.insert(0, REQUEST_SEPARATOR + "_bulk");
+
+        final Response response = performGzipRequest(REQUEST_TYPE_POST, builder.toString(), outputStream.toByteArray());
+        try (final InputStream inputStream = response.getEntity().getContent()){
+            final RestBulkResponse bulkResponse = mapper.readValue(inputStream, RestBulkResponse.class);
+            final List<Object> errors = bulkResponse.getItems().stream()
+                .flatMap(item -> item.values().stream())
+                .filter(item -> item.getError() != null && item.getStatus() != 404)
+                .map(RestBulkItemResponse::getError).collect(Collectors.toList());
+            if (!errors.isEmpty()) {
+                errors.forEach(error -> log.error("Failed to execute ES query: {}", error));
+                throw new IOException("Failure(s) in Elasticsearch bulk request: " + errors);
+            }
+        }
+    }
+
+    @Override
+    public void bulkRequestAsync(List<ElasticSearchMutation> requests, String ingestPipeline) throws IOException {
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        for (final ElasticSearchMutation request : requests) {
+            Map<String, Object> requestData = new HashMap<>();
+            if (useMappingTypes) {
+                requestData.put("_index", request.getIndex());
+                requestData.put("_type", request.getType());
+                requestData.put("_id", request.getId());
+            } else {
+                requestData.put("_index", request.getIndex());
+                requestData.put("_id", request.getId());
+            }
+
+            if (retryOnConflict != null && request.getRequestType() == ElasticSearchMutation.RequestType.UPDATE) {
+                requestData.put(retryOnConflictKey, retryOnConflict);
+            }
+
+            outputStream.write(mapWriter.writeValueAsBytes(
+                ImmutableMap.of(request.getRequestType().name().toLowerCase(), requestData))
+            );
+            outputStream.write(NEW_LINE_BYTES);
+            if (request.getSource() != null) {
+                outputStream.write(mapWriter.writeValueAsBytes(request.getSource()));
+                outputStream.write(NEW_LINE_BYTES);
+            }
+        }
+
+        final StringBuilder builder = new StringBuilder();
+        if (ingestPipeline != null) {
+            APPEND_OP.apply(builder).append("pipeline=").append(ingestPipeline);
+        }
+        if (bulkRefreshEnabled) {
+            APPEND_OP.apply(builder).append("refresh=").append(bulkRefresh);
+        }
+        builder.insert(0, REQUEST_SEPARATOR + "_bulk");
+        this.performRequestAsync(REQUEST_TYPE_POST, builder.toString(), outputStream.toByteArray());
     }
 
     public void setRetryOnConflict(Integer retryOnConflict) {
@@ -486,17 +599,51 @@ public class RestElasticSearchClient implements ElasticSearchClient {
     }
 
     private Response performRequest(Request request, byte[] requestData) throws IOException {
-
         final HttpEntity entity = requestData != null ? new ByteArrayEntity(requestData, ContentType.APPLICATION_JSON) : null;
-
         request.setEntity(entity);
-
         final Response response = delegate.performRequest(request);
-
         if (response.getStatusLine().getStatusCode() >= 400) {
             throw new IOException("Error executing request: " + response.getStatusLine().getReasonPhrase());
         }
         return response;
+    }
+
+    private Response performGzipRequest(String method, String path, byte[] requestData) throws IOException {
+        return performGzipRequest(new Request(method, path), requestData);
+    }
+
+    private Response performGzipRequest(Request request, byte[] requestData) throws IOException {
+        final HttpEntity entity = requestData != null ? new ByteArrayEntity(requestData,ContentType.APPLICATION_JSON) : null;
+        request.setEntity(entity);
+        RequestOptions options=request.getOptions();
+        RequestOptions.Builder builder=options.toBuilder();
+        builder.addHeader(HttpHeaders.CONTENT_ENCODING, "gzip");
+        RequestOptions requestOptions = builder.build();
+        request.setOptions(requestOptions);
+        final Response response = delegate.performRequest(request);
+        if (response.getStatusLine().getStatusCode() >= 400) {
+            throw new IOException("Error executing request: " + response.getStatusLine().getReasonPhrase());
+        }
+        return response;
+    }
+
+    private void performRequestAsync(String method, String path, byte[] requestData) throws IOException {
+        this.performRequestAsync(new Request(method, path), requestData);
+    }
+
+    private void performRequestAsync(Request request, byte[] requestData) throws IOException {
+        final HttpEntity entity = requestData != null ? new ByteArrayEntity(requestData, ContentType.APPLICATION_JSON) : null;
+        request.setEntity(entity);
+        delegate.performRequestAsync(request, new ResponseListener() {
+            @Override
+            public void onSuccess(Response response) {
+
+            }
+            @Override
+            public void onFailure(Exception e) {
+                log.error("索引失败！",e);
+            }
+        });
     }
 
     @JsonIgnoreProperties(ignoreUnknown=true)

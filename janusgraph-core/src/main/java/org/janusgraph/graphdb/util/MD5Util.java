@@ -1,7 +1,10 @@
 package org.janusgraph.graphdb.util;
 
-import java.math.BigInteger;
-import java.security.MessageDigest;
+import com.google.common.base.Stopwatch;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.RandomStringUtils;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * 文件md5加密
@@ -17,18 +20,7 @@ public class MD5Util {
      * @return  MD5加密后的字符串
      */
     private static String getMD5(String str) {
-        try {
-            // 生成一个MD5加密计算摘要
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            // 计算md5函数
-            md.update(str.getBytes());
-            // digest()最后确定返回md5 hash值，返回值为8为字符串。因为md5 hash值是16位的hex值，实际上就是8位的字符
-            // BigInteger函数则将8位的字符串转换成16位hex值，用字符串来表示；得到字符串形式的hash值
-            return new BigInteger(1, md.digest()).toString(16);
-        } catch (Exception e) {
-           e.printStackTrace();
-           return null;
-        }
+       return DigestUtils.md5Hex(str);
     }
 
     public static String getMD5(Object object){
@@ -36,6 +28,11 @@ public class MD5Util {
         String propertyValueMD5 = MD5Util.getMD5(string);
         String id = propertyValueMD5.substring(8, 24);
         return id;
+    }
+
+    public static String getMD5Full(String value){
+        String propertyValueMD5 = MD5Util.getMD5(value);
+        return propertyValueMD5;
     }
 
     public static String getMD8(Object object){
@@ -46,8 +43,29 @@ public class MD5Util {
     }
 
     public static void main(String[] args) {
-        System.out.println(getMD8(2222));
-        System.out.println(getMD8(2224));
+        String s = RandomStringUtils.randomAlphabetic(10);
+        String md51 = getMD5(s);
+        String md52 =  DigestUtils.md5Hex(s);
+        System.out.println("md51-->"+md51);
+        System.out.println("md52-->"+md52);
+        Stopwatch started1 = Stopwatch.createStarted();
+        for(int i=0;i<10000000;i++){
+            String md5 =  DigestUtils.md5Hex(s);
+        }
+        started1.stop();
+        System.out.println("apache md5完成------------>"+started1.elapsed(TimeUnit.MILLISECONDS));
+        Stopwatch started = Stopwatch.createStarted();
+        for(int i=0;i<10000000;i++){
+            String md5 = getMD5(s);
+        }
+        started.stop();
+        System.out.println("java md5完成------------>"+started.elapsed(TimeUnit.MILLISECONDS));
+        Stopwatch started2 = Stopwatch.createStarted();
+        for(int i=0;i<10000000;i++){
+            String md5 =  DigestUtils.sha1Hex(s);
+        }
+        started2.stop();
+        System.out.println("sha1完成------------>"+started2.elapsed(TimeUnit.MILLISECONDS));
     }
 
 }

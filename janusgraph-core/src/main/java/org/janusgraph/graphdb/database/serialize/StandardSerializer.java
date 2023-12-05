@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.database.serialize;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import org.apache.tinkerpop.gremlin.process.traversal.traverser.util.TraverserSet;

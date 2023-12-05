@@ -19,13 +19,16 @@ import com.google.common.collect.Iterables;
 import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.schema.ConsistencyModifier;
 import org.janusgraph.diskstorage.Entry;
+import org.janusgraph.diskstorage.PropertyPropertyInfo;
 import org.janusgraph.graphdb.internal.ElementLifeCycle;
 import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.transaction.RelationConstructor;
 import org.janusgraph.graphdb.types.system.ImplicitKey;
+import org.janusgraph.graphdb.vertices.CacheVertex;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -42,6 +45,17 @@ public class CacheVertexProperty extends AbstractVertexProperty {
     //############## Similar code as CacheEdge but be careful when copying #############################
 
     private final Entry data;
+
+    //属性的多值属性比如dsr
+    private List<PropertyPropertyInfo> multiPropertyProperties;
+
+    public List<PropertyPropertyInfo> getMultiPropertyProperties() {
+        return multiPropertyProperties;
+    }
+
+    public void setMultiPropertyProperties(List<PropertyPropertyInfo> multiPropertyProperties) {
+        this.multiPropertyProperties = multiPropertyProperties;
+    }
 
     @Override
     public InternalRelation it() {
@@ -78,6 +92,53 @@ public class CacheVertexProperty extends AbstractVertexProperty {
         return u;
     }
 
+    private synchronized InternalRelation updateExpend() {
+        StandardVertexProperty copy = new StandardVertexProperty(longId(), propertyKey(), getVertex(0), value(), ElementLifeCycle.Loaded);
+        copyProperties(copy);
+        copy.remove();
+
+        String id = type.getConsistencyModifier() != ConsistencyModifier.FORK ? longId() : null;
+        StandardVertexProperty u = (StandardVertexProperty) tx().addProperty(getVertex(0), propertyKey(), value(), id);
+        u.setPreviousID(longId());
+        copyPropertiesExpend(u);
+        return u;
+    }
+
+    private void copyPropertiesExpend(StandardVertexProperty to) {
+        boolean existMuiltValue=false;
+        for (ObjectObjectCursor<String,Object> entry : getPropertyMap()) {
+            PropertyKey type = tx().getExistingPropertyKey(entry.key);
+            if (!(type instanceof ImplicitKey)) {
+                to.setPropertyDirect(type, entry.value);
+                if (type.cardinality() == org.janusgraph.core.Cardinality.SET) {
+                    existMuiltValue=true;
+                }
+            }
+        }
+        if (existMuiltValue) {
+            InternalVertex vertex = this.getVertex(0);
+            if(vertex instanceof CacheVertex){
+                CacheVertex cacheVertex=(CacheVertex) vertex;
+                Collection<SimpleJanusGraphProperty> propertyProperties = cacheVertex.findPropertyProperties(this);
+                if(propertyProperties!=null){
+                    for (SimpleJanusGraphProperty pp : propertyProperties) {
+                        if(pp.getLifeCycle()!=ElementLifeCycle.Removed) {
+                            to.setMultiPropertyDirect(pp.propertyKey(), pp.value());
+                        }
+                    }
+                }
+            }else {
+                Iterable<SimpleJanusGraphProperty> propertyProperties = tx().getPropertyProperties(this, this.value(), null);
+                for (SimpleJanusGraphProperty pp : propertyProperties) {
+                    if(pp.getLifeCycle()!=ElementLifeCycle.Removed) {
+                        to.setMultiPropertyDirect(pp.propertyKey(), pp.value());
+                    }
+                }
+            }
+        }
+    }
+
+
     private RelationCache getPropertyMap() {
         RelationCache map = data.getCache();
         if (map == null || !map.hasProperties()) {
@@ -110,6 +171,11 @@ public class CacheVertexProperty extends AbstractVertexProperty {
     @Override
     public <O> O removePropertyDirect(PropertyKey key) {
         return update().removePropertyDirect(key);
+    }
+
+    @Override
+    public <O> O removePropertyDsr(PropertyKey key, Object value) {
+        return updateExpend().removePropertyDsr(key,value);
     }
 
     @Override

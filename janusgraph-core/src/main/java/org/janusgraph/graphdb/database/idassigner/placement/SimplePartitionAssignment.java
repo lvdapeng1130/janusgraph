@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.database.idassigner.placement;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 /**
  * Simple implementation of {@link PartitionAssignment}.

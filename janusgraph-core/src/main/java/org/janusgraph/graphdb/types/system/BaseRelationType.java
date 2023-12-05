@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.types.system;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.janusgraph.core.schema.ConsistencyModifier;
 import org.janusgraph.graphdb.idmanagement.IDManager;

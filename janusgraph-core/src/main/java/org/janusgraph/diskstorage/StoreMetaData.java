@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -14,8 +14,8 @@
 
 package org.janusgraph.diskstorage.locking.consistentkey;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
 import org.janusgraph.diskstorage.Entry;
@@ -29,6 +29,7 @@ import org.janusgraph.diskstorage.locking.PermanentLockingException;
 import org.janusgraph.diskstorage.util.BackendOperation;
 import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.KeyColumn;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +38,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 /**
@@ -87,6 +89,20 @@ public class ExpectedValueCheckingTransaction implements StoreTransaction {
         deleteAllLocks();
         inconsistentTx.rollback();
         strongConsistentTx.rollback();
+    }
+
+    @Override
+    public Set<String> getSkipIndexes() {
+        Set<String> skipIndexes = Sets.newHashSet();
+        Set<String> skipIndexes1 = inconsistentTx.getSkipIndexes();
+        Set<String> skipIndexes2 = strongConsistentTx.getSkipIndexes();
+        if(skipIndexes1!=null&&skipIndexes1.size()>0){
+            skipIndexes.addAll(skipIndexes1);
+        }
+        if(skipIndexes2!=null&&skipIndexes2.size()>0){
+            skipIndexes.addAll(skipIndexes2);
+        }
+        return skipIndexes;
     }
 
     @Override

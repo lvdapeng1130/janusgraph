@@ -59,6 +59,7 @@ import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
 import org.janusgraph.diskstorage.util.RecordIterator;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
+import org.janusgraph.kydsj.ContentStatus;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -361,6 +362,16 @@ public class CQLKeyColumnValueStore implements KeyColumnValueStore {
     @Override
     public Map<StaticBuffer, EntryList> getSlice(final List<StaticBuffer> keys, final SliceQuery query, final StoreTransaction txh) throws BackendException {
         throw new UnsupportedOperationException("The CQL backend does not support multi-key queries");
+    }
+
+    @Override
+    public byte[] getLargeCellContent(String fileName){
+        return null;
+    }
+
+    @Override
+    public ContentStatus getContentStatus(String fileName){
+        return null;
     }
 
     public static class CQLResultSetIterator implements RecordIterator<Tuple3<StaticBuffer, StaticBuffer, Row>> {

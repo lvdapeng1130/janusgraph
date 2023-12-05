@@ -30,12 +30,34 @@ public class ElasticSearchConstants {
     public static final String CUSTOM_ALL_FIELD = "all";
     //lvdapeng 定义elasticsearch属性的内置字段
     public static final String KG_PROPERTY_VALUE = "value";
+    public static final String KG_PROPERTY_VALUE_PARAM = "v";
+    public static final String KG_CARDINALITY= "cardinality";
+    public static final String KG_CARDINALITY_PARAM = "c";
     public static final String KG_PROPERTY_STARTDATE = "startDate";
+    public static final String KG_PROPERTY_STARTDATE_PARAM = "s";
     public static final String KG_PROPERTY_ENDDATE = "endDate";
+    public static final String KG_PROPERTY_ENDDATE_PARAM = "e";
     public static final String KG_PROPERTY_GEO = "geo";
+    public static final String KG_PROPERTY_GEO_PARAM = "g";
     public static final String KG_PROPERTY_DSR = "dsr";
+    public static final String KG_PROPERTY_DSR_PARAM = "d";
     public static final String KG_PROPERTY_ROLE = "role";
+    public static final String KG_PROPERTY_ROLE_PARAM = "r";
     public static final String KG_PROPERTY_DS = "ds";
     public static final String KG_PROPERTY_DS_NAME = "name";
+    public static final String KG_PROPERTY_OVERLAID = "overlaid";
+    public static final String KG_PROPERTY_DS_NAME_PARAM = "n";
     public static final String KG_PROPERTY_DS_RECORD = "record";
+
+    /**********************附件正文**********************/
+    public static final String KG_MEDIASET_KEY = "key";
+    public static final String KG_MEDIASET_TITLE = "title";
+    public static final String KG_MEDIASET_CONTENT = "content";
+    /**********************注释************************/
+    public static final String KG_NOTE_KEY = "key";
+    public static final String KG_NOTE_TITLE = "title";
+    public static final String KG_NOTE_CONTENT = "content";
+    public static final String KG_NOTE_USER = "user";
+    public static final String KG_NOTE_UPDATEDATE = "updateDate";
+
 }

@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.inmemory;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.slf4j.Logger;

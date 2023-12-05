@@ -14,10 +14,12 @@
 
 package org.janusgraph.diskstorage.common;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
 import org.janusgraph.diskstorage.keycolumnvalue.StoreTransaction;
+
+import java.util.Set;
 
 /**
  * Abstract implementation of {@link StoreTransaction} to be used as the basis for more specific implementations.
@@ -45,6 +47,11 @@ public abstract class AbstractStoreTransaction implements StoreTransaction {
     @Override
     public BaseTransactionConfig getConfiguration() {
         return config;
+    }
+
+    @Override
+    public Set<String> getSkipIndexes() {
+        return getConfiguration().getSkipIndexes();
     }
 
 }

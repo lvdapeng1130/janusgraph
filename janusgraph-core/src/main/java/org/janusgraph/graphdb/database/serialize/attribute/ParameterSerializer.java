@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.database.serialize.attribute;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.attribute.AttributeSerializer;
 import org.janusgraph.core.schema.Parameter;
 import org.janusgraph.diskstorage.ScanBuffer;

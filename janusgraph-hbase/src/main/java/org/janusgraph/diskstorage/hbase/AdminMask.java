@@ -51,6 +51,8 @@ public interface AdminMask extends Closeable
 
     void createTable(HTableDescriptor desc, byte[] startKey, byte[] endKey, int numRegions) throws IOException;
 
+    void createTable(HTableDescriptor desc, int numRegions) throws IOException;
+
     /**
      * Estimate the number of regionservers in the HBase cluster.
      *

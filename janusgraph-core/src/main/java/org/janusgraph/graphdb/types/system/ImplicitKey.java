@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.types.system;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.T;
@@ -87,7 +87,8 @@ public class ImplicitKey extends EmptyRelationType implements SystemRelationType
         if (this==ID) {
             return (O)e.id();
         } else if (this==JANUSGRAPHID) {
-            return (O)Long.valueOf(e.longId());
+            ///return (O)Long.valueOf(e.longId());
+            return (O)e.longId();
         } else if (this==LABEL) {
             return (O)e.label();
         } else if (this==KEY) {

@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.indexing;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransaction;
@@ -77,6 +77,35 @@ public interface IndexProvider extends IndexInformation {
     void register(String store, String key, KeyInformation information, BaseTransaction tx, Set<String> aliases) throws BackendException;
 
     /**
+     * This method registers a new key for the specified index store with the given data type. This allows the IndexProvider
+     * to prepare the index if necessary.
+     *
+     * It is expected that this method is first called with each new key to inform the index of the expected type before the
+     * key is used in any documents.
+     *
+     * @param store Index store
+     * @param key New key to register
+     * @param information Information on the key to register
+     * @param tx enclosing transaction
+     * @param aliases es索引的别名
+     * @param settings 创建索引时指定的别名
+     * @throws org.janusgraph.diskstorage.BackendException
+     */
+    void register(String store, String key, KeyInformation information, BaseTransaction tx,Map<String,Object> settings, Set<String> aliases) throws BackendException;
+
+    /**
+     * 批量添加索引字段
+     * @param store
+     * @param keys
+     * @param informations
+     * @param tx
+     * @param settings
+     * @param aliases
+     * @throws BackendException
+     */
+    void register(String store, List<String> keys, List<KeyInformation> informations, BaseTransaction tx,Map<String,Object> settings, Set<String> aliases) throws BackendException;
+
+    /**
      * Mutates the index (adds and removes fields or entire documents)
      *
      * @param mutations Updates to the index. First map contains all the mutations for each store. The inner map contains
@@ -126,6 +155,14 @@ public interface IndexProvider extends IndexInformation {
      * @see RawQuery
      */
     Stream<RawQuery.Result<String>> query(RawQuery query, KeyInformation.IndexRetriever information, BaseTransaction tx) throws BackendException;
+
+    /**
+     * 删除所以数据
+     * @param index
+     * @throws org.janusgraph.diskstorage.BackendException
+     * @param id
+     */
+    void deleteDocument(String index,String ... ids) throws BackendException;
 
     /**
      * Executes the given raw query against the index and returns the total hits. e.g. limit=0

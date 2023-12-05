@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.locking;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.util.KeyColumn;
 import org.janusgraph.diskstorage.util.time.TimestampProvider;
 import org.janusgraph.util.StringUtils;

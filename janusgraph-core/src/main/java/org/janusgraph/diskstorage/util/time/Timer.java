@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.util.time;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 import java.time.Duration;
 import java.time.Instant;

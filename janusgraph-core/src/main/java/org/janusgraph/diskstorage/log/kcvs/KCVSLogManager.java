@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.log.kcvs;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang3.ArrayUtils;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.StoreMetaData;
@@ -120,13 +120,15 @@ public class KCVSLogManager implements LogManager {
      */
     private final int indexStoreTTL;
 
+    private final GraphDatabaseConfiguration graphDatabaseConfiguration;
+
     /**
      * Opens a log manager against the provided KCVS store with the given configuration.
      * @param storeManager
      * @param config
      */
-    public KCVSLogManager(final KeyColumnValueStoreManager storeManager, final Configuration config) {
-        this(storeManager, config, null);
+    public KCVSLogManager(final KeyColumnValueStoreManager storeManager, final Configuration config,final GraphDatabaseConfiguration graphDatabaseConfiguration) {
+        this(storeManager, config, null,graphDatabaseConfiguration);
     }
 
     /**
@@ -138,7 +140,8 @@ public class KCVSLogManager implements LogManager {
      * @param readPartitionIds
      */
     public KCVSLogManager(KeyColumnValueStoreManager storeManager, final Configuration config,
-                          final int[] readPartitionIds) {
+                          final int[] readPartitionIds,final GraphDatabaseConfiguration graphDatabaseConfiguration) {
+        this.graphDatabaseConfiguration=graphDatabaseConfiguration;
         Preconditions.checkArgument(storeManager!=null && config!=null);
         if (config.has(LOG_STORE_TTL)) {
             indexStoreTTL = ConversionHelper.getTTLSeconds(config.get(LOG_STORE_TTL));
@@ -250,6 +253,13 @@ public class KCVSLogManager implements LogManager {
             log.close();
         }
         IOUtils.closeQuietly(serializer);
+    }
+
+    public boolean isReadOnly(){
+        if(graphDatabaseConfiguration!=null){
+            return graphDatabaseConfiguration.isReadOnly();
+        }
+        return false;
     }
 
 }

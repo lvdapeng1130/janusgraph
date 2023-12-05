@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.util;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.tinkerpop.gremlin.structure.Element;
 import org.janusgraph.core.PropertyKey;
 import org.janusgraph.core.attribute.Cmp;

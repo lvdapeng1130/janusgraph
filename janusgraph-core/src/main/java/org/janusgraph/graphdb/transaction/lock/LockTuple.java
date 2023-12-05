@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.transaction.lock;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 import java.util.Objects;
 

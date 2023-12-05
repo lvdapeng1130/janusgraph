@@ -15,7 +15,7 @@
 package org.janusgraph.graphdb.olap.computer;
 
 import com.carrotsearch.hppc.ObjectArrayList;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.Iterators;
 import org.apache.tinkerpop.gremlin.process.computer.MessageCombiner;
 import org.apache.tinkerpop.gremlin.process.computer.MessageScope;

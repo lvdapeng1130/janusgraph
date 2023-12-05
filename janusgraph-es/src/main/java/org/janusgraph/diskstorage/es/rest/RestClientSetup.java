@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.es.rest;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.client.config.RequestConfig;
@@ -27,7 +27,6 @@ import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.es.ElasticSearchClient;
 import org.janusgraph.diskstorage.es.ElasticSearchIndex;
-import org.janusgraph.diskstorage.es.rest.util.*;
 import org.janusgraph.diskstorage.es.rest.util.BasicAuthHttpClientConfigCallback;
 import org.janusgraph.diskstorage.es.rest.util.ConnectionKeepAliveConfigCallback;
 import org.janusgraph.diskstorage.es.rest.util.HttpAuthTypes;
@@ -67,7 +66,7 @@ public class RestClientSetup {
             String hostname = hostStringParts[0];
             int hostPort = defaultPort;
             if (hostStringParts.length == 2) hostPort = Integer.parseInt(hostStringParts[1]);
-            log.debug("Configured remote host: {} : {}", hostname, hostPort);
+            log.info("es 地址->Configured remote host: {} : {}", hostname, hostPort);
             hosts.add(new HttpHost(hostname, hostPort, httpScheme));
         }
 
@@ -98,7 +97,7 @@ public class RestClientSetup {
                 setMaxRetryTimeoutMillis.invoke(restClientBuilder, retryTimeOut);
             }
         } catch (NoSuchMethodException e) {
-            log.warn("反射获取到setMaxRetryTimeoutMillis方法失败");
+            log.info("反射获取到setMaxRetryTimeoutMillis方法失败");
         } catch (IllegalAccessException e) {
         } catch (InvocationTargetException e) {
         }
@@ -140,7 +139,7 @@ public class RestClientSetup {
         final List<RequestConfigCallback> callbackList = new LinkedList<>();
         final Integer connectTimeout = config.get(ElasticSearchIndex.CONNECT_TIMEOUT);
         final Integer socketTimeout = config.get(ElasticSearchIndex.SOCKET_TIMEOUT);
-
+        log.info(String.format("ElasticSearchIndex.CONNECT_TIMEOUT=%s,ElasticSearchIndex.SOCKET_TIMEOUT=%s",connectTimeout,socketTimeout));
         callbackList.add((requestConfigBuilder) ->
             requestConfigBuilder.setConnectTimeout(connectTimeout).setSocketTimeout(socketTimeout));
 

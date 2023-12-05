@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.keycolumnvalue.cache;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.BaseTransactionConfig;
 import org.janusgraph.diskstorage.Entry;
@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 /**
@@ -72,7 +73,7 @@ public class CacheTransaction implements StoreTransaction, LoggableTransaction {
         return tx;
     }
 
-    void mutate(KCVSCache store, StaticBuffer key, List<Entry> additions, List<Entry> deletions) throws BackendException {
+    void mutate(KCVSCache store, StaticBuffer key, List<Entry> additions, List<Entry> deletions,boolean deleteObject) throws BackendException {
         Preconditions.checkNotNull(store);
         if (additions.isEmpty() && deletions.isEmpty()) return;
 
@@ -215,6 +216,11 @@ public class CacheTransaction implements StoreTransaction, LoggableTransaction {
     public void rollback() throws BackendException {
         clear();
         tx.rollback();
+    }
+
+    @Override
+    public Set<String> getSkipIndexes() {
+        return tx.getSkipIndexes();
     }
 
     @Override

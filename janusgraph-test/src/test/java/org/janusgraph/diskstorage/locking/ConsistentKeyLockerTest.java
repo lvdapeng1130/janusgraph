@@ -59,6 +59,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.easymock.EasyMock.cmp;
 import static org.easymock.EasyMock.eq;
@@ -1265,6 +1266,11 @@ public class ConsistentKeyLockerTest {
         @Override
         public void rollback() throws BackendException {
             rollbackCount++;
+        }
+
+        @Override
+        public Set<String> getSkipIndexes() {
+            return trxConfig.getSkipIndexes();
         }
     }
 }

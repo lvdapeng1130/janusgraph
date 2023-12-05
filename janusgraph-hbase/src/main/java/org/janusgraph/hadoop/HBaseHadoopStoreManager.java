@@ -16,11 +16,11 @@ package org.janusgraph.hadoop;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.InputFormat;
-import org.janusgraph.hadoop.formats.hbase.HBaseBinaryInputFormat;
+import org.janusgraph.hadoop.formats.hbase.KYHBaseBinaryInputFormat;
 
 public class HBaseHadoopStoreManager implements HadoopStoreManager {
     @Override
     public Class<? extends InputFormat> getInputFormat(Configuration hadoopConf) {
-        return HBaseBinaryInputFormat.class;
+        return KYHBaseBinaryInputFormat.class;
     }
 }

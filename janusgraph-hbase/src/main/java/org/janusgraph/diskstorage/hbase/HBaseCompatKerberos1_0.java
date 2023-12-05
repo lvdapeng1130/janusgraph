@@ -31,11 +31,12 @@ import org.janusgraph.hadoop.kerberos.SecurityUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.security.auth.login.LoginException;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.security.auth.login.LoginException;
 
 public class HBaseCompatKerberos1_0 implements HBaseCompat {
 
@@ -65,27 +66,68 @@ public class HBaseCompatKerberos1_0 implements HBaseCompat {
         return new HConnection1_0(this.getConnection(conf,kerberosPrincipal,kerberosKeytab));
     }
     private void setJaasFile(){
+        String jaasFileName="jaas.conf";
         String userdir = System.getProperty("user.dir") + File.separator + "conf" + File.separator;
-        String jaasPath=userdir + "jaas.conf";
+        String jaasPath=userdir + jaasFileName;
         File file=new File(jaasPath);
         if(file.exists()){
             System.setProperty(JAVA_SECURITY_LOGIN_CONF_KEY,jaasPath);
             logger.info("设置jaas.conf文件路径->"+jaasPath);
         }else{
-            throw new KerberosException("kerberos认证时需设置jaas.conf文件但在"+jaasPath+"目录下没有找到jaas.conf文件，请检查该目录下是否有jaas.conf文件并配置正确。");
+            userdir = System.getProperty("user.dir") + File.separator + "config" + File.separator;
+            jaasPath=userdir + jaasFileName;
+            file=new File(jaasPath);
+            if(file.exists()){
+                System.setProperty(JAVA_SECURITY_LOGIN_CONF_KEY,jaasPath);
+                logger.info("设置jaas.conf文件路径->"+jaasPath);
+            }else{
+                URL resource = this.getClass().getClassLoader().getResource(jaasFileName);
+                if(resource!=null) {
+                    jaasPath = resource.getPath();
+                    if (StringUtils.isNotBlank(jaasPath)) {
+                        file = new File(jaasPath);
+                        if (file.exists()) {
+                            System.setProperty(JAVA_SECURITY_LOGIN_CONF_KEY,jaasPath);
+                            logger.info("设置jaas.conf文件路径->"+jaasPath);
+                            return;
+                        }
+                    }
+                }
+                throw new KerberosException("kerberos认证时需设置jaas.conf文件但在"+jaasPath+"目录下没有找到jaas.conf文件，请检查该目录下是否有jaas.conf文件并配置正确。");
+            }
         }
     }
 
     private void setkrb5File(){
+        String krb5FileName="krb5.conf";
         String userdir = System.getProperty("user.dir") + File.separator + "conf" + File.separator;
-        String krb5Path=userdir + "krb5.conf";
+        String krb5Path=userdir + krb5FileName;
         File file=new File(krb5Path);
         if(file.exists()){
             System.setProperty(JAVA_SECURITY_KRB5_CONF_KEY,krb5Path);
             logger.info("设置krb5.conf文件路径->"+krb5Path);
         }else{
-
-            throw new KerberosException("kerberos认证时需设置krb5.conf文件但在"+krb5Path+"目录下没有找到krb5.conf文件，请检查该目录下是否有krb5.conf文件并配置正确。");
+            userdir = System.getProperty("user.dir") + File.separator + "config" + File.separator;
+            krb5Path=userdir + krb5FileName;
+            file=new File(krb5Path);
+            if(file.exists()){
+                System.setProperty(JAVA_SECURITY_KRB5_CONF_KEY,krb5Path);
+                logger.info("设置krb5.conf文件路径->"+krb5Path);
+            }else{
+                URL resource = this.getClass().getClassLoader().getResource(krb5FileName);
+                if(resource!=null) {
+                    krb5Path = resource.getPath();
+                    if (StringUtils.isNotBlank(krb5Path)) {
+                        file = new File(krb5Path);
+                        if (file.exists()) {
+                            System.setProperty(JAVA_SECURITY_KRB5_CONF_KEY,krb5Path);
+                            logger.info("设置krb5.conf文件路径->"+krb5Path);
+                            return;
+                        }
+                    }
+                }
+                throw new KerberosException("kerberos认证时需设置krb5.conf文件但在"+krb5Path+"目录下没有找到krb5.conf文件，请检查该目录下是否有krb5.conf文件并配置正确。");
+            }
         }
     }
 

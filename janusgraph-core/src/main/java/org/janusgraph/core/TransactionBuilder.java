@@ -17,6 +17,7 @@ package org.janusgraph.core;
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
 
 import java.time.Instant;
+import java.util.Set;
 
 /**
  * Constructor returned by {@link org.janusgraph.core.JanusGraph#buildTransaction()} to build a new transaction.
@@ -206,5 +207,20 @@ public interface TransactionBuilder {
      * @return A new transaction configured according to this builder
      */
     JanusGraphTransaction start();
+
+    TransactionBuilder setIndexMode(boolean indexAddMode);
+
+    /**
+     * skip index type
+     * @return
+     */
+    TransactionBuilder setSkipIndexes(Set<String> skipIndexes);
+
+    /**
+     * 自定义参数
+     * @param transactionCustom
+     * @return
+     */
+    TransactionBuilder setTransactionCustom(TransactionCustom transactionCustom);
 
 }

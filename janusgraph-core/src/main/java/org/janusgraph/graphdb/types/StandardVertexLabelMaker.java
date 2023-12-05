@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.types;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.VertexLabel;
 import org.janusgraph.core.schema.VertexLabelMaker;
 import org.janusgraph.graphdb.internal.JanusGraphSchemaCategory;

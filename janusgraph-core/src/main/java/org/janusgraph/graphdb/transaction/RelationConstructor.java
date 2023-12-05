@@ -14,21 +14,23 @@
 
 package org.janusgraph.graphdb.transaction;
 
-import com.google.common.base.Preconditions;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.core.EdgeLabel;
 import org.janusgraph.core.JanusGraphRelation;
 import org.janusgraph.core.PropertyKey;
 import org.janusgraph.diskstorage.Entry;
 import org.janusgraph.graphdb.database.EdgeSerializer;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.graphdb.internal.InternalRelation;
 import org.janusgraph.graphdb.internal.InternalRelationType;
 import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.relations.CacheEdge;
 import org.janusgraph.graphdb.relations.CacheVertexProperty;
+import org.janusgraph.graphdb.relations.ContentCacheVertexProperty;
 import org.janusgraph.graphdb.relations.RelationCache;
 import org.janusgraph.graphdb.types.TypeInspector;
 import org.janusgraph.graphdb.types.TypeUtil;
+import org.janusgraph.util.system.DefaultFields;
 
 import java.util.Iterator;
 
@@ -85,7 +87,11 @@ public class RelationConstructor {
 
         if (type.isPropertyKey()) {
             assert relation.direction == Direction.OUT;
-            return new CacheVertexProperty(relation.relationId, (PropertyKey) type, vertex, relation.getValue(), data);
+            if(DefaultFields.DOCTEXT.getName().equals(type.name())){
+                return new ContentCacheVertexProperty(relation.relationId, (PropertyKey) type, vertex, relation.getValue(), data);
+            }else {
+                return new CacheVertexProperty(relation.relationId, (PropertyKey) type, vertex, relation.getValue(), data);
+            }
         }
 
         if (type.isEdgeLabel()) {

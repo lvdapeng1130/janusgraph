@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.database.serialize.attribute;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.Namifiable;
 import org.janusgraph.diskstorage.ScanBuffer;
 import org.janusgraph.diskstorage.WriteBuffer;
@@ -86,7 +86,7 @@ public class StringSerializer implements OrderPreservingSerializer<String>, Supp
 
     @Override
     public void verifyAttribute(String value) {
-        Preconditions.checkArgument(value.length()<=MAX_LENGTH,"String is too long: %s",value.length());
+        //Preconditions.checkArgument(value.length()<=MAX_LENGTH,"String is too long: %s",value.length());
     }
 
     @Override

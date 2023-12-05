@@ -129,7 +129,7 @@ public class SimpleScanJob implements ScanJob {
 
 
     @Override
-    public void process(StaticBuffer key, Map<SliceQuery, EntryList> entries, ScanMetrics metrics) {
+    public void process(StaticBuffer key, Map<SliceQuery, EntryList> entries, ScanMetrics metrics, PropertyEntry propertyEntry) {
         assertNotNull(key);
         assertTrue(keyFilter.test(key));
         metrics.incrementCustom(KEY_COUNT);

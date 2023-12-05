@@ -96,13 +96,14 @@
         <!-- <zookeeper.version>3.5.7</zookeeper.version>-->
         <zookeeper.version>3.4.5-cdh6.2.0</zookeeper.version>
         <!--<zookeeper.version>3.6.2</zookeeper.version>-->
-        <!--<hadoop2.version>3.0.0-cdh6.2.0</hadoop2.version>-->
-        <hadoop2.version>2.8.5</hadoop2.version>
+        <hadoop2.version>3.0.0-cdh6.2.0</hadoop2.version>
+       <!-- <hadoop2.version>2.8.5</hadoop2.version>-->
         <spark.version>2.4.0-cdh6.2.0</spark.version>
         <!--<hbase1.version>1.4.10</hbase1.version>
         <hbase2.version>2.1.0-cdh6.2.0</hbase2.version>-->
         <hbase1.version>1.6.0</hbase1.version>
-        <hbase2.version>2.2.7</hbase2.version>
+       <!-- <hbase2.version>2.2.7</hbase2.version>-->
+        <hbase2.version>2.1.0-cdh6.2.0</hbase2.version>
         <hbase.server.version>1.4.10</hbase.server.version>
         <htrace.version>4.2.0-incubating</htrace.version>
         <bigtable.version>1.21.0</bigtable.version>
@@ -131,7 +132,7 @@
         <gpg.skip>false</gpg.skip>
         <maven.gpg.version>1.6</maven.gpg.version>
         <perf.jvm.opts />
-        <default.test.jvm.opts>-Xms256m -Xmx768m -XX:+HeapDumpOnOutOfMemoryError -ea ${test.extra.jvm.opts}</default.test.jvm.opts>
+        <default.test.jvm.opts>-XX:+HeapDumpOnOutOfMemoryError -ea ${test.extra.jvm.opts}</default.test.jvm.opts>
         <mem.jvm.opts>-Xms256m -Xmx256m -ea -XX:+HeapDumpOnOutOfMemoryError ${test.extra.jvm.opts}</mem.jvm.opts>
         <test.extra.jvm.opts />
         <test.skip.default>false</test.skip.default>
@@ -1418,6 +1419,36 @@
                 <elasticsearch.version>6.7.1</elasticsearch.version>
                 <protobuf.version>2.5.0</protobuf.version>
             </properties>
+        </profile>
+
+        <profile>
+            <id>huawei-cbu-mrs-prd</id>
+            <properties>
+                <zookeeper.version>3.6.3-h0.cbu.mrs.321.r13</zookeeper.version>
+                <hadoop2.version>3.3.1-h0.cbu.mrs.321.r13</hadoop2.version>
+                <spark.version>3.3.1-h0.cbu.mrs.321.r13</spark.version>
+                <hbase2.version>2.4.14-h0.cbu.mrs.321.r13</hbase2.version>
+                <hbase.server.version>2.4.14-h0.cbu.mrs.321.r13</hbase.server.version>
+                <elasticsearch.version>7.10.2-h0.cbu.mrs.321.r13</elasticsearch.version>
+                <protobuf.version>2.5.0</protobuf.version>
+            </properties>
+            <repositories>
+                <repository>
+                    <id>huaweicloudsdk</id>
+                    <url>https://repo.huaweicloud.com/repository/maven/huaweicloudsdk/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </repository>
+            </repositories>
+            <dependencyManagement>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.google.protobuf</groupId>
+                        <artifactId>protobuf-java-util</artifactId>
+                        <version>3.12.2</version>
+                    </dependency>
+                </dependencies>
+            </dependencyManagement>
         </profile>
         <profile>
             <id>java-11</id>

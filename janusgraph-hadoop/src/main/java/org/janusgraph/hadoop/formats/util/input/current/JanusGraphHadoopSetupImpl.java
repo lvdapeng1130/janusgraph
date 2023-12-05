@@ -14,7 +14,8 @@
 
 package org.janusgraph.hadoop.formats.util.input.current;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.EdgeSerializer;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.janusgraph.core.JanusGraphFactory;
@@ -25,6 +26,7 @@ import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.janusgraph.graphdb.database.RelationReader;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
+import org.janusgraph.graphdb.database.serialize.Serializer;
 import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.internal.JanusGraphSchemaCategory;
 import org.janusgraph.graphdb.query.QueryUtil;
@@ -60,6 +62,21 @@ public class JanusGraphHadoopSetupImpl implements JanusGraphHadoopSetup {
     }
 
     @Override
+    public EdgeSerializer getEdgeSerializer(){
+        return graph.getEdgeSerializer();
+    }
+
+    @Override
+    public boolean vertexLabelFilter(String vertexLabel) {
+        return true;
+    }
+
+    @Override
+    public boolean edgeLabelFilter(String edgeLabel) {
+        return true;
+    }
+
+    @Override
     public TypeInspector getTypeInspector() {
         //Pre-load schema
         for (JanusGraphSchemaCategory sc : JanusGraphSchemaCategory.values()) {
@@ -89,12 +106,12 @@ public class JanusGraphHadoopSetupImpl implements JanusGraphHadoopSetup {
 
             @Override
             public boolean isVertexExistsSystemType(String typeId) {
-                return typeId == BaseKey.VertexExists.longId();
+                return typeId.equals(BaseKey.VertexExists.longId());
             }
 
             @Override
             public boolean isVertexLabelSystemType(String typeId) {
-                return typeId == BaseLabel.VertexLabelEdge.longId();
+                return typeId.equals(BaseLabel.VertexLabelEdge.longId());
             }
 
             @Override
@@ -127,5 +144,10 @@ public class JanusGraphHadoopSetupImpl implements JanusGraphHadoopSetup {
     @Override
     public boolean getFilterPartitionedVertices() {
         return scanConf.get(JanusGraphHadoopConfiguration.FILTER_PARTITIONED_VERTICES, true);
+    }
+
+    @Override
+    public Serializer getDataSerializer() {
+        return graph.getDataSerializer();
     }
 }

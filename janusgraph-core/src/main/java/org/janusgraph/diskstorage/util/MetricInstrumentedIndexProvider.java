@@ -68,6 +68,17 @@ public class MetricInstrumentedIndexProvider implements IndexProvider {
     }
 
     @Override
+    public void register(String store, String key, KeyInformation information, BaseTransaction tx,Map<String,Object> settings, Set<String> aliases) throws BackendException {
+        indexProvider.register(store, key, information, tx,settings,aliases);
+    }
+
+    @Override
+    public void register(String store, List<String> keys, List<KeyInformation> informations,
+                         BaseTransaction tx,Map<String,Object> settings,Set<String> aliases) throws BackendException {
+        indexProvider.register(store,keys,informations,tx,settings,aliases);
+    }
+
+    @Override
     public void mutate(final Map<String, Map<String, IndexMutation>> mutations, final KeyInformation.IndexRetriever information,
                        final BaseTransaction tx) throws BackendException {
         runWithMetrics((BaseTransactionConfigurable) tx, M_MUTATE, () -> indexProvider.mutate(mutations, information, tx));
@@ -91,6 +102,10 @@ public class MetricInstrumentedIndexProvider implements IndexProvider {
         return runWithMetrics((BaseTransactionConfigurable) tx, M_QUERY, () -> indexProvider.query(query, information, tx));
     }
 
+    @Override
+    public void deleteDocument(String index,String ... ids) throws BackendException{
+
+    }
     @Override
     public Stream<RawQuery.Result<String>> query(final RawQuery query, final KeyInformation.IndexRetriever information,
                                                  final BaseTransaction tx) throws BackendException {

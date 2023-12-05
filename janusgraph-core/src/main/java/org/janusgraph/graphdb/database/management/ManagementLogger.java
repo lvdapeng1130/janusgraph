@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.database.management;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.collections.CollectionUtils;
 import org.janusgraph.core.JanusGraphManagerUtility;
 import org.janusgraph.core.JanusGraphTransaction;
@@ -69,7 +69,7 @@ public class ManagementLogger implements MessageReader {
     private final TimestampProvider times;
 
     private final AtomicInteger evictionTriggerCounter = new AtomicInteger(0);
-    private final ConcurrentMap<Long,EvictionTrigger> evictionTriggerMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String,EvictionTrigger> evictionTriggerMap = new ConcurrentHashMap<>();
 
     public ManagementLogger(StandardJanusGraph graph, Log sysLog, SchemaCache schemaCache, TimestampProvider times) {
         this.graph = graph;
@@ -109,7 +109,8 @@ public class ManagementLogger implements MessageReader {
             }
             case CACHED_TYPE_EVICTION_ACK: {
                 String receiverId = serializer.readObjectNotNull(in, String.class);
-                long evictionId = VariableLong.readPositive(in);
+                String evictionId = serializer.readObjectNotNull(in, String.class);
+                //long evictionId = VariableLong.readPositive(in);
                 if (receiverId.equals(graph.getConfiguration().getUniqueGraphId())) {
                     //Acknowledgements targeted at this instance
                     EvictionTrigger evictTrigger = evictionTriggerMap.get(evictionId);
@@ -132,7 +133,7 @@ public class ManagementLogger implements MessageReader {
                                              List<Callable<Boolean>> updatedTypeTriggers,
                                              Set<String> openInstances) {
         Preconditions.checkArgument(CollectionUtils.isNotEmpty(openInstances), "openInstances cannot be null or empty");
-        long evictionId = evictionTriggerCounter.incrementAndGet();
+        String evictionId = evictionTriggerCounter.incrementAndGet()+"";
         evictionTriggerMap.put(evictionId,new EvictionTrigger(evictionId,updatedTypeTriggers,graph));
         DataOutput out = graph.getDataSerializer().getDataOutput(128);
         out.writeObjectNotNull(MgmtLogType.CACHED_TYPE_EVICTION);
@@ -164,12 +165,12 @@ public class ManagementLogger implements MessageReader {
 
     private class EvictionTrigger {
 
-        final long evictionId;
+        final String evictionId;
         final List<Callable<Boolean>> updatedTypeTriggers;
         final StandardJanusGraph graph;
         final Set<String> instancesToBeAcknowledged;
 
-        private EvictionTrigger(long evictionId, List<Callable<Boolean>> updatedTypeTriggers, StandardJanusGraph graph) {
+        private EvictionTrigger(String evictionId, List<Callable<Boolean>> updatedTypeTriggers, StandardJanusGraph graph) {
             this.graph = graph;
             this.evictionId = evictionId;
             this.updatedTypeTriggers = updatedTypeTriggers;

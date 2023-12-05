@@ -2,6 +2,7 @@ package org.janusgraph.kggraph;
 
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.ex.ConfigurationException;
+import org.apache.tinkerpop.gremlin.groovy.jsr223.GremlinGroovyScriptEngine;
 import org.janusgraph.core.JanusGraph;
 import org.janusgraph.core.JanusGraphFactory;
 import org.janusgraph.dsl.KydsjTraversalSource;
@@ -11,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import javax.script.ScriptException;
 
 /**
  * @author: ldp
@@ -22,12 +24,19 @@ public class AbstractKGgraphTest {
     protected Configuration conf;
     protected JanusGraph graph;
     protected KydsjTraversalSource g;
+
+    protected static GremlinGroovyScriptEngine engine = new GremlinGroovyScriptEngine();
     @Before
-    public void startHBase() throws IOException, ConfigurationException {
+    public void startHBase() throws IOException, ConfigurationException, ScriptException {
         LOGGER.info("opening graph");
-        conf = ConfigurationUtil.loadPropertiesConfig("C:\\work\\kggraph\\trunk\\janusgraph-kydsj\\src\\main\\resources\\trsgraph-hbase-es-test.properties");
+        String dataPath=this.getClass().getResource("/trsgraph-hbase-es-244_es7new.properties").getFile();
+        conf = ConfigurationUtil.loadPropertiesConfig(dataPath);
         graph = JanusGraphFactory.open(conf);
         g = graph.traversal(KydsjTraversalSource.class);
+        String gremlin = "g.V().limit(1)";
+        engine.compile(gremlin);
+        //engine.compile(gremlin);
+
     }
     protected JanusGraph getJanusGraph() {
         return (JanusGraph) graph;

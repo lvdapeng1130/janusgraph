@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.berkeleyje;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.sleepycat.je.CacheMode;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class BerkeleyJETx extends AbstractStoreTransaction {
 
@@ -101,6 +102,11 @@ public class BerkeleyJETx extends AbstractStoreTransaction {
         } catch (DatabaseException e) {
             throw new PermanentBackendException(e);
         }
+    }
+
+    @Override
+    public Set<String> getSkipIndexes() {
+        return getConfiguration().getSkipIndexes();
     }
 
     @Override

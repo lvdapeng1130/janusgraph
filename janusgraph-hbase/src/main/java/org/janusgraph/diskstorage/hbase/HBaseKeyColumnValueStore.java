@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.hbase;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -48,6 +48,7 @@ import org.janusgraph.diskstorage.util.RecordIterator;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.janusgraph.diskstorage.util.StaticArrayEntry;
 import org.janusgraph.diskstorage.util.StaticArrayEntryList;
+import org.janusgraph.kydsj.ContentStatus;
 import org.janusgraph.util.system.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,6 +115,16 @@ public class HBaseKeyColumnValueStore implements KeyColumnValueStore {
     public EntryList getSlice(KeySliceQuery query, StoreTransaction txh) throws BackendException {
         Map<StaticBuffer, EntryList> result = getHelper(Collections.singletonList(query.getKey()), getFilter(query));
         return Iterables.getOnlyElement(result.values(), EntryList.EMPTY_LIST);
+    }
+
+    @Override
+    public byte[] getLargeCellContent(String fileName){
+        return storeManager.getLargeCellContent(fileName);
+    }
+
+    @Override
+    public ContentStatus getContentStatus(String fileName){
+        return storeManager.getContentStatus(fileName);
     }
 
     @Override

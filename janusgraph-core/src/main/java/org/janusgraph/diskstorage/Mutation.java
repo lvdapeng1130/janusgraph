@@ -14,7 +14,8 @@
 
 package org.janusgraph.diskstorage;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.diskstorage.indexing.IndexEntry;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -170,6 +171,25 @@ public abstract class Mutation<E,K> {
         }
     }
 
+    public<V> void kgConsolidate(Function<E,V> convertAdditions, Function<K,V> convertDeletions) {
+        if (hasDeletions() && hasAdditions()) {
+            Set<V> adds = new HashSet<>(additions.size());
+            Set<V> dels = new HashSet<>(additions.size());
+            for (final K del : deletions) {
+                dels.add(convertDeletions.apply(del));
+            }
+            for (final E add : additions) {
+                IndexEntry indexEntry=(IndexEntry) add;
+                V value = convertAdditions.apply(add);
+                adds.add(value);
+                if(dels.contains(value)){
+                    indexEntry.setOverlaid(true);
+                }
+            }
+            deletions.removeIf(k -> adds.contains(convertDeletions.apply(k)));
+        }
+    }
+
     public abstract void consolidate();
 
     /**
@@ -188,7 +208,5 @@ public abstract class Mutation<E,K> {
     }
 
     public abstract boolean isConsolidated();
-
-
 
 }

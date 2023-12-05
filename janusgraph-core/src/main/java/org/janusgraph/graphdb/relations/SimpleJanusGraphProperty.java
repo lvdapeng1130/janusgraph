@@ -14,13 +14,15 @@
 
 package org.janusgraph.graphdb.relations;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 import org.janusgraph.core.JanusGraphElement;
 import org.janusgraph.core.JanusGraphProperty;
 import org.janusgraph.core.PropertyKey;
+import org.janusgraph.graphdb.internal.ElementLifeCycle;
 import org.janusgraph.graphdb.internal.InternalRelation;
+import org.janusgraph.graphdb.vertices.StandardVertex;
 
 import java.util.NoSuchElementException;
 
@@ -28,10 +30,12 @@ import java.util.NoSuchElementException;
  * @author Matthias Broecheler (me@matthiasb.com)
  */
 public class SimpleJanusGraphProperty<V> implements JanusGraphProperty<V> {
-
+    private final Object lifecycleMutex = new Object();
     private final PropertyKey key;
     private final V value;
-    private final InternalRelation relation;
+    private InternalRelation relation;
+
+    private volatile byte lifecycle=ElementLifeCycle.Loaded;
 
     public SimpleJanusGraphProperty(InternalRelation relation, PropertyKey key, V value) {
         this.key = key;
@@ -54,6 +58,10 @@ public class SimpleJanusGraphProperty<V> implements JanusGraphProperty<V> {
         return true;
     }
 
+    public void setRelation(InternalRelation relation){
+        this.relation=relation;
+    }
+
     @Override
     public JanusGraphElement element() {
         return relation;
@@ -62,7 +70,12 @@ public class SimpleJanusGraphProperty<V> implements JanusGraphProperty<V> {
     @Override
     public void remove() {
         Preconditions.checkArgument(!relation.isRemoved(), "Cannot modified removed relation");
-        relation.it().removePropertyDirect(key);
+        if("dsr".equalsIgnoreCase(key.name())){
+            relation.it().removePropertyDsr(key,value);
+        }else {
+            relation.it().removePropertyDirect(key);
+        }
+        this.updateLifeCycle(ElementLifeCycle.Event.REMOVED);
     }
 
     @Override
@@ -78,6 +91,16 @@ public class SimpleJanusGraphProperty<V> implements JanusGraphProperty<V> {
     @Override
     public boolean equals(Object oth) {
         return ElementHelper.areEqual(this, oth);
+    }
+
+    public byte getLifeCycle() {
+        return lifecycle;
+    }
+
+    public final void updateLifeCycle(ElementLifeCycle.Event event) {
+        synchronized(lifecycleMutex) {
+            this.lifecycle = ElementLifeCycle.update(lifecycle,event);
+        }
     }
 
 }

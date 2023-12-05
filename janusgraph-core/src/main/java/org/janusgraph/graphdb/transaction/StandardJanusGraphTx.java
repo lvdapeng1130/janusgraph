@@ -15,7 +15,10 @@
 package org.janusgraph.graphdb.transaction;
 
 import com.carrotsearch.hppc.ObjectArrayList;
-import com.google.common.base.Preconditions;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+import org.janusgraph.diskstorage.util.ReadArrayBuffer;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -65,6 +68,8 @@ import org.janusgraph.graphdb.database.EdgeSerializer;
 import org.janusgraph.graphdb.database.IndexSerializer;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.database.idassigner.IDPool;
+import org.janusgraph.graphdb.database.idhandling.IDHandler;
+import org.janusgraph.graphdb.database.management.ManagementSystem;
 import org.janusgraph.graphdb.database.serialize.AttributeHandler;
 import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.database.serialize.InternalAttributeUtil;
@@ -146,6 +151,7 @@ import org.janusgraph.graphdb.util.VertexCentricEdgeIterable;
 import org.janusgraph.graphdb.vertices.CacheVertex;
 import org.janusgraph.graphdb.vertices.PreloadedVertex;
 import org.janusgraph.graphdb.vertices.StandardVertex;
+import org.janusgraph.kydsj.ContentStatus;
 import org.janusgraph.kydsj.SimpleAttachment;
 import org.janusgraph.kydsj.SimpleNote;
 import org.janusgraph.kydsj.serialize.MediaData;
@@ -175,6 +181,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import javax.annotation.Nullable;
+
+import static org.janusgraph.graphdb.util.Constants.HDFS_MEDIA_MEDIATYPE;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -617,6 +625,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         Preconditions.checkArgument(vertexId == null || ((InternalVertexLabel)label).hasDefaultConfiguration(), "Cannot only use default vertex labels: %s",label);
         //Preconditions.checkArgument(vertexId == null || !config.hasVerifyExternalVertexExistence() || !containsVertex(vertexId), "Vertex with given id already exists: %s", vertexId);
         StandardVertex vertex = new StandardVertex(this, IDManager.getTemporaryVertexID(IDManager.VertexIDType.NormalVertex, temporaryIds.nextID()), ElementLifeCycle.New);
+        vertex.setVertexLabel(label);
         if (vertexId != null) {
             vertex.setId(vertexId);
         } else if (config.hasAssignIDsImmediately() || label.isPartitioned()) {
@@ -713,7 +722,9 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
                 verifyWriteAccess(vertex);
                 vertex.removeRelation(relation);
             }*/
-            vertex.removeRelation(relation);
+            if(!vertex.isRemoved()&&!relation.isRemoved()) {
+                vertex.removeRelation(relation);
+            }
             if (!vertex.isNew()) {
                 vertexCache.add(vertex, vertex.longId());
             }
@@ -829,6 +840,27 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
        return addEdge(null, outVertex, inVertex, label);
     }
 
+
+    public RelationIdentifier getEdgeId(String linkId,String linkType,String outVertexId,String inVertexId){
+        InternalVertex outVertex = this.getInternalVertex(outVertexId);
+        InternalVertex inVertex = this.getInternalVertex(inVertexId);
+        return this.getEdgeId(linkId,linkType,outVertex,inVertex);
+    }
+
+    public RelationIdentifier getEdgeId(String linkId,String linkType,JanusGraphVertex outVertex,JanusGraphVertex inVertex){
+        String relationId=linkId;
+        if(StringUtils.isNotBlank(linkId)){
+            long partition= this.getPartitionID((InternalVertex)inVertex);
+            relationId = this.getIdInspector().getRelationID(linkId, partition);
+        }
+        EdgeLabel edgeLabel= this.getEdgeLabel(linkType);
+        String typeId=edgeLabel.longId();
+        String outVertexId=outVertex.longId();
+        String inVertexId=inVertex.longId();
+        RelationIdentifier relationIdentifier=new RelationIdentifier(outVertexId,typeId,relationId,inVertexId);
+        return  relationIdentifier;
+    }
+
     public JanusGraphEdge addEdge(String id, JanusGraphVertex outVertex, JanusGraphVertex inVertex, EdgeLabel label) {
         verifyWriteAccess(outVertex, inVertex);
         outVertex = ((InternalVertex) outVertex).it();
@@ -854,11 +886,11 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
                             throw new SchemaViolationException("An edge with the given label already exists on the in-vertex and the label [%s] is in-unique", label.name());
                 }
             }
-            if(StringUtils.isNotBlank(id)){
+            /*if(StringUtils.isNotBlank(id)){
                 long partition= getPartitionID((InternalVertex)outVertex);
                 id = idManager.getRelationID(id, partition);
                 //vertexId=IDManager.VertexIDType.NormalVertex.addPadding(vertexId);
-            }
+            }*/
             String edgeId = id == null ? IDManager.getTemporaryRelationID(temporaryIds.nextID()) : id;
             StandardEdge edge = new StandardEdge(edgeId, label, (InternalVertex) outVertex, (InternalVertex) inVertex, ElementLifeCycle.New);
             if (config.hasAssignIDsImmediately() && id == null) graph.assignID(edge);
@@ -869,7 +901,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         }
     }
 
-    private long getPartitionID(final InternalVertex v) {
+    public long getPartitionID(final InternalVertex v) {
         String vid = v.longId();
         if (IDManager.VertexIDType.Schema.is(vid)) return IDManager.SCHEMA_PARTITION;
         else return idManager.getPartitionId(vid);
@@ -985,6 +1017,17 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
 
     }
 
+    public JanusGraphVertexProperty addTrsProperty(VertexProperty.Cardinality cardinality, JanusGraphVertex vertex, PropertyKey key, Object value, String id) {
+        Preconditions.checkArgument(!(key instanceof ImplicitKey),"Cannot create a property of implicit type: %s",key.name());
+        vertex = ((InternalVertex) vertex).it();
+        final Object normalizedValue = verifyAttribute(key, value);
+        String propId = id == null ? IDManager.getTemporaryRelationID(temporaryIds.nextID()) : id;
+        StandardVertexProperty prop = new StandardVertexProperty(propId, key, (InternalVertex) vertex, normalizedValue, ElementLifeCycle.New);
+        if (config.hasAssignIDsImmediately() && id == null) graph.assignID(prop);
+        connectRelation(prop);
+        return prop;
+    }
+
     public JanusGraphVertexProperty addAttachment(JanusGraphVertex vertex, PropertyKey key, Object value) {
         return addAttachment(key.cardinality().convert(), vertex, key, value);
     }
@@ -997,6 +1040,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         Preconditions.checkNotNull(key);
         final Object normalizedValue = verifyAttribute(key, value);
         MediaData mediaData=(MediaData)normalizedValue;
+        mediaData.setVertex((InternalVertex)vertex);
         Preconditions.checkArgument(mediaData!=null,"为顶点指定的附件MediaData对象不能为null");
         Preconditions.checkArgument(StringUtils.isNotBlank(mediaData.getKey()),"为顶点指定的附件MediaData对象的key不能为null或空字符串");
         addedAttachments.add(vertex.longId(), mediaData);
@@ -1007,6 +1051,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
     public void addAttachment(JanusGraphVertex vertex,MediaData mediaData) {
         verifyWriteAccess(vertex);
         vertex = ((InternalVertex) vertex).it();
+        mediaData.setVertex((InternalVertex)vertex);
         Preconditions.checkArgument(mediaData!=null,"为顶点指定的附件MediaData对象不能为null");
         Preconditions.checkArgument(StringUtils.isNotBlank(mediaData.getKey()),"为顶点指定的附件MediaData对象的key不能为null或空字符串");
         addedAttachments.add(vertex.longId(), mediaData);
@@ -1023,6 +1068,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         Preconditions.checkNotNull(key);
         final Object normalizedValue = verifyAttribute(key, value);
         Note note=(Note)normalizedValue;
+        note.setVertex((InternalVertex)vertex);
         Preconditions.checkArgument(note!=null,"为顶点指定的注释Note对象不能为null");
         Preconditions.checkArgument(StringUtils.isNotBlank(note.getId()),"为顶点指定的注释Note对象的id不能为null或空字符串");
         addedNotes.add(vertex.longId(), note);
@@ -1033,6 +1079,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
     public void addNote(JanusGraphVertex vertex,Note note) {
         verifyWriteAccess(vertex);
         vertex = ((InternalVertex) vertex).it();
+        note.setVertex((InternalVertex)vertex);
         Preconditions.checkArgument(note!=null,"为顶点指定的注释Note对象不能为null");
         Preconditions.checkArgument(StringUtils.isNotBlank(note.getId()),"为顶点指定的注释Note对象的id不能为null或空字符串");
         addedNotes.add(vertex.longId(), note);
@@ -1101,6 +1148,27 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
     }
 
     @Override
+    public byte[] getLargeCellContent(String fileName){
+        return this.getTxHandle().getLargeCellContent(fileName);
+    }
+
+    @Override
+    public ContentStatus getContentStatus(String fileName){
+        return this.getTxHandle().getContentStatus(fileName);
+    }
+
+
+    public MediaData loadHdfsMediaData(String hdfsFileName){
+        byte[] largeCellContent =this.getLargeCellContent(hdfsFileName);
+        if (largeCellContent != null) {
+            ReadArrayBuffer readArrayBuffer = new ReadArrayBuffer(largeCellContent);
+            MediaData media = graph.getDataSerializer().readObjectNotNull(readArrayBuffer, MediaData.class);
+            return media;
+        }
+        return null;
+    }
+
+    @Override
     public Iterator<MediaData> getMediaDatas(String vertexId,String ... keys) {
         try {
             StaticBuffer rowkey = this.getHBaseTableRowkey(vertexId);
@@ -1109,7 +1177,20 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
                 for(String colName:keys){
                     Iterator<MediaData> mediaDataIterator = getMediaDataIterator(rowkey, colName,MediaData.class);
                     List<MediaData> list = IteratorUtils.toList(mediaDataIterator);
-                    mediaDataList.addAll(list);
+                    if(graph.getLargeContentUploadHdfsEnabled()) {
+                        List<MediaData> collect = list.stream().map(mediaData -> {
+                            //附件内容在hdfs上,从hdfs下载附件内容并替换
+                            if (HDFS_MEDIA_MEDIATYPE.equals(mediaData.getMediaType())) {
+                                String hdfsFileName = mediaData.getLargeFileName(vertexId);
+                                ContentStatus contentStatus = this.getContentStatus(hdfsFileName);
+                                mediaData.setStatus(contentStatus);
+                            }
+                            return mediaData;
+                        }).collect(Collectors.toList());
+                        mediaDataList.addAll(collect);
+                    }else {
+                        mediaDataList.addAll(list);
+                    }
                 }
                 return mediaDataList.iterator();
             }else {
@@ -1129,6 +1210,12 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
                     ReadBuffer buffer = entry.asReadBuffer();
                     String col = graph.getDataSerializer().readObjectNotNull(buffer, String.class);
                     MediaData mediaData = graph.getDataSerializer().readObjectNotNull(buffer, MediaData.class);
+                    //附件内容在hdfs上,从hdfs下载附件内容并替换
+                    if(graph.getLargeContentUploadHdfsEnabled()&&HDFS_MEDIA_MEDIATYPE.equals(mediaData.getMediaType())){
+                        String hdfsFileName=mediaData.getLargeFileName(vertexId);
+                        ContentStatus contentStatus = this.getContentStatus(hdfsFileName);
+                        mediaData.setStatus(contentStatus);
+                    }
                     return mediaData;
                 }).iterator();
                 return noteIterator;
@@ -1201,6 +1288,31 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
             return graph.getDataSerializer().readObject(read, key.dataType());
         }
     }
+
+    public Multimap<String,SimpleJanusGraphProperty> getPropertyProperties(CacheVertex vertex){
+        Multimap<String,SimpleJanusGraphProperty> multimap= ArrayListMultimap.create();
+        StaticBuffer rowkey = this.getHBaseTableRowkey(vertex.longId());
+        KeySliceQuery keySliceQuery = new KeySliceQuery(rowkey, IDHandler.MIN_KEY, IDHandler.MAX_KEY);
+        EntryList entries = this.getTxHandle().propertyPropertiesQuery(keySliceQuery);
+        if(entries!=null) {
+            Iterator<Entry> iterator = entries.iterator();
+            while (iterator.hasNext()) {
+                Entry entry = iterator.next();
+                ReadBuffer buffer = entry.asReadBuffer();
+                String propertyTypeId = graph.getDataSerializer().readObjectNotNull(buffer, String.class);
+                String propertyValue_md5 = graph.getDataSerializer().readObjectNotNull(buffer, String.class);
+                String propertyPropertyKeyId = graph.getDataSerializer().readObjectNotNull(buffer, String.class);
+                RelationType relationType = this.getExistingRelationType(propertyPropertyKeyId);
+                PropertyKey key = (PropertyKey) relationType;
+                Object propertyPropertyValue = this.readPropertyValue(buffer, key);
+                String propertyId = graph.getDataSerializer().readObjectNotNull(buffer, String.class);
+                SimpleJanusGraphProperty simpleJanusGraphProperty = new SimpleJanusGraphProperty(null, key, propertyPropertyValue);
+                multimap.put(propertyTypeId+propertyValue_md5, simpleJanusGraphProperty);
+            }
+        }
+        return multimap;
+    }
+
     public Iterable<SimpleJanusGraphProperty> getPropertyProperties(InternalRelation relation,Object propertyValue,final String... propertyKeys) {
         try {
             List<SimpleJanusGraphProperty> propertyProperties = new ArrayList<>();
@@ -1826,6 +1938,12 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
         return new IndexQueryBuilder(this,indexSerializer).setIndex(indexName).setQuery(query);
     }
 
+   @Override
+   public void deleteIndexDocument(String indexName, String ... documentIds){
+       IndexType indexType = ManagementSystem.getGraphIndexDirect(indexName, this);
+       indexSerializer.deleteIndexDocument(txHandle,indexType,indexName,documentIds);
+   }
+
     /*
      * ------------------------------------ Transaction State ------------------------------------
      */
@@ -1914,7 +2032,7 @@ public class StandardJanusGraphTx extends JanusGraphBlueprintsTransaction implem
 
     @Override
     public void expireSchemaElement(final String id) {
-        if (vertexCache.contains(id)) {
+        if (vertexCache!=null&&vertexCache.contains(id)) {
             final InternalVertex v = vertexCache.get(id, externalVertexRetriever);
             if (v instanceof JanusGraphSchemaVertex) {
                 JanusGraphSchemaVertex sv = (JanusGraphSchemaVertex) v;

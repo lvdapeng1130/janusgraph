@@ -15,7 +15,7 @@
 package org.janusgraph.graphdb.olap.computer;
 
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.Maps;
 import org.apache.tinkerpop.gremlin.process.computer.ComputerResult;
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;

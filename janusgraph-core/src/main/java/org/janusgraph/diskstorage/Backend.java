@@ -15,7 +15,8 @@
 package org.janusgraph.diskstorage;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.lang3.StringUtils;
 import org.janusgraph.core.JanusGraphConfigurationException;
@@ -231,8 +232,11 @@ public class Backend implements LockerProvider, AutoCloseable {
 
     private final Configuration configuration;
 
-    public Backend(Configuration configuration) {
+    private final GraphDatabaseConfiguration graphDatabaseConfiguration;
+
+    public Backend(Configuration configuration,GraphDatabaseConfiguration graphDatabaseConfiguration) {
         this.configuration = configuration;
+        this.graphDatabaseConfiguration=graphDatabaseConfiguration;
 
         KeyColumnValueStoreManager manager = getStorageManager(configuration);
         if (configuration.get(BASIC_METRICS)) {
@@ -476,15 +480,15 @@ public class Backend implements LockerProvider, AutoCloseable {
     }
 
     public LogManager getLogManager(String logName) {
-        return getLogManager(configuration, logName, storeManager);
+        return getLogManager(configuration, logName, storeManager,graphDatabaseConfiguration);
     }
 
-    private static LogManager getLogManager(Configuration config, String logName, KeyColumnValueStoreManager sm) {
+    private static LogManager getLogManager(Configuration config, String logName, KeyColumnValueStoreManager sm,GraphDatabaseConfiguration graphDatabaseConfiguration) {
         assert config!=null;
         Configuration logConfig = config.restrictTo(logName);
         String backend = logConfig.get(LOG_BACKEND);
         if (backend.equalsIgnoreCase(LOG_BACKEND.getDefaultValue())) {
-            return new KCVSLogManager(sm,logConfig);
+            return new KCVSLogManager(sm,logConfig,graphDatabaseConfiguration);
         } else {
             LogManager lm = getImplementationClass(logConfig,logConfig.get(LOG_BACKEND),REGISTERED_LOG_MANAGERS);
             Preconditions.checkNotNull(lm);

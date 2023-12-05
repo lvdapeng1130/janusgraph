@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.berkeleyje;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.BerkeleyStorageSetup;
 import org.janusgraph.core.JanusGraphException;
 import org.janusgraph.core.JanusGraphFactory;

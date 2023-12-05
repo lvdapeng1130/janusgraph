@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.keycolumnvalue.keyvalue;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.diskstorage.BackendException;
 import org.janusgraph.diskstorage.keycolumnvalue.KeyColumnValueStore;
 

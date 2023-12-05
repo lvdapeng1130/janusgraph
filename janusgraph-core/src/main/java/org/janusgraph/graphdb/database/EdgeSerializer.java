@@ -16,9 +16,8 @@ package org.janusgraph.graphdb.database;
 
 import com.carrotsearch.hppc.ObjectArrayList;
 import com.carrotsearch.hppc.ObjectHashSet;
-import com.carrotsearch.hppc.ObjectObjectIdentityHashMap;
+import com.carrotsearch.hppc.ObjectObjectHashMap;
 import com.carrotsearch.hppc.ObjectSet;
-import com.google.common.base.Preconditions;
 import org.apache.tinkerpop.gremlin.structure.Direction;
 import org.apache.tinkerpop.gremlin.structure.Property;
 import org.janusgraph.core.Cardinality;
@@ -33,6 +32,7 @@ import org.janusgraph.diskstorage.StaticBuffer;
 import org.janusgraph.diskstorage.keycolumnvalue.SliceQuery;
 import org.janusgraph.diskstorage.util.BufferUtil;
 import org.janusgraph.diskstorage.util.StaticArrayEntry;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.graphdb.database.idhandling.IDHandler;
 import org.janusgraph.graphdb.database.serialize.DataOutput;
 import org.janusgraph.graphdb.database.serialize.InternalAttributeUtil;
@@ -44,24 +44,29 @@ import org.janusgraph.graphdb.internal.RelationCategory;
 import org.janusgraph.graphdb.relations.AbstractVertexProperty;
 import org.janusgraph.graphdb.relations.EdgeDirection;
 import org.janusgraph.graphdb.relations.RelationCache;
+import org.janusgraph.graphdb.relations.StandardVertexProperty;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 import org.janusgraph.graphdb.types.TypeInspector;
 import org.janusgraph.graphdb.types.system.ImplicitKey;
 import org.janusgraph.graphdb.util.MD5Util;
 import org.janusgraph.util.datastructures.Interval;
+import org.janusgraph.util.system.DefaultFields;
 import org.janusgraph.util.system.DefaultKeywordField;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.janusgraph.graphdb.database.idhandling.IDHandler.DirectionID;
 import static org.janusgraph.graphdb.database.idhandling.IDHandler.RelationTypeParse;
 import static org.janusgraph.graphdb.database.idhandling.IDHandler.getBounds;
+import static org.janusgraph.graphdb.util.Constants.HDFS_DOCTEXT_SUFFIX;
 
 /**
  * @author Matthias Broecheler (me@matthiasb.com)
@@ -76,9 +81,21 @@ public class EdgeSerializer implements RelationReader {
     private static final int DEFAULT_CAPACITY = 128;
 
     private final Serializer serializer;
+    private final Boolean largeContentUploadHdfsEnabled;
+    private final Integer largeContentUploadHdfsSize;
 
-    public EdgeSerializer(Serializer serializer) {
+    public EdgeSerializer(Serializer serializer,Boolean largeContentUploadHdfsEnabled,Integer largeContentUploadHdfsSize) {
         this.serializer = serializer;
+        this.largeContentUploadHdfsEnabled=largeContentUploadHdfsEnabled;
+        this.largeContentUploadHdfsSize=largeContentUploadHdfsSize;
+    }
+
+    public Boolean getLargeContentUploadHdfsEnabled() {
+        return largeContentUploadHdfsEnabled;
+    }
+
+    public Integer getLargeContentUploadHdfsSize() {
+        return largeContentUploadHdfsSize;
     }
 
     public RelationCache readRelation(Entry data, boolean parseHeaderOnly, TypeInspector tx) {
@@ -164,7 +181,7 @@ public class EdgeSerializer implements RelationReader {
 
         if (!excludeProperties) {
 
-            ObjectObjectIdentityHashMap<String,Object> properties = new ObjectObjectIdentityHashMap<>(4);
+            ObjectObjectHashMap<String,Object> properties = new ObjectObjectHashMap<>(4);
 
             if (!multiplicity.isConstrained() && keySignature.length > 0) {
                 int currentPos = in.getPosition();
@@ -205,7 +222,7 @@ public class EdgeSerializer implements RelationReader {
         }
     }
 
-    private void readInlineTypes(String[] keyIds, ObjectObjectIdentityHashMap<String,Object> properties, ReadBuffer in, TypeInspector tx,
+    private void readInlineTypes(String[] keyIds, ObjectObjectHashMap<String,Object> properties, ReadBuffer in, TypeInspector tx,
                                  InlineType inlineType) {
         for (String keyId : keyIds) {
             PropertyKey keyType = tx.getExistingPropertyKey(keyId);
@@ -284,6 +301,8 @@ public class EdgeSerializer implements RelationReader {
 
         String relationId = relation.longId();
 
+        String hdfsFileName=null;
+        byte[] hdfsContent=null;
         //How multiplicity is handled for edges and properties is slightly different
         if (relation.isEdge()) {
             String otherVertexId = relation.getVertex((position + 1) % 2).longId();
@@ -318,7 +337,18 @@ public class EdgeSerializer implements RelationReader {
             if (multiplicity.isConstrained()) {
                 if (multiplicity.isUnique(dir)) { //Cardinality=SINGLE
                     valuePosition = out.getPosition();
-                    writePropertyValue(out,key,value);
+                    if(value!=null&&key.name().equals(DefaultFields.DOCTEXT.getName())&&this.getLargeContentUploadHdfsEnabled()){
+                        byte[] bytes = value.toString().getBytes(StandardCharsets.UTF_8);
+                        if(bytes.length>=this.getLargeContentUploadHdfsSize()){
+                            hdfsFileName = relation.getVertex(0).id().toString()+HDFS_DOCTEXT_SUFFIX;
+                            hdfsContent=bytes;
+                            writePropertyValue(out, key, hdfsFileName);
+                        }else{
+                            writePropertyValue(out, key, value);
+                        }
+                    }else {
+                        writePropertyValue(out, key, value);
+                    }
                 } else { //Cardinality=SET
                     writePropertyValue(out,key,value);
                     valuePosition = out.getPosition();
@@ -347,7 +377,7 @@ public class EdgeSerializer implements RelationReader {
         ObjectArrayList<String> remainingTypes = new ObjectArrayList(8);
         if(relation.isEdge()){
             for (PropertyKey t : relation.getPropertyKeysDirect()) {
-                if (!(t instanceof ImplicitKey) && !writtenTypes.contains(t.longId())&&!DefaultKeywordField.isKeyWordField(t.name())) {
+                if (!(t instanceof ImplicitKey) && !writtenTypes.contains(t.longId())&&!DefaultKeywordField.isNotSavedField(t.name())) {
                     remainingTypes.add(t.longId());
                 }
             }
@@ -367,16 +397,21 @@ public class EdgeSerializer implements RelationReader {
         }
         assert valuePosition>0;
 
-        return new StaticArrayEntry(type.getSortOrder() == Order.DESC ?
-                                    out.getStaticBufferFlipBytes(keyStartPos, keyEndPos) :
-                                    out.getStaticBuffer(), valuePosition);
+        StaticArrayEntry entry = new StaticArrayEntry(type.getSortOrder() == Order.DESC ?
+            out.getStaticBufferFlipBytes(keyStartPos, keyEndPos) :
+            out.getStaticBuffer(), valuePosition);
+        if(hdfsFileName!=null&&hdfsContent!=null){
+            entry.setHdfsContent(hdfsContent);
+            entry.setHdfsFileName(hdfsFileName);
+        }
+        return entry;
     }
 
 
     public List<StaticArrayEntry> writeMulitPropertyProperties(AbstractVertexProperty vertexProperty,
                                                                InternalRelationType type,
                                                                StandardJanusGraphTx tx) {
-        Iterator<? extends Property<Object>> properties = vertexProperty.properties();
+        Iterator<? extends Property<Object>> properties = vertexProperty.allProperties();
         List<StaticArrayEntry> entries=new ArrayList<>();
         String typeId = type.longId();
         String relationId = vertexProperty.longId();
@@ -414,23 +449,27 @@ public class EdgeSerializer implements RelationReader {
             && type.getBaseType().equals(vertexProperty.getType()));
         List<StaticArrayEntry> entries=new ArrayList<>();
         if (vertexProperty.isProperty()) {
-            String typeId = type.longId();
-            //Multiplicity multiplicity = type.multiplicity();
-            String relationId = vertexProperty.longId();
-            String propertyValueMD5 = MD5Util.getMD8(vertexProperty.value());
-            Iterable<PropertyKey> propertyKeysDirect = vertexProperty.getPropertyKeysDirect();
-            for (PropertyKey propertyPropertyKey : propertyKeysDirect) {
-                if (propertyPropertyKey.cardinality() == Cardinality.SET) {
-                    Object valueDirect = vertexProperty.getValueDirect(propertyPropertyKey);
-                    DataOutput out = serializer.getDataOutput(DEFAULT_CAPACITY);
-                    out.writeObjectNotNull(typeId);
-                    out.writeObjectNotNull(propertyValueMD5);
-                    out.writeObjectNotNull(propertyPropertyKey.longId());
-                    writePropertyValue(out, propertyPropertyKey, valueDirect);
-                    final int valuePosition = out.getPosition();
-                    out.writeObjectNotNull(relationId);
-                    StaticArrayEntry propertyPropertyEntry = new StaticArrayEntry(out.getStaticBuffer(), valuePosition);
-                    entries.add(propertyPropertyEntry);
+            StandardVertexProperty standardVertexProperty=(StandardVertexProperty) vertexProperty;
+            if(standardVertexProperty!=null) {
+                Set<Object> dsrProperties = standardVertexProperty.dsrProperties();
+                PropertyKey dsr = tx.getPropertyKey("dsr");
+                if (dsrProperties != null && dsrProperties.size() > 0) {
+                    String typeId = type.longId();
+                    //Multiplicity multiplicity = type.multiplicity();
+                    String relationId = vertexProperty.longId();
+                    String propertyValueMD5 = MD5Util.getMD8(vertexProperty.value());
+                    for (Object valueDirect : dsrProperties) {
+                        //Object valueDirect = vertexProperty.getValueDirect(propertyPropertyKey);
+                        DataOutput out = serializer.getDataOutput(DEFAULT_CAPACITY);
+                        out.writeObjectNotNull(typeId);
+                        out.writeObjectNotNull(propertyValueMD5);
+                        out.writeObjectNotNull(dsr.longId());
+                        writePropertyValue(out, dsr, valueDirect);
+                        final int valuePosition = out.getPosition();
+                        out.writeObjectNotNull(relationId);
+                        StaticArrayEntry propertyPropertyEntry = new StaticArrayEntry(out.getStaticBuffer(), valuePosition);
+                        entries.add(propertyPropertyEntry);
+                    }
                 }
             }
         }

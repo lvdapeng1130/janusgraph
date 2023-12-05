@@ -48,4 +48,5 @@ public class KCVMutation extends Mutation<Entry,StaticBuffer> {
     public boolean isConsolidated() {
         return super.isConsolidated(KCVEntryMutation.ENTRY2COLUMN_FCT, Function.identity());
     }
+
 }

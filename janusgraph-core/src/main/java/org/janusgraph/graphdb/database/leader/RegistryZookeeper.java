@@ -1,5 +1,6 @@
 package org.janusgraph.graphdb.database.leader;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -11,6 +12,8 @@ import org.janusgraph.graphdb.database.StandardJanusGraph;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
 
@@ -19,6 +22,7 @@ import static org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration.*;
  * @time: 2020/8/18 9:22
  * @jira:
  */
+@Slf4j
 public class RegistryZookeeper implements Closeable {
     private final GraphDatabaseConfiguration configuration;
     private final String uniqueInstanceId;
@@ -35,12 +39,16 @@ public class RegistryZookeeper implements Closeable {
 
     public void registry(){
         //连接zookeeper
-        String zookeeperURI = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_URI);
+        //String zookeeperURI = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_URI);
+        String[] zookeeperURIs = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_URI);
         String zookeeperNamespace = configuration.getConfiguration().get(JANUSGRAPH_ZOOKEEPER_NAMESPACE);
         int sessionTimeoutMs = configuration.getConfiguration().get(ZOOKEEPER_SESSIONTIMEOUTMS);
         int connectionTimeoutMs = configuration.getConfiguration().get(ZOOKEEPER_CONNECTIONTIMEOUTMS);
         String graph_node = configuration.getConfiguration().get(GRAPH_NODE);
-        if(StringUtils.isNotBlank(zookeeperURI)&&StringUtils.isNotBlank(zookeeperNamespace)&&StringUtils.isNotBlank(graph_node)) {
+        boolean registry_zookeeper_enable = configuration.getConfiguration().get(REGISTRY_ZOOKEEPER_ENABLE);
+        if(registry_zookeeper_enable&&zookeeperURIs!=null&&zookeeperURIs.length>0&&StringUtils.isNotBlank(zookeeperNamespace)&&StringUtils.isNotBlank(graph_node)) {
+            String zookeeperURI = Arrays.stream(zookeeperURIs).collect(Collectors.joining(","));
+            log.info(String.format("连接zookeeper->%s (%s/%s)",zookeeperURI,zookeeperNamespace,graph_node));
             String rootPath=zookeeperNamespace+"/"+graph_node;
             retryPolicy = new ExponentialBackoffRetry(1000, 3);
             curatorClient = CuratorFrameworkFactory.builder()

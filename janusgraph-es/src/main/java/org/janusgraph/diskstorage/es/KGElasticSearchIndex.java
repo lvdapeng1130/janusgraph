@@ -14,8 +14,12 @@
 
 package org.janusgraph.diskstorage.es;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import org.apache.commons.lang3.StringUtils;
 import org.janusgraph.core.Cardinality;
 import org.janusgraph.core.JanusGraphException;
@@ -25,20 +29,38 @@ import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.core.attribute.Text;
 import org.janusgraph.core.schema.Mapping;
 import org.janusgraph.core.schema.Parameter;
-import org.janusgraph.diskstorage.*;
+import org.janusgraph.diskstorage.BackendException;
+import org.janusgraph.diskstorage.BaseTransaction;
+import org.janusgraph.diskstorage.BaseTransactionConfig;
+import org.janusgraph.diskstorage.BaseTransactionConfigurable;
+import org.janusgraph.diskstorage.PermanentBackendException;
+import org.janusgraph.diskstorage.TemporaryBackendException;
 import org.janusgraph.diskstorage.configuration.ConfigOption;
 import org.janusgraph.diskstorage.configuration.Configuration;
 import org.janusgraph.diskstorage.es.compat.AbstractESCompat;
 import org.janusgraph.diskstorage.es.compat.ESCompatUtils;
 import org.janusgraph.diskstorage.es.mapping.IndexMapping;
 import org.janusgraph.diskstorage.es.script.ESScriptResponse;
-import org.janusgraph.diskstorage.indexing.*;
+import org.janusgraph.diskstorage.indexing.IndexEntry;
+import org.janusgraph.diskstorage.indexing.IndexFeatures;
+import org.janusgraph.diskstorage.indexing.IndexMutation;
+import org.janusgraph.diskstorage.indexing.IndexProvider;
+import org.janusgraph.diskstorage.indexing.IndexQuery;
+import org.janusgraph.diskstorage.indexing.KeyInformation;
+import org.janusgraph.diskstorage.indexing.RawQuery;
 import org.janusgraph.diskstorage.util.DefaultTransaction;
 import org.janusgraph.graphdb.configuration.PreInitializeConfigOptions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.graphdb.database.serialize.AttributeUtils;
+import org.janusgraph.graphdb.internal.ElementCategory;
 import org.janusgraph.graphdb.query.JanusGraphPredicate;
-import org.janusgraph.graphdb.query.condition.*;
+import org.janusgraph.graphdb.query.condition.And;
+import org.janusgraph.graphdb.query.condition.Condition;
+import org.janusgraph.graphdb.query.condition.Not;
+import org.janusgraph.graphdb.query.condition.Or;
+import org.janusgraph.graphdb.query.condition.PredicateCondition;
 import org.janusgraph.graphdb.types.ParameterType;
+import org.janusgraph.util.system.DefaultFields;
 import org.janusgraph.util.system.DefaultKeywordField;
 import org.janusgraph.util.system.DefaultTextField;
 import org.locationtech.spatial4j.shape.Rectangle;
@@ -48,7 +70,20 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -88,16 +123,9 @@ public class KGElasticSearchIndex implements IndexProvider {
                 "if('title'.equals(field.name)||'tid'.equals(field.name)||'link_tid'.equals(field.name)||'link_type'.equals(field.name)" +
                     "||'link_role'.equals(field.name)||'left_tid'.equals(field.name)||'left_type'.equals(field.name)||'right_tid'.equals(field.name)" +
                     "||'right_type'.equals(field.name)||'link_text'.equals(field.name)){",
-                "    if (field.cardinality == 'SINGLE') {",
-                "        ctx._source.remove(field.name);",
-                "    } else if (ctx._source.containsKey(field.name)) {",
-                "        def fieldIndex = ctx._source[field.name].indexOf(field.value);",
-                "        if (fieldIndex >= 0 && fieldIndex < ctx._source[field.name].size()) {",
-                "            ctx._source[field.name].remove(fieldIndex);",
-                "        }",
-                "    }",
+                "      ctx._source.remove(field.name);",
                 "}else{",
-                    "    if (field.cardinality == 'SINGLE') {",
+                    "    if (field.cardinality.equalsIgnoreCase('SINGLE')) {",
                     "        ctx._source.remove(field.name);",
                     "    } else if (ctx._source.containsKey(field.name)) {",
                 "            def fieldValueArray = ctx._source.get(field.name);",
@@ -106,20 +134,36 @@ public class KGElasticSearchIndex implements IndexProvider {
                 "            if (fieldValueArray != null) {",
                 "                Map existMap=null;",
                 "                for (Map simple : fieldValueArray) {",
-                "                    if (simple != null && simple.containsKey(\"value\")) {",
-                "                        Object v=simple.get(\"value\");",
-                "                        if(v!=null&&simple.get(\"value\").equals(field.value)){",
-                "                            existMap=simple;",
-                "                            fieldIndex=cId;",
-                "                            break;",
-                "                        }",
+                "                    if(simple != null){",
+                    "                   if('mediaset'.equals(field.name)||'noteset'.equals(field.name)){",
+                        "                    if (simple.containsKey(\"role\")) {",
+                        "                        Object v=simple.get(\"role\");",
+                        "                        if(v!=null&&simple.get(\"role\").equals(field.role)){",
+                        "                            existMap=simple;",
+                        "                            fieldIndex=cId;",
+                        "                            break;",
+                        "                        }",
+                        "                    }",
+                    "                    }else{",
+                        "                    if (simple.containsKey(\"value\")) {",
+                        "                        Object v=simple.get(\"value\");",
+                        "                        if(v!=null&&simple.get(\"value\").equals(field.value)){",
+                        "                            existMap=simple;",
+                        "                            fieldIndex=cId;",
+                        "                            break;",
+                        "                        }",
+                        "                    }",
+                    "                    }",
+                    "                    cId=cId+1;",
                 "                    }",
-                "                    cId=cId+1;",
                 "                }",
                 "               if (fieldIndex >= 0 && fieldIndex < ctx._source[field.name].size()) {",
                 "                   ctx._source[field.name].remove(fieldIndex);",
                 "                }",
                 "            }",
+            "                if (ctx._source[field.name]!=null && ctx._source[field.name].size()==0) {",
+                        "        ctx._source.remove(field.name);",
+            "                }",
                     "    }",
                 "}",
             "}");
@@ -128,27 +172,104 @@ public class KGElasticSearchIndex implements IndexProvider {
              "if('title'.equals(field.name)||'tid'.equals(field.name)||'link_tid'.equals(field.name)||'link_type'.equals(field.name)" +
                  "||'link_role'.equals(field.name)||'left_tid'.equals(field.name)||'left_type'.equals(field.name)||'right_tid'.equals(field.name)" +
                  "||'right_type'.equals(field.name)||'link_text'.equals(field.name)){",
-                "    if (ctx._source[field.name] == null) {",
-                "        ctx._source[field.name] = [];",
-                "    }",
-                "    if (field.cardinality != 'SET' || ctx._source[field.name].indexOf(field.value) == -1) {",
-                "        ctx._source[field.name].add(field.value);",
-                "    }",
+            "     ctx._source[field.name] = field.value;",
+             "}else if('SINGLE'.equals(field.cardinality)){",
+        "            def fieldValueMap = ctx._source.get(field.name);",
+        "            if (fieldValueMap != null && fieldValueMap instanceof Map){",
+            "                if(field.value!=null){" ,
+            "                    fieldValueMap.put(\"value\",field.value);" ,
+            "                }" ,
+        "                    if (field.startDate != null) {",
+        "                        fieldValueMap.put(\"startDate\", field.startDate);",
+        "                    }",
+        "                    if (field.endDate != null) {",
+        "                        fieldValueMap.put(\"endDate\", field.endDate);",
+        "                    }",
+        "                    if (field.role != null) {",
+        "                        fieldValueMap.put(\"role\", field.role);",
+        "                    }",
+        "                    if(field.geo!=null){",
+        "                        fieldValueMap.put(\"geo\",field.geo);",
+        "                    }",
+        "                    if(field.dsr!=null&&field.dsr.size()>0) {",
+            "                        if(field.overlaid){",
+            "                           fieldValueMap.put(\"dsr\",field.dsr);",
+            "                        }else{",
+                "                        Object dsrObjects = fieldValueMap.get(\"dsr\");",
+                "                        if (dsrObjects != null) {",
+                "                            if (dsrObjects instanceof List) {",
+                "                                Set existsDsrs=new HashSet((List)dsrObjects);",
+                "                                for(String dsr:field.dsr){",
+                "                                    if(!existsDsrs.contains(dsr)){",
+                "                                        ((List)dsrObjects).add(dsr);",
+                "                                    }",
+                "                                }",
+                "                            } else {",
+                "                                fieldValueMap.put(\"dsr\",field.dsr);",
+                "                            }",
+                "                        }else{",
+                "                            fieldValueMap.put(\"dsr\",field.dsr);",
+                "                        }",
+            "                        }",
+        "                   }else{",
+            "                  if(field.overlaid){",
+            "                     fieldValueMap.remove(\"dsr\");",
+            "                  }",
+            "               }",
+        "            }else{",
+        "                Map newValueMap=new HashMap();" ,
+        "                if(field.value!=null){" ,
+        "                    newValueMap.put(\"value\",field.value);" ,
+        "                }" ,
+        "                if (field.startDate != null) {" ,
+        "                    newValueMap.put(\"startDate\", field.startDate);" ,
+        "                }" ,
+        "                if (field.endDate != null) {" ,
+        "                    newValueMap.put(\"endDate\", field.endDate);" ,
+        "                }" ,
+        "                if (field.role != null) {" ,
+        "                    newValueMap.put(\"role\", field.role);" ,
+        "                }" ,
+        "                if(field.geo!=null){" ,
+        "                    newValueMap.put(\"geo\",field.geo);" ,
+        "                }" ,
+        "                if(field.dsr!=null&&field.dsr.size()>0) {" ,
+        "                    newValueMap.put(\"dsr\",field.dsr);" ,
+        "                }" ,
+        "                ctx._source[field.name]=newValueMap;" ,
+        "            }",
              "}else{",
             "            def fieldValueArray = ctx._source.get(field.name);",
             "            boolean isExists=false;",
-            "            if (fieldValueArray != null) {",
+            "            if (fieldValueArray != null){",
             "                Map existMap=null;",
             "                for (Map simple : fieldValueArray) {",
-            "                    if (simple != null && simple.containsKey(\"value\")) {",
-            "                        Object v=simple.get(\"value\");",
-            "                        if(v!=null&&simple.get(\"value\").equals(field.value)){",
-            "                            isExists=true;",
-            "                            existMap=simple;",
-            "                        }",
+            "                    if(simple!=null){",
+            "                      if('mediaset'.equals(field.name)||'noteset'.equals(field.name)){",
+                "                      if (simple.containsKey(\"role\")) {",
+                "                        Object v=simple.get(\"role\");",
+                "                        if(v!=null&&simple.get(\"role\").equals(field.role)){",
+                "                            isExists=true;",
+                "                            existMap=simple;",
+                "                        }",
+                "                      }",
+            "                      }else{",
+                "                      if (simple.containsKey(\"value\")) {",
+                "                        Object v=simple.get(\"value\");",
+                "                        if(v!=null&&simple.get(\"value\").equals(field.value)){",
+                "                            isExists=true;",
+                "                            existMap=simple;",
+                "                        }",
+                "                      }",
+            "                      }",
             "                    }",
             "                }",
             "                if(isExists&&existMap!=null){",
+            "                    if('mediaset'.equals(field.name)||'noteset'.equals(field.name)){",
+                "                    if(field.value!=null){",
+                "                        existMap.put(\"value\",field.value);",
+                "                    }",
+            "                    }",
             "                    if (field.startDate != null) {",
             "                        existMap.put(\"startDate\", field.startDate);",
             "                    }",
@@ -162,21 +283,29 @@ public class KGElasticSearchIndex implements IndexProvider {
             "                        existMap.put(\"geo\",field.geo);",
             "                    }",
             "                    if(field.dsr!=null&&field.dsr.size()>0) {",
-            "                        Object dsrObjects = existMap.get(\"dsr\");",
-            "                        if (dsrObjects != null) {",
-            "                            if (dsrObjects instanceof List) {",
-            "                                Set existsDsrs=new HashSet((List)dsrObjects);",
-            "                                for(String dsr:field.dsr){",
-            "                                    if(!existsDsrs.contains(dsr)){",
-            "                                        ((List)dsrObjects).add(dsr);",
-            "                                    }",
-            "                                }",
-            "                            } else {",
-            "                                existMap.put(\"dsr\",field.dsr);",
-            "                            }",
+            "                        if(field.overlaid){",
+            "                           existMap.put(\"dsr\",field.dsr);",
             "                        }else{",
-            "                            existMap.put(\"dsr\",field.dsr);",
+                "                        Object dsrObjects = existMap.get(\"dsr\");",
+                "                        if (dsrObjects != null) {",
+                "                            if (dsrObjects instanceof List) {",
+                "                                Set existsDsrs=new HashSet((List)dsrObjects);",
+                "                                for(String dsr:field.dsr){",
+                "                                    if(!existsDsrs.contains(dsr)){",
+                "                                        ((List)dsrObjects).add(dsr);",
+                "                                    }",
+                "                                }",
+                "                            } else {",
+                "                                existMap.put(\"dsr\",field.dsr);",
+                "                            }",
+                "                        }else{",
+                "                            existMap.put(\"dsr\",field.dsr);",
+                "                        }",
             "                        }",
+            "                    }else{",
+            "                        if(field.overlaid){",
+            "                           existMap.remove(\"dsr\");",
+            "                         }",
             "                    }",
             "                }else{",
             "                    Map newValueMap=new HashMap();",
@@ -255,6 +384,7 @@ public class KGElasticSearchIndex implements IndexProvider {
     private final boolean useAllField;
     private final Map<String, Object> ingestPipelines;
     private final boolean useMappingForES7;
+    private final boolean showBulkWriteCosts;
     private final String parameterizedAdditionScriptId;
     private final String parameterizedDeletionScriptId;
 
@@ -267,6 +397,7 @@ public class KGElasticSearchIndex implements IndexProvider {
         useExternalMappings = config.get(ElasticSearchIndex.USE_EXTERNAL_MAPPINGS);
         allowMappingUpdate = config.get(ElasticSearchIndex.ALLOW_MAPPING_UPDATE);
         createSleep = config.get(ElasticSearchIndex.CREATE_SLEEP);
+        showBulkWriteCosts = config.get(ElasticSearchIndex.BULK_WRITE_COSTS);
         ingestPipelines = config.getSubset(ElasticSearchIndex.ES_INGEST_PIPELINES);
         useMappingForES7 = config.get(ElasticSearchIndex.USE_MAPPING_FOR_ES7);
         indexStoreNameCacheEnabled = config.get(ElasticSearchIndex.ENABLE_INDEX_STORE_NAMES_CACHE);
@@ -354,21 +485,27 @@ public class KGElasticSearchIndex implements IndexProvider {
      * @param index index name
      * @throws IOException if the index status could not be checked or index could not be created
      */
-    private void checkForOrCreateIndex(String index,Set<String> aliases) throws IOException {
+    private void checkForOrCreateIndex(String index,Set<String> aliases,Map<String,Object> settings) throws IOException {
         Objects.requireNonNull(client);
         Objects.requireNonNull(index);
 
         // Create index if it does not useExternalMappings and if it does not already exist
         if (!useExternalMappings) {
             if(!client.indexExists(index)) {
-                client.createIndex(index, indexSetting);
-                client.updateIndexSettings(index, MAX_RESULT_WINDOW);
+                Map<String, Object> settingParam=new HashMap<>();
+                settingParam.putAll(indexSetting);
+                if(settings!=null){
+                    settingParam.putAll(settings);
+                }
+                settingParam.putAll(MAX_RESULT_WINDOW);
                 Set<String> aliasSet = Sets.newHashSet();
                 if(aliases!=null){
                     aliasSet.addAll(aliases);
                 }
                 aliasSet.add(indexName);
-                client.addAliases(index,aliasSet);
+                client.createIndex(index, settingParam,aliasSet);
+                //client.updateIndexSettings(index, MAX_RESULT_WINDOW);
+                //client.addAliases(index,aliasSet);
                 /*try {
                     log.debug("Sleeping {} ms after {} index creation returned from actionGet()", createSleep, index);
                     Thread.sleep(createSleep);
@@ -377,7 +514,7 @@ public class KGElasticSearchIndex implements IndexProvider {
                 }*/
             }
         }else{
-            Preconditions.checkState(client.indexExists(index), "Could not create index: %s",index);
+           Preconditions.checkState(client.indexExists(index), "Could not create index: %s",index);
             Set<String> aliasSet = Sets.newHashSet();
             if(aliases!=null){
                 aliasSet.addAll(aliases);
@@ -437,6 +574,12 @@ public class KGElasticSearchIndex implements IndexProvider {
     @Override
     public void register(String store, String key, KeyInformation information,
                          BaseTransaction tx,Set<String> aliases) throws BackendException {
+        this.register(store,key,information,tx,null,aliases);
+    }
+
+    @Override
+    public void register(String store, String key, KeyInformation information,
+                         BaseTransaction tx,Map<String,Object> settings,Set<String> aliases) throws BackendException {
         final Class<?> dataType = information.getDataType();
         final Mapping map = Mapping.getMapping(information);
         Preconditions.checkArgument(map==Mapping.DEFAULT || AttributeUtils.isString(dataType) ||
@@ -459,7 +602,7 @@ public class KGElasticSearchIndex implements IndexProvider {
             }
         } else {
             try {
-                checkForOrCreateIndex(indexStoreName,aliases);
+                checkForOrCreateIndex(indexStoreName,aliases,settings);
             } catch (final IOException e) {
                 throw new PermanentBackendException(e);
             }
@@ -468,9 +611,168 @@ public class KGElasticSearchIndex implements IndexProvider {
     }
 
     @Override
+    public void register(String store, List<String> keys, List<KeyInformation> informations,
+                         BaseTransaction tx,Map<String,Object> settings,Set<String> aliases) throws BackendException {
+        Preconditions.checkArgument(keys.size()==informations.size(),"Specified illegal keys [%s] for informations [%s]",keys.size(),informations.size());
+        final String indexStoreName = getIndexStoreName(store);
+        if (useExternalMappings) {
+            try {
+                //We check if the externalMapping have the property 'key'
+                for(int i=0;i<informations.size();i++) {
+                    KeyInformation information = informations.get(i);
+                    String key = keys.get(i);
+                    final Class<?> dataType = information.getDataType();
+                    final Mapping map = Mapping.getMapping(information);
+                    Preconditions.checkArgument(map==Mapping.DEFAULT || AttributeUtils.isString(dataType) ||
+                            (map==Mapping.PREFIX_TREE && AttributeUtils.isGeo(dataType)),
+                        "Specified illegal mapping [%s] for data type [%s]",map,dataType);
+
+                    final IndexMapping mappings = client.getMapping(indexStoreName, store);
+                    if (mappings == null || (!mappings.isDynamic() && !mappings.getProperties().containsKey(key))) {
+                        //Error if it is not dynamic and have not the property 'key'
+                        throw new PermanentBackendException("The external mapping for index '" + indexStoreName + "' and type '" + store + "' do not have property '" + key + "'");
+                    } else if (allowMappingUpdate && mappings.isDynamic()) {
+                        //If it is dynamic, we push the unknown property 'key'
+                        this.pushMapping(store, key, information);
+                    }
+                }
+            } catch (final IOException e) {
+                throw new PermanentBackendException(e);
+            }
+        } else {
+            try {
+                checkForOrCreateIndex(indexStoreName,aliases,settings);
+            } catch (final IOException e) {
+                throw new PermanentBackendException(e);
+            }
+            this.pushMapping(store, keys, informations);
+        }
+    }
+
+    @Override
     public void register(String store, String key, KeyInformation information,
                          BaseTransaction tx) throws BackendException {
         this.register(store,key,information,tx,null);
+    }
+
+    /**
+     * Push mapping to ElasticSearch
+     * @param store the type in the index
+     * @param keys the name of the property in the index
+     * @param informations information of the key
+     */
+    private void pushMapping(String store, List<String> keys,
+                             List<KeyInformation> informations) throws AssertionError, BackendException {
+        final Map<String,Object> properties = new HashMap<>();
+        for(int i=0;i<informations.size();i++){
+            KeyInformation information=informations.get(i);
+            String key=keys.get(i);
+            final Class<?> dataType = information.getDataType();
+            Mapping map = Mapping.getMapping(information);
+            Preconditions.checkArgument(map==Mapping.DEFAULT || AttributeUtils.isString(dataType) ||
+                    (map==Mapping.PREFIX_TREE && AttributeUtils.isGeo(dataType)),
+                "Specified illegal mapping [%s] for data type [%s]",map,dataType);
+            if (AttributeUtils.isString(dataType)) {
+                if (map==Mapping.DEFAULT) map=Mapping.TEXT;
+                log.debug("Registering string type for {} with mapping {}", key, map);
+                final String stringAnalyzer
+                    = ParameterType.STRING_ANALYZER.findParameter(information.getParameters(), null);
+                final String textAnalyzer = ParameterType.TEXT_ANALYZER.findParameter(information.getParameters(), null);
+                // use keyword type for string mappings unless custom string analyzer is provided
+                final Map<String,Object> stringMapping
+                    = stringAnalyzer == null ? compat.createKeywordMapping() : compat.createTextMapping(stringAnalyzer);
+                switch (map) {
+                    case STRING:
+                        //properties.put(key,this.constructKGField(information,stringMapping,dataType));
+                        if(DefaultKeywordField.isKeyWordField(key)){
+                            properties.put(key, stringMapping);
+                        }else if(DefaultTextField.isKeyWordField(key)) {
+                            properties.put(key, this.constructKGLabelField(information, compat.createTextMapping(textAnalyzer), dataType));
+                        }else{
+                            properties.put(key, this.constructKGField(information,compat.createTextMapping(textAnalyzer),dataType));
+                        }
+                        break;
+                    case TEXT:
+                        if(DefaultKeywordField.isKeyWordField(key)){
+                            properties.put(key, stringMapping);
+                        }else if(DefaultTextField.isKeyWordField(key)) {
+                            properties.put(key, this.constructKGLabelField(information, compat.createTextMapping(textAnalyzer), dataType));
+                        }else{
+                            properties.put(key, this.constructKGField(information,compat.createTextMapping(textAnalyzer),dataType));
+                        }
+                        break;
+                    case TEXTSTRING:
+                        if(DefaultKeywordField.isKeyWordField(key)){
+                            properties.put(key, stringMapping);
+                        }else if(DefaultTextField.isKeyWordField(key)) {
+                            properties.put(key, this.constructKGLabelField(information, compat.createTextMapping(textAnalyzer), dataType));
+                        }else{
+                            properties.put(key, this.constructKGField(information,compat.createTextMapping(textAnalyzer),dataType));
+                        }
+                        //properties.put(getDualMappingName(key), this.constructKGField(information,stringMapping,dataType));
+                        break;
+                    default: throw new AssertionError("Unexpected mapping: "+map);
+                }
+            } else if (dataType == Float.class) {
+                log.debug("Registering float type for {}", key);
+                properties.put(key, this.constructKGField(information,ImmutableMap.of(ES_TYPE_KEY, "float"),dataType));
+            } else if (dataType == Double.class) {
+                log.debug("Registering double type for {}", key);
+                properties.put(key, this.constructKGField(information,ImmutableMap.of(ES_TYPE_KEY, "double"),dataType));
+            } else if (dataType == Byte.class) {
+                log.debug("Registering byte type for {}", key);
+                properties.put(key, this.constructKGField(information,ImmutableMap.of(ES_TYPE_KEY, "byte"),dataType));
+            } else if (dataType == Short.class) {
+                log.debug("Registering short type for {}", key);
+                properties.put(key, this.constructKGField(information,ImmutableMap.of(ES_TYPE_KEY, "short"),dataType));
+            } else if (dataType == Integer.class) {
+                log.debug("Registering integer type for {}", key);
+                properties.put(key, this.constructKGField(information,ImmutableMap.of(ES_TYPE_KEY, "integer"),dataType));
+            } else if (dataType == Long.class) {
+                log.debug("Registering long type for {}", key);
+                properties.put(key, this.constructKGField(information,ImmutableMap.of(ES_TYPE_KEY, "long"),dataType));
+            } else if (dataType == Boolean.class) {
+                log.debug("Registering boolean type for {}", key);
+                properties.put(key, this.constructKGField(information,ImmutableMap.of(ES_TYPE_KEY, "boolean"),dataType));
+            } else if (dataType == Geoshape.class) {
+                switch (map) {
+                    case PREFIX_TREE:
+                        final int maxLevels = ParameterType.INDEX_GEO_MAX_LEVELS.findParameter(information.getParameters(),
+                            DEFAULT_GEO_MAX_LEVELS);
+                        final double distErrorPct
+                            = ParameterType.INDEX_GEO_DIST_ERROR_PCT.findParameter(information.getParameters(),
+                            DEFAULT_GEO_DIST_ERROR_PCT);
+                        log.debug("Registering geo_shape type for {} with tree_levels={} and distance_error_pct={}", key,
+                            maxLevels, distErrorPct);
+                        properties.put(key, this.constructKGField(information,ImmutableMap.of(ES_TYPE_KEY, "geo_shape",
+                            "tree", "quadtree",
+                            "tree_levels", maxLevels,
+                            "distance_error_pct", distErrorPct),dataType));
+                        break;
+                    default:
+                        log.debug("Registering geo_point type for {}", key);
+                        properties.put(key, this.constructKGField(information,ImmutableMap.of(ES_TYPE_KEY, "geo_point"),dataType));
+                }
+            } else if (dataType == Date.class || dataType == Instant.class) {
+                log.debug("Registering date type for {}", key);
+                properties.put(key, this.constructKGField(information,ImmutableMap.of(ES_TYPE_KEY, "date"),dataType));
+            } else if (dataType == UUID.class) {
+                log.debug("Registering uuid type for {}", key);
+                properties.put(key, this.constructKGField(information,compat.createKeywordMapping(),dataType));
+            }
+        }
+        if (useAllField) {
+            // add custom all field mapping if it doesn't exist
+            properties.put(ElasticSearchConstants.CUSTOM_ALL_FIELD, compat.createTextMapping(null));
+        }
+        final Map<String,Object> mapping = ImmutableMap.of("properties", properties);
+
+        try {
+            String indexStoreName = getIndexStoreName(store);
+            client.createMapping(indexStoreName, indexStoreName, mapping);
+        } catch (final Exception e) {
+            throw convert(e);
+        }
     }
 
     /**
@@ -641,6 +943,24 @@ public class KGElasticSearchIndex implements IndexProvider {
         return ImmutableMap.of("properties",innerFieldMapping);
     }
 
+    private Map<String,Object> constructMediaField(){
+        final Map<String,Object> innerFieldMapping = new HashMap<>();
+        innerFieldMapping.put(KG_MEDIASET_KEY,compat.createKeywordMapping());
+        innerFieldMapping.put(KG_MEDIASET_TITLE,ImmutableMap.of(ES_TYPE_KEY, "text"));
+        innerFieldMapping.put(KG_MEDIASET_CONTENT,ImmutableMap.of(ES_TYPE_KEY, "text"));
+        return ImmutableMap.of("properties",innerFieldMapping);
+    }
+
+    private Map<String,Object> constructNoteField(){
+        final Map<String,Object> innerFieldMapping = new HashMap<>();
+        innerFieldMapping.put(KG_NOTE_KEY,compat.createKeywordMapping());
+        innerFieldMapping.put(KG_NOTE_TITLE,ImmutableMap.of(ES_TYPE_KEY, "text"));
+        innerFieldMapping.put(KG_NOTE_CONTENT,ImmutableMap.of(ES_TYPE_KEY, "text"));
+        innerFieldMapping.put(KG_NOTE_UPDATEDATE,ImmutableMap.of(ES_TYPE_KEY, "date"));
+        innerFieldMapping.put(KG_NOTE_USER,compat.createKeywordMapping());
+        return ImmutableMap.of("properties",innerFieldMapping);
+    }
+
     private static Mapping getStringMapping(KeyInformation information) {
         assert AttributeUtils.isString(information.getDataType());
         Mapping map = Mapping.getMapping(information);
@@ -666,15 +986,19 @@ public class KGElasticSearchIndex implements IndexProvider {
         final Map<String, Object> doc = new HashMap<>();
         for (final Map.Entry<String, Collection<IndexEntry>> add : unique.asMap().entrySet()) {
             final KeyInformation keyInformation = information.get(add.getKey());
+            String fieldName=add.getKey();
             Collection<IndexEntry> indexEntries=add.getValue();
+            if(keyInformation==null){
+                continue;
+            }
             switch (keyInformation.getCardinality()) {
                 case SINGLE:
                     IndexEntry lastEntry=Iterators.getLast(indexEntries.iterator());
                     Object fValue = convertToEsType(lastEntry.value,
                             Mapping.getMapping(keyInformation));
-                    String fieldName=add.getKey();
                     if(DefaultKeywordField.isKeyWordField(fieldName)|| DefaultTextField.isKeyWordField(fieldName)) {
-                        doc.put(fieldName, new Object[]{fValue});
+                        //doc.put(fieldName, new Object[]{fValue});
+                        doc.put(fieldName, fValue);
                     }else{
                         Map<String, Object> fieldValues = new HashMap<>();
                         fieldValues.put(KG_PROPERTY_VALUE, fValue);
@@ -693,40 +1017,52 @@ public class KGElasticSearchIndex implements IndexProvider {
                         if (StringUtils.isNotBlank(lastEntry.getRole())) {
                             fieldValues.put(KG_PROPERTY_ROLE, lastEntry.getRole().trim());
                         }
-                        doc.put(fieldName, new Object[]{fieldValues});
+                        //20230524 处理single字段在es呈现数组的情况
+                        //doc.put(fieldName, new Object[]{fieldValues});
+                        doc.put(fieldName, fieldValues);
                     }
                     break;
                 case SET:
                 case LIST:
-                    Object[] fieldContent = indexEntries.stream().map(entry -> {
-                        Object fieldValue = convertToEsType(entry.value, Mapping.getMapping(keyInformation));
-                        Map<String, Object> fieValues = new HashMap<>();
-                        fieValues.put(KG_PROPERTY_VALUE, fieldValue);
-                        if (entry.getStartDate() != null) {
-                            fieValues.put(KG_PROPERTY_STARTDATE, entry.getStartDate());
-                        }
-                        if (entry.getEndDate() != null) {
-                            fieValues.put(KG_PROPERTY_ENDDATE, entry.getEndDate());
-                        }
-                        if (entry.getGeo() != null && entry.getGeo().length == 2) {
-                            fieValues.put(KG_PROPERTY_GEO, entry.getGeo());
-                        }
-                        if (entry.getDsr() != null && entry.getDsr().size() > 0) {
-                            fieValues.put(KG_PROPERTY_DSR, entry.getDsr().toArray(new String[entry.getDsr().size()]));
-                        }
-                        if (StringUtils.isNotBlank(entry.getRole())) {
-                            fieValues.put(KG_PROPERTY_ROLE, entry.getRole().trim());
-                        }
-                        return fieValues;
-                    }).filter(map -> {
-                        Object fieldValue = map.get(KG_PROPERTY_VALUE);
-                        if(fieldValue instanceof byte[]){
-                            return false;
-                        }else {
-                            return true;
-                        }
-                    }).toArray();
-                    doc.put(add.getKey(), fieldContent);
+                    //特殊处理关系的dsr
+                    if(information.getCategory()== ElementCategory.EDGE&&add.getKey().equals(DefaultFields.DSR.getName())){
+                        IndexEntry dsrEntry=Iterators.getLast(indexEntries.iterator());
+                        Object dsrValue = convertToEsType(dsrEntry.value,
+                            Mapping.getMapping(keyInformation));
+                        Map<String, Object> fieldValues = new HashMap<>();
+                        fieldValues.put(KG_PROPERTY_VALUE, dsrValue);
+                        doc.put(fieldName, fieldValues);
+                    }else {
+                        Object[] fieldContent = indexEntries.stream().map(entry -> {
+                            Object fieldValue = convertToEsType(entry.value, Mapping.getMapping(keyInformation));
+                            Map<String, Object> fieValues = new HashMap<>();
+                            fieValues.put(KG_PROPERTY_VALUE, fieldValue);
+                            if (entry.getStartDate() != null) {
+                                fieValues.put(KG_PROPERTY_STARTDATE, entry.getStartDate());
+                            }
+                            if (entry.getEndDate() != null) {
+                                fieValues.put(KG_PROPERTY_ENDDATE, entry.getEndDate());
+                            }
+                            if (entry.getGeo() != null && entry.getGeo().length == 2) {
+                                fieValues.put(KG_PROPERTY_GEO, entry.getGeo());
+                            }
+                            if (entry.getDsr() != null && entry.getDsr().size() > 0) {
+                                fieValues.put(KG_PROPERTY_DSR, entry.getDsr().toArray(new String[entry.getDsr().size()]));
+                            }
+                            if (StringUtils.isNotBlank(entry.getRole())) {
+                                fieValues.put(KG_PROPERTY_ROLE, entry.getRole().trim());
+                            }
+                            return fieValues;
+                        }).filter(map -> {
+                            Object fieldValue = map.get(KG_PROPERTY_VALUE);
+                            if (fieldValue instanceof byte[]) {
+                                return false;
+                            } else {
+                                return true;
+                            }
+                        }).toArray();
+                        doc.put(add.getKey(), fieldContent);
+                    }
                     break;
                 default:
                     break;
@@ -797,12 +1133,15 @@ public class KGElasticSearchIndex implements IndexProvider {
     @Override
     public void mutate(Map<String, Map<String, IndexMutation>> mutations, KeyInformation.IndexRetriever information,
                        BaseTransaction tx) throws BackendException {
+        Set<String> skipIndexes = tx.getSkipIndexes();
         final List<ElasticSearchMutation> requests = new ArrayList<>();
         try {
+            Set<String> indices=new HashSet<>();
             for (final Map.Entry<String, Map<String, IndexMutation>> stores : mutations.entrySet()) {
                 final List<ElasticSearchMutation> requestByStore = new ArrayList<>();
                 final String storeName = stores.getKey();
                 final String indexStoreName = getIndexStoreName(storeName);
+                indices.add(indexStoreName);
                 for (final Map.Entry<String, IndexMutation> entry : stores.getValue().entrySet()) {
                     final String documentId = entry.getKey();
                     final IndexMutation mutation = entry.getValue();
@@ -817,46 +1156,53 @@ public class KGElasticSearchIndex implements IndexProvider {
                             requestByStore.add(ElasticSearchMutation.createDeleteRequest(indexStoreName, indexStoreName,
                                     documentId));
                         } else {
-                            List<Map<String, Object>> params = getParameters(information.get(storeName),
-                                mutation.getDeletions(), true);
-                            Map doc = compat.prepareStoredScript(parameterizedDeletionScriptId, params).build();
-                            log.trace("Deletion script {} with params {}", PARAMETERIZED_DELETION_SCRIPT, params);
-                            requestByStore.add(ElasticSearchMutation.createUpdateRequest(indexStoreName, indexStoreName,
-                                documentId, doc));
+                            if(skipIndexes==null||!skipIndexes.contains(storeName)){
+                                List<Map<String, Object>> params = getParameters(information.get(storeName),
+                                    mutation.getDeletions(), true);
+                                Map doc = compat.prepareStoredScript(parameterizedDeletionScriptId, params).build();
+                                log.trace("Deletion script {} with params {}", PARAMETERIZED_DELETION_SCRIPT, params);
+                                requestByStore.add(ElasticSearchMutation.createUpdateRequest(indexStoreName, indexStoreName,
+                                    documentId, doc));
+                            }
                         }
                     }
                     if (mutation.hasAdditions()) {
-                        /*if (mutation.isNew()) { //Index
+                        //if (mutation.isNew()) { //Index
+                        if (tx.isIndexMode()) {
                             log.trace("Adding entire document {}", documentId);
                             final Map<String, Object> source = getNewDocument(mutation.getAdditions(),
                                     information.get(storeName));
-                            requestByStore.add(ElasticSearchMutation.createIndexRequest(indexStoreName, indexStoreName,
+                            if(source.size()>0) {
+                                requestByStore.add(ElasticSearchMutation.createIndexRequest(indexStoreName, indexStoreName,
                                     documentId, source));
-                        } else {*/
-                            final Map upsert;
-                            if (!mutation.hasDeletions()) {
-                                upsert = getNewDocument(mutation.getAdditions(), information.get(storeName));
-                            } else {
-                                upsert = null;
                             }
+                        } else {
+                            if(skipIndexes==null||!skipIndexes.contains(storeName)) {
+                                final Map upsert=getNewDocument(mutation.getAdditions(), information.get(storeName));
+                                /*if (!mutation.hasDeletions()) {
+                                    upsert = getNewDocument(mutation.getAdditions(), information.get(storeName));
+                                } else {
+                                    upsert = null;
+                                }*/
 
-                            List<Map<String, Object>> params = getParameters(information.get(storeName),
-                                    mutation.getAdditions(), false, Cardinality.SINGLE);
-                            if (!params.isEmpty()) {
-                                ImmutableMap.Builder builder = compat.prepareStoredScript(parameterizedAdditionScriptId, params);
-                                requestByStore.add(ElasticSearchMutation.createUpdateRequest(indexStoreName, indexStoreName,
+                                List<Map<String, Object>> params = getUpdateParameters(information.get(storeName),
+                                    mutation.getAdditions());
+                                if (!params.isEmpty()) {
+                                    ImmutableMap.Builder builder = compat.prepareStoredScript(parameterizedAdditionScriptId, params);
+                                    requestByStore.add(ElasticSearchMutation.createUpdateRequest(indexStoreName, indexStoreName,
                                         documentId, builder, upsert));
-                                log.trace("Adding script {} with params {}", PARAMETERIZED_ADDITION_SCRIPT, params);
-                            }
+                                    log.trace("Adding script {} with params {}", PARAMETERIZED_ADDITION_SCRIPT, params);
+                                }
 
-                            final Map<String, Object> doc = getAdditionDoc(information, storeName, mutation);
-                            if (!doc.isEmpty()) {
-                                final ImmutableMap.Builder builder = ImmutableMap.builder().put(ES_DOC_KEY, doc);
-                                requestByStore.add(ElasticSearchMutation.createUpdateRequest(indexStoreName, indexStoreName,
+                                /*final Map<String, Object> doc = getAdditionDoc(information, storeName, mutation);
+                                if (!doc.isEmpty()) {
+                                    final ImmutableMap.Builder builder = ImmutableMap.builder().put(ES_DOC_KEY, doc);
+                                    requestByStore.add(ElasticSearchMutation.createUpdateRequest(indexStoreName, indexStoreName,
                                         documentId, builder, upsert));
-                                log.trace("Adding update {}", doc);
+                                    log.trace("Adding update {}", doc);
+                                }*/
                             }
-                        //}
+                        }
                     }
                 }
                 if (!requestByStore.isEmpty() && ingestPipelines.containsKey(storeName)) {
@@ -866,12 +1212,61 @@ public class KGElasticSearchIndex implements IndexProvider {
                 }
             }
             if (!requests.isEmpty()) {
+                long start = System.currentTimeMillis();
+                int size=requests.size();
                 client.bulkRequest(requests, null);
+                long end = System.currentTimeMillis();
+                long time =end - start;
+                if(showBulkWriteCosts&&time>=400){
+                    log.info(String.format("线程%s向elasticsearch的[%s]索引处理%s条数据用时：%s毫秒",Thread.currentThread().getName(),indices.stream().collect(Collectors.joining(",")),size,time));
+                }
             }
         } catch (final Exception e) {
             log.error("Failed to execute bulk Elasticsearch mutation", e);
             throw convert(e);
         }
+    }
+
+    private List<Map<String, Object>> getUpdateParameters(KeyInformation.StoreRetriever storeRetriever,
+                                                    List<IndexEntry> entries) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (IndexEntry entry : entries) {
+            KeyInformation info = storeRetriever.get(entry.field);
+            Object jsValue = convertToEsType(entry.value, Mapping.getMapping(info));
+            Map<String, Object> params=new HashMap<>();
+            params.put(KG_PROPERTY_DS_NAME, entry.field);
+            params.put(KG_PROPERTY_VALUE, jsValue);
+            params.put(KG_PROPERTY_OVERLAID, entry.isOverlaid());
+            params.put(KG_CARDINALITY, info.getCardinality().name());
+            //特殊处理关系的dsr，关系的dsr只能是单值
+            if(storeRetriever.getCategory()== ElementCategory.EDGE&&entry.field.equals(DefaultFields.DSR.getName())){
+                params.put(KG_CARDINALITY, Cardinality.SINGLE.name());
+            }
+            if(!DefaultTextField.isKeyWordField(entry.field)&&!DefaultKeywordField.isKeyWordField(entry.field)) {
+                if(entry.getStartDate()!=null) {
+                    params.put(KG_PROPERTY_STARTDATE, entry.getStartDate());
+                }
+                if( entry.getEndDate()!=null) {
+                    params.put(KG_PROPERTY_ENDDATE, entry.getEndDate());
+                }
+                if(entry.getGeo()!=null) {
+                    params.put(KG_PROPERTY_GEO, entry.getGeo());
+                }
+                if (entry.getDsr() != null && entry.getDsr().size() > 0) {
+                    params.put(KG_PROPERTY_DSR, entry.getDsr().toArray(new String[entry.getDsr().size()]));
+                }
+                if( entry.getRole()!=null) {
+                    params.put(KG_PROPERTY_ROLE, entry.getRole());
+                }
+            }
+            result.add(params);
+            /*if (hasDualStringMapping(info)) {
+                result.add(ImmutableMap.of("name", getDualMappingName(entry.field),
+                        "value", jsValue,
+                        "cardinality", info.getCardinality().name()));
+            }*/
+        }
+        return result;
     }
 
     private List<Map<String, Object>> getParameters(KeyInformation.StoreRetriever storeRetriever,
@@ -888,19 +1283,29 @@ public class KGElasticSearchIndex implements IndexProvider {
             Object jsValue = deletion && info.getCardinality() == Cardinality.SINGLE ?
                 "" : convertToEsType(entry.value, Mapping.getMapping(info));
             Map<String, Object> params=new HashMap<>();
-            params.put("name", entry.field);
-            params.put("value", jsValue);
-            params.put("cardinality", info.getCardinality().name());
+            params.put(KG_PROPERTY_DS_NAME, entry.field);
+            params.put(KG_PROPERTY_VALUE, jsValue);
+            params.put(KG_CARDINALITY, info.getCardinality().name());
+            //特殊处理关系的dsr，关系的dsr只能是单值
+            if(storeRetriever.getCategory()== ElementCategory.EDGE&&entry.field.equals(DefaultFields.DSR.getName())){
+                params.put(KG_CARDINALITY, Cardinality.SINGLE.name());
+            }
             if(!DefaultTextField.isKeyWordField(entry.field)&&!DefaultKeywordField.isKeyWordField(entry.field)) {
-                params.put(KG_PROPERTY_STARTDATE, entry.getStartDate());
-                params.put(KG_PROPERTY_ENDDATE, entry.getEndDate());
-                params.put(KG_PROPERTY_GEO, entry.getGeo());
+                if(entry.getStartDate()!=null) {
+                    params.put(KG_PROPERTY_STARTDATE, entry.getStartDate());
+                }
+                if( entry.getEndDate()!=null) {
+                    params.put(KG_PROPERTY_ENDDATE, entry.getEndDate());
+                }
+                if(entry.getGeo()!=null) {
+                    params.put(KG_PROPERTY_GEO, entry.getGeo());
+                }
                 if (entry.getDsr() != null && entry.getDsr().size() > 0) {
                     params.put(KG_PROPERTY_DSR, entry.getDsr().toArray(new String[entry.getDsr().size()]));
-                } else {
-                    params.put(KG_PROPERTY_DSR, null);
                 }
-                params.put(KG_PROPERTY_ROLE, entry.getRole());
+                if( entry.getRole()!=null) {
+                    params.put(KG_PROPERTY_ROLE, entry.getRole());
+                }
             }
             result.add(params);
             /*if (hasDualStringMapping(info)) {
@@ -978,8 +1383,10 @@ public class KGElasticSearchIndex implements IndexProvider {
                         if (log.isTraceEnabled())
                             log.trace("Adding entire document {}", docID);
                         final Map<String, Object> source = getNewDocument(content, information.get(store));
-                        requestByStore.add(ElasticSearchMutation.createIndexRequest(indexStoreName, indexStoreName, docID,
+                        if(source.size()>0) {
+                            requestByStore.add(ElasticSearchMutation.createIndexRequest(indexStoreName, indexStoreName, docID,
                                 source));
+                        }
                     }
                 }
                 if (!requestByStore.isEmpty() && ingestPipelines.containsKey(store)) {
@@ -1334,6 +1741,33 @@ public class KGElasticSearchIndex implements IndexProvider {
             sr.addSort(orderEntry.getKey(), order.toLowerCase(), convertToEsDataType(datatype, mapping));
         }
     }
+
+    @Override
+   public void deleteDocument(String index,String ... ids) throws BackendException{
+        Preconditions.checkArgument(StringUtils.isNotBlank(index));
+        Preconditions.checkArgument(ids!=null&&ids.length>0);
+        final String indexStoreName = getIndexStoreName(index);
+        final List<ElasticSearchMutation> requestByStore = new ArrayList<>();
+        for(String documentId:ids){
+            requestByStore.add(ElasticSearchMutation.createDeleteRequest(indexStoreName, indexStoreName,
+                documentId));
+        }
+        try {
+            if (!requestByStore.isEmpty()) {
+                long start = System.currentTimeMillis();
+                int size = requestByStore.size();
+                client.bulkRequest(requestByStore, null);
+                long end = System.currentTimeMillis();
+                long time = end - start;
+                if (showBulkWriteCosts && time >= 400) {
+                    log.info(String.format("线程%s向elasticsearch的[%s]索引删除%s条数据用时：%s毫秒", Thread.currentThread().getName(), indexStoreName, size, time));
+                }
+            }
+        } catch (final Exception e) {
+            log.error("Failed to execute bulk Elasticsearch mutation", e);
+            throw convert(e);
+        }
+   }
 
     @Override
     public Stream<RawQuery.Result<String>> query(RawQuery query, KeyInformation.IndexRetriever information,

@@ -3,6 +3,7 @@ package org.janusgraph.kggraph;
 import com.google.common.collect.Sets;
 import org.apache.tinkerpop.gremlin.structure.T;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.janusgraph.core.attribute.Geoshape;
 import org.janusgraph.graphdb.database.StandardJanusGraph;
 import org.janusgraph.graphdb.types.system.BaseKey;
 import org.janusgraph.kydsj.serialize.Note;
@@ -10,6 +11,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -25,16 +27,22 @@ public class NoteTest extends AbstractKGgraphTest{
     @Test
     public void insertNote(){
         LOGGER.info("创建一个顶点并添加一个注释");
-        String tid="tid002";
+        String tid="001";
         Note note=new Note("我是注释的id");
         note.setId("我是注释的id");
-        note.setNoteTitle("我是注释的标题");
-        note.setNoteData("我是注释的内容");
+        note.setNoteTitle("我是注释的标题113223");
+        note.setNoteData("我是注释的内容111223");
+        note.setUser("zhangsan");
+        note.setUpdateDate(new Date());
         note.setDsr(Sets.newHashSet("我是注释的dsr"));
 
         //为顶点添加一个注释
-        final Vertex mediaAndNote=g.addV("object_qq")
+        final Vertex mediaAndNote=g.addV("person")
             .property(T.id, tid)
+            .property("person_xm","ldp","startDate", new Date(),
+                "endDate", new Date(),
+                "dsr", "程序导入12223333",
+                "geo", Geoshape.point(22.22, 113.1122))
             .property(BaseKey.VertexNote.name(),note)
             .next();
         g.tx().commit();
@@ -140,7 +148,7 @@ public class NoteTest extends AbstractKGgraphTest{
     public void dropNoteByDsl(){
         String tid="tid002";
         //String graphId = ((StandardJanusGraph) this.getJanusGraph()).getIDManager().toVertexId(tid);
-        List<Note> notes = g.T(tid).notes("我是注释的iddsl").dropExpand().toList();
+        List<Note> notes = g.T(tid).notes("我是注释的id").dropExpand().toList();
         g.tx().commit();
     }
 

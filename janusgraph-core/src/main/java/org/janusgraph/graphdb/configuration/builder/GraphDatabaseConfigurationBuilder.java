@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.configuration.builder;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.Maps;
 import org.janusgraph.diskstorage.Backend;
 import org.janusgraph.diskstorage.configuration.BasicConfiguration;

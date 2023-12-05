@@ -12,6 +12,7 @@ import org.janusgraph.graphdb.internal.InternalVertex;
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -27,6 +28,8 @@ public class Note extends AbstractElement implements JanusGraphElement, Serializ
     private String noteTitle;
     private String noteData;
     private String linkType;
+    private String user;
+    private Date updateDate;
     private transient InternalVertex vertex;
 
     public String getId() {
@@ -76,6 +79,26 @@ public class Note extends AbstractElement implements JanusGraphElement, Serializ
 
     public void setVertex(InternalVertex vertex) {
         this.vertex = vertex;
+    }
+
+    public Date getUpdateDate() {
+        return updateDate;
+    }
+
+    public void setUpdateDate(Date updateDate) {
+        this.updateDate = updateDate;
+    }
+
+    public String getUser() {
+        return user;
+    }
+
+    public void setUser(String user) {
+        this.user = user;
+    }
+
+    public Note() {
+        super(null);
     }
 
     public Note(String id) {

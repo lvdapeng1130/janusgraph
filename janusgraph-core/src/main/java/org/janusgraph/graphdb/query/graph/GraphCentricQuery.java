@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.query.graph;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.collections.comparators.ComparableComparator;
 import org.janusgraph.core.JanusGraphElement;
 import org.janusgraph.graphdb.internal.ElementCategory;

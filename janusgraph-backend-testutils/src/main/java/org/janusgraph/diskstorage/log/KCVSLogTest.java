@@ -49,7 +49,7 @@ public abstract class KCVSLogTest extends LogTest {
         //To ensure that the write order is preserved in reading, we need to ensure that all writes go to the same partition
         //otherwise readers will independently read from the partitions out-of-order by design to avoid having to synchronize
         config.set(KCVSLogManager.LOG_FIXED_PARTITION, requiresOrderPreserving, LOG_NAME);
-        return new KCVSLogManager(storeManager,config.restrictTo(LOG_NAME));
+        return new KCVSLogManager(storeManager,config.restrictTo(LOG_NAME),null);
     }
 
     @Override

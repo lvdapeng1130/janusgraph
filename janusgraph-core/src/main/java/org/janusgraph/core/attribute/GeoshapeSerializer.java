@@ -14,7 +14,7 @@
 
 package org.janusgraph.core.attribute;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.janusgraph.diskstorage.ScanBuffer;
 import org.janusgraph.diskstorage.WriteBuffer;

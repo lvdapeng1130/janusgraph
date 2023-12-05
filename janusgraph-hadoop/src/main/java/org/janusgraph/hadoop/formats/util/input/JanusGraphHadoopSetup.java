@@ -14,7 +14,9 @@
 
 package org.janusgraph.hadoop.formats.util.input;
 
+import org.janusgraph.graphdb.database.EdgeSerializer;
 import org.janusgraph.graphdb.database.RelationReader;
+import org.janusgraph.graphdb.database.serialize.Serializer;
 import org.janusgraph.graphdb.idmanagement.IDManager;
 import org.janusgraph.graphdb.types.TypeInspector;
 
@@ -34,5 +36,13 @@ public interface JanusGraphHadoopSetup {
     void close();
 
     boolean getFilterPartitionedVertices();
+
+    Serializer getDataSerializer();
+
+    EdgeSerializer getEdgeSerializer();
+
+    boolean vertexLabelFilter(String vertexLabel);
+
+    boolean edgeLabelFilter(String edgeLabel);
 
 }

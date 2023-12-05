@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.keycolumnvalue.keyvalue;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import org.janusgraph.diskstorage.BackendException;
@@ -37,6 +37,7 @@ import org.janusgraph.diskstorage.util.StaticArrayBuffer;
 import org.janusgraph.diskstorage.util.StaticArrayEntry;
 import org.janusgraph.diskstorage.util.StaticArrayEntryList;
 import org.janusgraph.graphdb.query.BaseQuery;
+import org.janusgraph.kydsj.ContentStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,6 +87,16 @@ public class OrderedKeyValueStoreAdapter extends BaseKeyColumnValueAdapter {
     @Override
     public EntryList getSlice(KeySliceQuery query, StoreTransaction txh) throws BackendException {
         return convert(store.getSlice(convertQuery(query), txh));
+    }
+
+    @Override
+    public byte[] getLargeCellContent(String fileName){
+        return store.getLargeCellContent(fileName);
+    }
+
+    @Override
+    public ContentStatus getContentStatus(String fileName){
+        return store.getContentStatus(fileName);
     }
 
     @Override

@@ -14,7 +14,7 @@
 
 package org.janusgraph.graphdb.database.log;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import org.janusgraph.core.TransactionBuilder;
 import org.janusgraph.graphdb.log.StandardTransactionId;
 import org.janusgraph.graphdb.transaction.TransactionConfiguration;

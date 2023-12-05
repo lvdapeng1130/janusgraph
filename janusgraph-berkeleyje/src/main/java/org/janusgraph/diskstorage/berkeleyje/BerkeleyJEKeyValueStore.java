@@ -15,7 +15,7 @@
 package org.janusgraph.diskstorage.berkeleyje;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
@@ -39,6 +39,7 @@ import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.KeyValueEntry;
 import org.janusgraph.diskstorage.keycolumnvalue.keyvalue.OrderedKeyValueStore;
 import org.janusgraph.diskstorage.util.RecordIterator;
 import org.janusgraph.diskstorage.util.StaticArrayBuffer;
+import org.janusgraph.kydsj.ContentStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,6 +143,16 @@ public class BerkeleyJEKeyValueStore implements OrderedKeyValueStore {
         if (getTransaction(txh) == null) {
             log.warn("Attempt to acquire lock with transactions disabled");
         } //else we need no locking
+    }
+
+    @Override
+    public byte[] getLargeCellContent(String fileName){
+        return null;
+    }
+
+    @Override
+    public ContentStatus getContentStatus(String fileName){
+        return null;
     }
 
     @Override

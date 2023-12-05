@@ -14,7 +14,7 @@
 
 package org.janusgraph.diskstorage.lucene;
 
-import com.google.common.base.Preconditions;
+import org.janusgraph.graphdb.database.idassigner.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import org.apache.commons.io.FileUtils;
@@ -261,6 +261,18 @@ public class LuceneIndex implements IndexProvider {
     public void register(String store, String key, KeyInformation information,
                          BaseTransaction tx,Set<String> aliases) throws BackendException {
         this.register(store,key,information,tx);
+    }
+
+    @Override
+    public void register(String store, String key, KeyInformation information,
+                         BaseTransaction tx,Map<String,Object> settings,Set<String> aliases) throws BackendException {
+        this.register(store,key,information,tx);
+    }
+
+    @Override
+    public void register(String store, List<String> keys, List<KeyInformation> informations,
+                         BaseTransaction tx,Map<String,Object> settings,Set<String> aliases) throws BackendException {
+        //this.register(store,key,information,tx);
     }
 
     @Override
@@ -887,6 +899,10 @@ public class LuceneIndex implements IndexProvider {
     }
 
     @Override
+    public void deleteDocument(String index,String ... ids) throws BackendException{
+
+    }
+    @Override
     public Stream<RawQuery.Result<String>> query(RawQuery query, KeyInformation.IndexRetriever information, BaseTransaction tx) throws BackendException {
         final Query q;
         try {
@@ -1133,6 +1149,11 @@ public class LuceneIndex implements IndexProvider {
         @Override
         public void rollback() throws BackendException {
             close();
+        }
+
+        @Override
+        public Set<String> getSkipIndexes() {
+            return config.getSkipIndexes();
         }
 
         private void close() throws BackendException {

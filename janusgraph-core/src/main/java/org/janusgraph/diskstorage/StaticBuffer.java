@@ -70,6 +70,10 @@ public interface StaticBuffer extends Comparable<StaticBuffer> {
     //Convenience method
     ByteBuffer asByteBuffer();
 
+    void setHdfsFileName(String fileName);
+
+    String getHdfsFileName();
+
     interface Factory<T> {
 
         T get(byte[] array, int offset, int limit);
